@@ -3,11 +3,12 @@ import * as PIXI from 'pixi.js';
 
 export class Ball {
     private body: Matter.Body;
-    private sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
+    public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
 
     constructor(world: Matter.World, stage: PIXI.Container) {
         // TODO Research params, particularly around friction and air friction
-        this.body = Matter.Bodies.circle(100, 100, 20, { 
+        // TODO Figure out how to spawn in a particular, configurable position
+        this.body = Matter.Bodies.circle(1280 / 2, 720 / 2, 20, { 
             restitution: 0.95,
             friction: 0,
             frictionStatic: 0, 

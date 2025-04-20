@@ -43,6 +43,18 @@ export class Game {
         Matter.Engine.update(this.engine, 16.666);
 
         this.ball?.update();
+    
         this.maze?.update();
+    
+        // TODO Figure out camera follow system
+        // // Smooth camera follow
+    // const cameraSpeed = 0.0; // TODO Lower = smoother
+
+    // const targetPivotX: number | undefined = this.ball?.sprite.x;
+    // const targetPivotY: number | undefined = this.ball?.sprite.y;
+
+        // (this.app && targetPivotX) && (this.app.stage.pivot.x += (targetPivotX - this.app.stage.pivot.x) * cameraSpeed);
+        // (this.app && targetPivotY) && (this.app.stage.pivot.y += (targetPivotY - this.app.stage.pivot.y) * cameraSpeed);
+        // this.app?.stage.position.set(this.app?.renderer.width / 2, this.app?.renderer.height / 2);
     }
 }

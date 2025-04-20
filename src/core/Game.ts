@@ -40,7 +40,7 @@ export class Game {
     }
 
     update() {
-        Matter.Engine.update(this.engine, this.app?.ticker.deltaMS);
+        Matter.Engine.update(this.engine, 16.666);
 
         this.ball?.update();
         this.maze?.update();

@@ -9,7 +9,12 @@ export class Maze {
         mazeLayout.forEach(wallData => {
             const { x, y, width, height } = wallData;
 
-            const wall = Matter.Bodies.rectangle(x, y, width, height, { isStatic: true });
+            const wall = Matter.Bodies.rectangle(x, y, width, height, { 
+                isStatic: true,
+                restitution: 0.95,
+    friction: 0,
+    frictionStatic: 0
+            });
             Matter.World.add(world, wall);
 
             const sprite = new PIXI.Graphics();

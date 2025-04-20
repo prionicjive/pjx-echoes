@@ -7,7 +7,12 @@ export class Ball {
 
     constructor(world: Matter.World, stage: PIXI.Container) {
         // TODO Research params, particularly around friction and air friction
-        this.body = Matter.Bodies.circle(100, 100, 20, { restitution: 0.9, frictionAir: 0.001 });
+        this.body = Matter.Bodies.circle(100, 100, 20, { 
+            restitution: 0.95,
+            friction: 0,
+            frictionStatic: 0, 
+            frictionAir: 0.001 
+        });
         Matter.World.add(world, this.body);
 
         // TODO Understand how PIXI.Graphic generates a renderable entity

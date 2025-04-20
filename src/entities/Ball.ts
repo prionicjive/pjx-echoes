@@ -7,7 +7,7 @@ export class Ball {
 
     constructor(world: Matter.World, stage: PIXI.Container) {
         // TODO Research params, particularly around friction and air friction
-        this.body = Matter.Bodies.circle(100, 100, 20, { restitution: 0.9, frictionAir: 0.02 });
+        this.body = Matter.Bodies.circle(100, 100, 20, { restitution: 0.9, frictionAir: 0.001 });
         Matter.World.add(world, this.body);
 
         // TODO Understand how PIXI.Graphic generates a renderable entity
@@ -20,10 +20,10 @@ export class Ball {
 
     applyImpulseTowards(target: {x: number, y: number}) {
         // TODO Rewrite this to make it repulse from instead of attract to position
-        const deltaX = target.x - this.body.position.x;
-        const deltaY = target.y - this.body.position.y;
+        const deltaX = this.body.position.x - target.x;
+        const deltaY = this.body.position.y - target.y;
         const length = Math.hypot(deltaX, deltaY);
-        const forceScale = 0.005; // Tune as needed
+        const forceScale = 0.0025; // TODO Tune as needed
 
         Matter.Body.applyForce(this.body, this.body.position, {
             x: (deltaX / length) * forceScale,

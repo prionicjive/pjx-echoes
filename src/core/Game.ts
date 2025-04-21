@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import * as Matter from 'matter-js';
+import planck from 'planck-js';
 import { InputManager } from './InputManager.ts';
 import { Ball } from '../entities/Ball.ts';
 import { Maze } from '../entities/Maze.ts';
@@ -7,8 +7,7 @@ import { MazeGenerator } from '../utils/MazeGenerator.ts';
 
 export class Game {
     private app: PIXI.Application | null = null;;
-    private engine: Matter.Engine;
-    private world: Matter.World;
+    private world: planck.World;
     private ball: Ball | null = null;
     private maze: Maze | null = null;
     
@@ -16,9 +15,7 @@ export class Game {
     //private input: InputManager;
 
     constructor() {
-        this.engine = Matter.Engine.create();
-        this.engine.gravity.scale = 0; // TODO Is there a better way to disable gravity?
-        this.world = this.engine.world;
+        this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
     }
 
     async init() {
@@ -40,7 +37,9 @@ export class Game {
     }
 
     update() {
-        Matter.Engine.update(this.engine, 16.666);
+        // Step the physics
+        // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
+        this.world.step(1 / 60);
 
         this.ball?.update();
     

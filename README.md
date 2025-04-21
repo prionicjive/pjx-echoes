@@ -6,11 +6,10 @@ A 2D physics-based maze game.
 TODO
 
 ## TODO
-- Cordinate translation system
-- Camera follow system
+- Camera follow system with Cordinate translation system
 - Screen shake on colliding with wall
 - Fancy maze generation with "wider corridors or rooms / caves"
-  - Possible consider Recursive Backtracker maze layout
+  - Possible Cellular Automata + Flood Fill approach
 - Post processing bloom / glow shader and crt shader (From pixi-filters)
 - Post processing glitch shaders, for when colliding with wall
 - Particle trail effect for ball

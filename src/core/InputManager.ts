@@ -11,14 +11,7 @@ export class InputManager {
     }
 
     onPointerDown(e: MouseEvent) {
-        // TODO Look into best way to map screen-to-world coordinates
-
-        // TODO What is rect used for?
-        //const rect = document.body.getBoundingClientRect();
-        //const clickX = e.clientX - rect.left;
-        //const clickY = e.clientY - rect.top;
-        //this.ball.applyImpulseTowards({ clickX, clickY });
-
+        // TODO Look into best way to map screen-to-world coordinates for camera and Box2D usage
         const x = e.clientX;
         const y = e.clientY;
 

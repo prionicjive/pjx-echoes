@@ -25,6 +25,9 @@ export class Game {
 
         this.ball = new Ball(this.world, this.app.stage);
         const mazeLayout = MazeGenerator.generate(); // Consider if there should be params passed in
+       
+        // TODO Use this as the default maze generation algorithm
+        MazeGenerator.generateCellularAutomata();
         this.maze = new Maze(this.world, this.app.stage, mazeLayout);
 
         // TODO Likely need to assign this to an instance variable or property

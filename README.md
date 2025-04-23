@@ -4,12 +4,12 @@ An exploration game rooted in navigating the unknown and unseen.
 
 ## Features
 - Map / maze generation with rooms / caves, utilizing cellular automata and flood fill
+- Player impulse movement via Planck physics
 - Generation of a new map / maze upon reaching a finish tile
+- Soft follow camera when world islarger than single screen, with soft dead zone.
 
 ## TODO
-- Address todos and deprecations, particularly around Box2D questions (Look to echoes for reference)
-- Soft follow camera with world larger than single screen with proper coordinate translation system
-  - See if stage.pivot suffices or if camera system is needed
+- Address todos and deprecations, particularly around Box2D questions (Look to echoes for reference)with proper coordinate translation system
 
 ### Graphical Polish
 - Post processing bloom / glow shader and crt shader (From pixi-filters)

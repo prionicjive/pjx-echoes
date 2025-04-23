@@ -14,10 +14,17 @@ export class Game {
             height: 720
         },
         WorldDimensions: {
-            width: 100,
-            height: 100
+            width: 200,
+            height: 200
         },
         PixelsPerMeter: 16,
+        Camera: {
+            lerpFactor: 1.2,
+            DeadZone: {
+                width: 160,
+                height: 90
+            }
+        },
         Physics: {
             Collision: {
                 categoryPlayer: 0x0001,
@@ -174,22 +181,40 @@ export class Game {
         this.level?.update();
 
         // TODO Any other entities to update?
-    
-        // Camera smoothness magic
-        // TODO Move to Game Config object?
-        const CAMERA_LERP = 0.85; // 0 = super slow, 1 = instant snap
 
         // Smooth camera follow
         if (this.player?.sprite && this.levelContainer) {
             // Camera target position: center the ball on the screen
             const screenCenterX = Game.Config.ScreenDimensions.width / 2;
             const screenCenterY = Game.Config.ScreenDimensions.height / 2;
-            const targetX = -this.player.sprite.x + screenCenterX;
-            const targetY = -this.player.sprite.y + screenCenterY;
+
+            // World coordinates of screen center
+            const cameraX = -this.levelContainer.x;
+            const cameraY = -this.levelContainer.y;
+
+            // Get ball position relative to camera center
+            const offsetX = this.player.sprite.x - cameraX;
+            const offsetY = this.player.sprite.y - cameraY;
+
+            // Only move camera if the ball is outside the dead zone
+            let moveX = 0;
+            let moveY = 0;
+
+            if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
+            } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
+            }
+        
+            if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
+            } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
+            }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.x += (targetX - this.levelContainer.x) * (CAMERA_LERP * deltaTime);
-            this.levelContainer.y += (targetY - this.levelContainer.y) * (CAMERA_LERP * deltaTime)
+            this.levelContainer.x -= moveX * (Game.Config.Camera.lerpFactor * deltaTime);
+            this.levelContainer.y -= moveY * (Game.Config.Camera.lerpFactor * deltaTime);
 
             // Keep camera inside the world edges
             this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.WorldDimensions.width * Game.Config.PixelsPerMeter));

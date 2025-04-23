@@ -1,6 +1,10 @@
+type MapData = {
+    map: number[][], visitedFloors: string[]
+}
+
 export class MapGenerator {
     // Generate map from cellular automata
-    static generateFromCellularAutomata(width: number, height: number): number[][] {
+    static generateFromCellularAutomata(width: number, height: number): MapData {
         // Map constants
         // TODO Better way to handle this
         const WIDTH = width;
@@ -9,7 +13,7 @@ export class MapGenerator {
         const SMOOTHING_STEPS = 4;
 
         // Initialize the map
-        function generateMap(): number[][] {
+        function generateMap(): MapData {
             let map: number[][] = [];
 
             // Step 1: Random fill
@@ -30,9 +34,9 @@ export class MapGenerator {
             }
 
             // Step 3: Ensure connectivity
-            map = ensureConnectivity(map);
+            const correctedMapData = ensureConnectivity(map);
 
-            return map;
+            return correctedMapData;
         }
 
         // Smoothing: Cellular Automata step
@@ -79,8 +83,8 @@ export class MapGenerator {
         }
 
         // Flood fill to ensure connectivity
-        function ensureConnectivity(map: number[][]): number[][] {
-            const visited = new Set();
+        function ensureConnectivity(map: number[][]): MapData {
+            const visited = new Set<string>();
             let startX: number = Math.floor(WIDTH / 2);
             let startY: number = Math.floor(HEIGHT / 2);
 
@@ -129,7 +133,10 @@ export class MapGenerator {
                 }
             }
 
-            return map;
+            return {
+                map,
+                visitedFloors: Array.from(visited)
+            };
         }
 
         return generateMap();

@@ -8,13 +8,13 @@ export class Ball {
     private body: planck.Body;
     public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
 
-    constructor(world: planck.World, stage: PIXI.Container) {
+    constructor(world: planck.World, stage: PIXI.Container, x: number, y: number) {
         // Create ball
         // TODO Figure out if I externalize / centralize ball configuration
         const ballRadius = 0.48;
 
         // TODO Look at echoes for examples of how Box2D creates bodies and fixtures
-        this.body = world.createDynamicBody(planck.Vec2(10, 10));
+        this.body = world.createDynamicBody(planck.Vec2(x + 0.5, y + 0.5));
         this.body.createFixture(new planck.Circle(ballRadius), {
             restitution: 0.95,
             friction: 0,

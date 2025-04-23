@@ -37,15 +37,19 @@ export class Game {
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height }); // TODO Fix deprecation
         document.body.appendChild(this.app.canvas); // TODO Fix deprecation
 
-        this.ball = new Ball(this.world, this.app.stage);
-
         // Generate a map
-        const levelMap = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
+        const { map: levelMap, visitedFloors} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
         this.level = new Level(this.world, this.app.stage, levelMap);
 
+        // Find a random valid starting spot
+        const [startX, startY] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");
+
+        // Construct a ball at a given location
+        this.ball = new Ball(this.world, this.app.stage, Number(startX), Number(startY));
+
         // TODO Likely need to assign this to an instance variable or property
-    new InputManager(this.ball);
+         new InputManager(this.ball);
 
         // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
         // TODO See if I can convert this to an arrow function

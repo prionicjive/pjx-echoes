@@ -22,8 +22,8 @@ export class Ball {
         });
 
         // TODO Understand how PIXI.Graphic generates a renderable entity
-        this.sprite = new PIXI.Graphics(); // TODO Convert to sprite with an image from an assets folder
-        this.sprite.beginFill(0xff0000).drawCircle(0, 0, ballRadius * PIXELS_PER_METER).endFill(); // TODO Fix deprecation
+        this.sprite = new PIXI.Graphics(); // TODO Convert to sprite with an image / texture from an assets folder
+        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, ballRadius * PIXELS_PER_METER).endFill(); // TODO Fix deprecation
         this.sprite.x = this.body.getPosition().x * PIXELS_PER_METER;
         this.sprite.y = this.body.getPosition().y * PIXELS_PER_METER;
         stage.addChild(this.sprite);

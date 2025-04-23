@@ -2,14 +2,28 @@ import * as PIXI from 'pixi.js';
 import planck from 'planck-js';
 import { InputManager } from './InputManager.ts';
 import { Ball } from '../entities/Ball.ts';
-import { Maze } from '../entities/Maze.ts';
-import { MazeGenerator } from '../utils/MazeGenerator.ts';
+import { Level } from '../entities/Level.ts';
+import { MapGenerator } from '../utils/MapGenerator.ts';
 
 export class Game {
+    // TODO Make the internals readonly
+    static Config = {
+        // TODO Add useful config options here
+        ScreenDimensions: {
+            width: 1280,
+            height: 720
+        },
+        WorldDimensions: {
+            width: 80,
+            height: 45
+        },
+        PixelsPerMeter: 16
+    };
+
     private app: PIXI.Application | null = null;;
     private world: planck.World;
     private ball: Ball | null = null;
-    private maze: Maze | null = null;
+    private level: Level | null = null;
     
     // TODO See if input instance ever needs to be used
     //private input: InputManager;
@@ -20,18 +34,18 @@ export class Game {
 
     async init() {
         this.app = new PIXI.Application();
-        await this.app.init({ width: 1280, height: 720 }); // TODO Fix deprecation
+        await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height }); // TODO Fix deprecation
         document.body.appendChild(this.app.canvas); // TODO Fix deprecation
 
         this.ball = new Ball(this.world, this.app.stage);
-        const mazeLayout = MazeGenerator.generate(); // Consider if there should be params passed in
-       
-        // TODO Use this as the default maze generation algorithm
-        MazeGenerator.generateCellularAutomata();
-        this.maze = new Maze(this.world, this.app.stage, mazeLayout);
+
+        // Generate a map
+        const levelMap = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
+        MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
+        this.level = new Level(this.world, this.app.stage, levelMap);
 
         // TODO Likely need to assign this to an instance variable or property
-        new InputManager(this.ball);
+    new InputManager(this.ball);
 
         // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
         // TODO See if I can convert this to an arrow function
@@ -46,7 +60,7 @@ export class Game {
 
         this.ball?.update();
     
-        this.maze?.update();
+        this.level?.update();
     
         // TODO Figure out camera follow system
         // // Smooth camera follow

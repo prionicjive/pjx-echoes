@@ -19,10 +19,10 @@ export class Game {
         },
         PixelsPerMeter: 16,
         Camera: {
-            lerpFactor: 1.2,
+            lerpFactor: 0.05,
             DeadZone: {
-                width: 160,
-                height: 90
+                width: 320,
+                height: 180
             }
         },
         Physics: {
@@ -213,8 +213,8 @@ export class Game {
             }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.x -= moveX * (Game.Config.Camera.lerpFactor * deltaTime);
-            this.levelContainer.y -= moveY * (Game.Config.Camera.lerpFactor * deltaTime);
+            this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor;
+            this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor;
 
             // Keep camera inside the world edges
             this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.WorldDimensions.width * Game.Config.PixelsPerMeter));

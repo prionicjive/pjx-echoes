@@ -2,6 +2,7 @@ import { Game } from '../core/Game';
 
 import * as planck from 'planck-js';
 import * as PIXI from 'pixi.js';
+import { MathUtils } from '../utils/MathUtils';
 
 type WallScaffold = {
     x: number;
@@ -20,7 +21,8 @@ export class Level {
     // TODO Make as a "robust" wall object
     private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
     private finishTiles: LevelEntity[];
-    constructor(world: planck.World, stage: PIXI.Container, levelMap: number[][]) {
+    // TODO Rename visitedFloors to open or empty tiles
+    constructor(world: planck.World, stage: PIXI.Container, levelMap: number[][], visitedFloors: string[]) {
         // TODO Reconsider when we might have more than just walls in a level
         this.walls = [];
         this.finishTiles = [];
@@ -90,9 +92,9 @@ export class Level {
 
         // TODO Add finish tiles for the player to reach
         // TODO Figure out how many to randomly generate
-        for (let i = 0; i < 4; i++) {
-            const x = Math.random() * (Game.Config.WorldDimensions.width - 1);
-            const y = Math.random() * (Game.Config.WorldDimensions.height - 1);
+        const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
+        for (let i = 0; i < numFinishTiles; i++) {
+            const [x, y] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");
             const width = 1;
             const height = 1;
             const color = 0x00ff00; // TODO Choose a better color or make it configurable
@@ -101,7 +103,7 @@ export class Level {
             // TODO Do we need to dispose of bodies and fixtures?
             // TODO HOw do we flag these as static?
             const finishBody = world.createBody();
-            const center = new planck.Vec2(x + width / 2, y + height / 2);
+            const center = new planck.Vec2(Number(x) + width / 2, Number(y) + height / 2);
             finishBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
                 isSensor: true,
                 userData: "FINISH",
@@ -114,8 +116,8 @@ export class Level {
             sprite
                 .beginFill(color)
                 .drawRect(
-                    x * Game.Config.PixelsPerMeter, 
-                    y * Game.Config.PixelsPerMeter, 
+                    Number(x) * Game.Config.PixelsPerMeter, 
+                    Number(y) * Game.Config.PixelsPerMeter, 
                     width * Game.Config.PixelsPerMeter, 
                     height * Game.Config.PixelsPerMeter
                 )

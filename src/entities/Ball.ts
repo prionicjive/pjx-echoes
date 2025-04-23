@@ -3,9 +3,6 @@ import { Game } from '../core/Game';
 import * as planck from 'planck-js';
 import * as PIXI from 'pixi.js';
 
-// TODO Figure out how to best centralize this
-const PIXELS_PER_METER = 16;
-
 export class Ball {
     private body: planck.Body;
     public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
@@ -28,9 +25,9 @@ export class Ball {
 
         // TODO Understand how PIXI.Graphic generates a renderable entity
         this.sprite = new PIXI.Graphics(); // TODO Convert to sprite with an image / texture from an assets folder
-        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, ballRadius * PIXELS_PER_METER).endFill(); // TODO Fix deprecation
-        this.sprite.x = this.body.getPosition().x * PIXELS_PER_METER;
-        this.sprite.y = this.body.getPosition().y * PIXELS_PER_METER;
+        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, ballRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
+        this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
+        this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
         stage.addChild(this.sprite);
     }
 
@@ -40,8 +37,8 @@ export class Ball {
         // Convert target to world coordinates (meters)
         const ballPos = this.body.getPosition();
         const targetWorld = {
-            x: target.x / PIXELS_PER_METER,
-            y: target.y / PIXELS_PER_METER
+            x: target.x / Game.Config.PixelsPerMeter,
+            y: target.y / Game.Config.PixelsPerMeter
         };
         const deltaX = ballPos.x - targetWorld.x;
         const deltaY = ballPos.y - targetWorld.y;
@@ -58,8 +55,8 @@ export class Ball {
     }
 
     update() {
-        this.sprite.x = this.body.getPosition().x * PIXELS_PER_METER;
-        this.sprite.y = this.body.getPosition().y * PIXELS_PER_METER;
+        this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
+        this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
     }
 }

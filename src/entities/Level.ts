@@ -22,7 +22,7 @@ export class Level {
     private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
     private finishTiles: LevelEntity[];
     // TODO Rename visitedFloors to open or empty tiles
-    constructor(world: planck.World, stage: PIXI.Container, levelMap: number[][], visitedFloors: string[]) {
+    constructor(world: planck.World, stage: PIXI.Container | undefined, levelMap: number[][], visitedFloors: string[]) {
         // TODO Reconsider when we might have more than just walls in a level
         this.walls = [];
         this.finishTiles = [];
@@ -56,8 +56,9 @@ export class Level {
 
         levelScaffold.forEach(wallScaffold => {
             const { x, y, width, height, color } = wallScaffold;
-
+            
             const wallBody = world.createBody();
+            
             // TODO Refer to echoes and Box2D docs on how to be set up the tiles, fixtures and such
             // TODO Do we need to dispose of bodies and fixtures?
             // TODO HOw do we flag these as static?
@@ -84,7 +85,7 @@ export class Level {
 
             sprite.x = wallBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
-            stage.addChild(sprite);
+            stage?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later
             this.walls.push({ body: wallBody, sprite });
@@ -125,17 +126,13 @@ export class Level {
 
             sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
-            stage.addChild(sprite);
+            stage?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later
         this.finishTiles.push({ body: finishBody, sprite });
         }
 
         // TODO Add other entities
-    }
-
-    onBeginContact(contact: planck.Contact) {
-        console.log(contact);
     }
 
     update() {

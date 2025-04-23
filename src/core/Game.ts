@@ -14,8 +14,8 @@ export class Game {
             height: 720
         },
         WorldDimensions: {
-            width: 64,
-            height: 64
+            width: 160,
+            height: 90
         },
         PixelsPerMeter: 8,
         Physics: {
@@ -30,15 +30,13 @@ export class Game {
     };
 
     private app: PIXI.Application | null = null;;
-    private world: planck.World;
+    private world: planck.World | null = null;
     private ball: Ball | null = null;
     private level: Level | null = null;
-    
-    // TODO See if input instance ever needs to be used
-    //private input: InputManager;
+    private input: InputManager;
 
     constructor() {
-        this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
+        this.input = new InputManager();
     }
 
     async init() {
@@ -46,58 +44,85 @@ export class Game {
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height }); // TODO Fix deprecation
         document.body.appendChild(this.app.canvas); // TODO Fix deprecation
 
+        // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
+        // TODO See if I can convert this to an arrow function
+        this.app.ticker.add(this.update.bind(this));
+
+        // Call reset() to (re)initialize all the meaning bits
+        this.reset();
+
+        // TODO Handle additional setup if needed
+    }
+
+    reset() {
+        // Empty PIXI stage
+        this.app?.stage.removeChildren();
+
+        // Remove all bodies / fixtures from Planck world
+        let body = this.world?.getBodyList();
+        let counter = 0;
+        while (body) {
+            const nextBody = body.getNext();
+            this.world?.destroyBody(body);
+            counter++;
+            body = nextBody;
+        }
+
+        if (this.world) {
+            this.world.off('begin-contact', this.onBeginContact.bind(this));
+        }
+
+        // TODO This may be too drastic, but regenerate entire Planck world
+        this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
+        this.world.on('begin-contact', this.onBeginContact.bind(this));
+
+        // TODO Regenerate level and place player and finish tiles
         // Generate a map
         const { map: levelMap, visitedFloors} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
-        this.level = new Level(this.world, this.app.stage, levelMap, visitedFloors);
-
-        // Set up contact listeners
-        this.world.on('begin-contact', (contact) => {
-            const fixtureA = contact.getFixtureA();
-            const fixtureB = contact.getFixtureB();
-
-            const aType = fixtureA.getUserData();
-            const bType = fixtureB.getUserData();
-
-            if (
-                (aType === "PLAYER" && bType === "FINISH") ||
-                (aType === "FINISH" && bType === "PLAYER")
-            ) {
-                // TODO Handle player reaching finish tile
-                console.log("Player reached finish tile!");
-
-                // TODO Regenerate level and place player and finish tiles
-            } else if (
-                (aType === "PLAYER" && bType === "WALL") ||
-                (aType === "WALL" && bType === "PLAYER")
-            ) {
-                // TODO Handle player hitting a wall
-                console.log("Player hit a wall!");
-
-                // TODO Regenerate level and place player and finish tiles
-            }
-        });
+        this.level = new Level(this.world, this.app?.stage, levelMap, visitedFloors);
 
         // Find a random valid starting spot for player
         // TODO Better place to do this?
         const [startX, startY] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");
 
         // Construct a ball at a given location
-        this.ball = new Ball(this.world, this.app.stage, Number(startX), Number(startY));
+        this.ball = new Ball(this.world, this.app?.stage, Number(startX), Number(startY));
 
-        // TODO Likely need to assign this to an instance variable or property
-         new InputManager(this.ball);
+        // Reset the Input Manager (to clear out event listener and have latest player object)
+        this.input.reset(this.ball);
+        
+    }
 
-        // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
-        // TODO See if I can convert this to an arrow function
-        this.app.ticker.add(this.update.bind(this));
-        // TODO Handle additional setup if needed
+    onBeginContact(contact: planck.Contact) {
+        const fixtureA = contact.getFixtureA();
+        const fixtureB = contact.getFixtureB();
+
+        const aType = fixtureA.getUserData();
+        const bType = fixtureB.getUserData();
+
+        if (
+            (aType === "PLAYER" && bType === "FINISH") ||
+            (aType === "FINISH" && bType === "PLAYER")
+        ) {
+            // TODO Handle player reaching finish tile
+            //console.log("Player reached finish tile!");
+
+            // Reset game to reinitialize everything
+            this.reset();
+        } else if (
+            (aType === "PLAYER" && bType === "WALL") ||
+            (aType === "WALL" && bType === "PLAYER")
+        ) {
+            // TODO Handle player hitting a wall
+            //console.log("Player hit a wall!");
+        }
     }
 
     update() {
         // Step the physics
         // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
-        this.world.step(1 / 60);
+        this.world?.step(1 / 60);
 
         this.ball?.update();
     

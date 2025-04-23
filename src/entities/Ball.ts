@@ -7,7 +7,7 @@ export class Ball {
     private body: planck.Body;
     public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
 
-    constructor(world: planck.World, stage: PIXI.Container, x: number, y: number) {
+    constructor(world: planck.World, stage: PIXI.Container | undefined, x: number, y: number) {
         // Create ball
         // TODO Figure out if I externalize / centralize ball configuration
         const ballRadius = 0.48;
@@ -28,7 +28,7 @@ export class Ball {
         this.sprite.beginFill(0x00aaee).drawCircle(0, 0, ballRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
         this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
         this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
-        stage.addChild(this.sprite);
+        stage?.addChild(this.sprite);
     }
 
     applyImpulseTowards(target: {x: number, y: number}) {

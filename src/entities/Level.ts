@@ -22,7 +22,7 @@ export class Level {
     private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
     private finishTiles: LevelEntity[];
 
-    constructor(world: planck.World, stage: PIXI.Container | undefined, levelMap: number[][], openSpaces: string[]) {
+    constructor(world: planck.World, levelContainer: PIXI.Container | null, levelMap: number[][], openSpaces: string[]) {
         // TODO Reconsider when we might have more than just walls in a level
         this.walls = [];
         this.finishTiles = [];
@@ -85,7 +85,7 @@ export class Level {
 
             sprite.x = wallBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
-            stage?.addChild(sprite);
+            levelContainer?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later
             this.walls.push({ body: wallBody, sprite });
@@ -126,7 +126,7 @@ export class Level {
 
             sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
-            stage?.addChild(sprite);
+            levelContainer?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later
         this.finishTiles.push({ body: finishBody, sprite });

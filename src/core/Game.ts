@@ -14,10 +14,10 @@ export class Game {
             height: 720
         },
         WorldDimensions: {
-            width: 160,
-            height: 90
+            width: 100,
+            height: 100
         },
-        PixelsPerMeter: 8,
+        PixelsPerMeter: 16,
         Physics: {
             Collision: {
                 categoryPlayer: 0x0001,
@@ -41,7 +41,8 @@ export class Game {
         }
     };
 
-    private app: PIXI.Application | null = null;;
+    private app: PIXI.Application | null = null;
+    private levelContainer: PIXI.Container | null = null;
     private world: planck.World | null = null;
     private player: Player | null = null;
     private level: Level | null = null;
@@ -58,7 +59,7 @@ export class Game {
 
         // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
         // TODO See if I can convert this to an arrow function
-        this.app.ticker.add(this.update.bind(this));
+        this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
 
         // Call reset() to (re)initialize all the meaning bits
         this.reset();
@@ -67,8 +68,13 @@ export class Game {
     }
 
     reset() {
-        // Empty PIXI stage
+        // Empty PIXI containers
+        this.levelContainer?.removeChildren();
         this.app?.stage.removeChildren();
+
+        // Create a big container that will hold the entire level (like a big carpet I can slide around)
+        this.levelContainer = new PIXI.Container();
+        this.app?.stage.addChild(this.levelContainer);
 
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -97,17 +103,20 @@ export class Game {
             Game.Config.MapGeneration.smoothingSteps
         );
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
-        this.level = new Level(this.world, this.app?.stage, levelMap, openSpaces);
+        this.level = new Level(this.world, this.levelContainer, levelMap, openSpaces);
 
         // Find a random valid starting spot for player
         // TODO Better place to do this?
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
 
         // Construct a player at a given location
-        this.player = new Player(this.world, this.app?.stage, Number(startX), Number(startY));
+        this.player = new Player(this.world, this.levelContainer, Number(startX), Number(startY));
+
+        // Instantly center camera on player to avoid an initial soft follow
+        this.instantlyCenterCamera();
 
         // Reset the Input Manager (to clear out event listener and have latest player object)
-        this.input.reset(this.player);
+        this.input.reset(this.player, this.levelContainer);
         
     }
 
@@ -136,24 +145,55 @@ export class Game {
         }
     }
 
-    update() {
+    // TODO Maybe a better place for this?
+    instantlyCenterCamera() {
+        if (this.player?.sprite && this.levelContainer) {
+            // Camera target position: center the ball on the screen
+            const screenCenterX = Game.Config.ScreenDimensions.width / 2;
+            const screenCenterY = Game.Config.ScreenDimensions.height / 2;
+            const targetX = -this.player.sprite.x + screenCenterX;
+            const targetY = -this.player.sprite.y + screenCenterY;
+
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.x += (targetX - this.levelContainer.x);
+            this.levelContainer.y += (targetY - this.levelContainer.y);
+            // Keep camera inside the world edges
+            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.WorldDimensions.width * Game.Config.PixelsPerMeter));
+            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.WorldDimensions.height * Game.Config.PixelsPerMeter));
+        }
+    }
+
+    update(deltaMS: number) {
+        const deltaTime = deltaMS / 1000;
+
         // Step the physics
-        // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
-        this.world?.step(1 / 60);
+        this.world?.step(deltaTime);
 
+        // Update player and level
         this.player?.update();
-    
         this.level?.update();
+
+        // TODO Any other entities to update?
     
-        // TODO Figure out camera follow system
-        // // Smooth camera follow
-    // const cameraSpeed = 0.0; // TODO Lower = smoother
+        // Camera smoothness magic
+        // TODO Move to Game Config object?
+        const CAMERA_LERP = 0.85; // 0 = super slow, 1 = instant snap
 
-    // const targetPivotX: number | undefined = this.player?.sprite.x;
-    // const targetPivotY: number | undefined = this.player?.sprite.y;
+        // Smooth camera follow
+        if (this.player?.sprite && this.levelContainer) {
+            // Camera target position: center the ball on the screen
+            const screenCenterX = Game.Config.ScreenDimensions.width / 2;
+            const screenCenterY = Game.Config.ScreenDimensions.height / 2;
+            const targetX = -this.player.sprite.x + screenCenterX;
+            const targetY = -this.player.sprite.y + screenCenterY;
 
-        // (this.app && targetPivotX) && (this.app.stage.pivot.x += (targetPivotX - this.app.stage.pivot.x) * cameraSpeed);
-        // (this.app && targetPivotY) && (this.app.stage.pivot.y += (targetPivotY - this.app.stage.pivot.y) * cameraSpeed);
-        // this.app?.stage.position.set(this.app?.renderer.width / 2, this.app?.renderer.height / 2);
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.x += (targetX - this.levelContainer.x) * (CAMERA_LERP * deltaTime);
+            this.levelContainer.y += (targetY - this.levelContainer.y) * (CAMERA_LERP * deltaTime)
+
+            // Keep camera inside the world edges
+            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.WorldDimensions.width * Game.Config.PixelsPerMeter));
+            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.WorldDimensions.height * Game.Config.PixelsPerMeter));
+        }
     }
 }

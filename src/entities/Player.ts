@@ -7,7 +7,7 @@ export class Player {
     private body: planck.Body;
     public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
 
-    constructor(world: planck.World, stage: PIXI.Container | undefined, x: number, y: number) {
+    constructor(world: planck.World, levelContainer: PIXI.Container | null, x: number, y: number) {
         // Create player
         const playerRadius = Game.Config.Physics.Player.radius;
 
@@ -28,20 +28,15 @@ export class Player {
         this.sprite.beginFill(0x00aaee).drawCircle(0, 0, playerRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
         this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
         this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
-        stage?.addChild(this.sprite);
+        levelContainer?.addChild(this.sprite);
     }
 
-    applyImpulseTowards(target: {x: number, y: number}) {
-        // TODO Rewrite this to make it repulse from instead of attract to position
-        // TODO How can we make sure we've properly map a click from screen coordinates to Box2D meter coordinates?
-        // Convert target to world coordinates (meters)
+    applyImpulseTowards(levelRelativePositionInPixels: {x: number, y: number}) {
+        // Convert pixel to world coordinates (meters)
         const playerPos = this.body.getPosition();
-        const targetWorld = {
-            x: target.x / Game.Config.PixelsPerMeter,
-            y: target.y / Game.Config.PixelsPerMeter
-        };
-        const deltaX = playerPos.x - targetWorld.x;
-        const deltaY = playerPos.y - targetWorld.y;
+       
+        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Game.Config.PixelsPerMeter);
+        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Game.Config.PixelsPerMeter);
         const length = Math.hypot(deltaX, deltaY);
 
         // Tune this value for desired impulse strength

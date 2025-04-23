@@ -14,12 +14,11 @@ type WallScaffold = {
 
 type LevelEntity = {
     body: planck.Body;
-    sprite: PIXI.Graphics;
+    sprite: PIXI.Graphics; // TODO Consider what to do when we use an actual textured sprite
 }
 
 export class Level {
-    // TODO Make as a "robust" wall object
-    private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
+    private walls: LevelEntity[];
     private finishTiles: LevelEntity[];
 
     constructor(world: planck.World, levelContainer: PIXI.Container | null, levelMap: number[][], openSpaces: string[]) {
@@ -46,9 +45,9 @@ export class Level {
                     levelScaffold.push({
                         x: x,
                         y: y,
-                        width: 1,
-                        height: 1,
-                        color: 0x3d3d3d // TODO Choose a better color or make it configurable
+                        width: Game.Config.Wall.size,
+                        height: Game.Config.Wall.size,
+                        color: Game.Config.Wall.color
                     });
                 }
             }
@@ -59,9 +58,6 @@ export class Level {
             
             const wallBody = world.createBody();
             
-            // TODO Refer to echoes and Box2D docs on how to be set up the tiles, fixtures and such
-            // TODO Do we need to dispose of bodies and fixtures?
-            // TODO HOw do we flag these as static?
             const center = new planck.Vec2(x + width / 2, y + height / 2);
             wallBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
               restitution: 0.95,
@@ -74,14 +70,13 @@ export class Level {
             // TODO Figure out what to do when using an actual sprite with textures
             const sprite = new PIXI.Graphics();
             sprite
-                .beginFill(color)
-                .drawRect(
+                .rect(
                     x * Game.Config.PixelsPerMeter, 
                     y * Game.Config.PixelsPerMeter, 
                     width * Game.Config.PixelsPerMeter, 
                     height * Game.Config.PixelsPerMeter
                 )
-                .endFill(); // TODO Fix deprecation
+                .fill(color);
 
             sprite.x = wallBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
@@ -91,18 +86,14 @@ export class Level {
             this.walls.push({ body: wallBody, sprite });
         });
 
-        // TODO Add finish tiles for the player to reach
-        // TODO Figure out how many to randomly generate
+        // Add finish tiles for the player to reach
         const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
         for (let i = 0; i < numFinishTiles; i++) {
             const [x, y] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-            const width = 1;
-            const height = 1;
-            const color = 0x00ff00; // TODO Choose a better color or make it configurable
+            const width = Game.Config.Finish.size;
+            const height = Game.Config.Finish.size;
+            const color = Game.Config.Finish.color;
 
-            // TODO Refer to echoes and Box2D docs on how to be set up the tiles, fixtures and such
-            // TODO Do we need to dispose of bodies and fixtures?
-            // TODO HOw do we flag these as static?
             const finishBody = world.createBody();
             const center = new planck.Vec2(Number(x) + width / 2, Number(y) + height / 2);
             finishBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
@@ -115,14 +106,13 @@ export class Level {
             // TODO Figure out what to do when using an actual sprite with textures
             const sprite = new PIXI.Graphics();
             sprite
-                .beginFill(color)
-                .drawRect(
+                .rect(
                     Number(x) * Game.Config.PixelsPerMeter, 
                     Number(y) * Game.Config.PixelsPerMeter, 
                     width * Game.Config.PixelsPerMeter, 
                     height * Game.Config.PixelsPerMeter
                 )
-                .endFill(); // TODO Fix deprecation
+                .fill(color);
 
             sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
@@ -136,8 +126,6 @@ export class Level {
     }
 
     update() {
-        // TODO Read below...
-        // If walls move (dynamic level), update here.
-        // Normally walls don't move, so you can leave this empty.
+        // If walls move or other entities move (Ex: dynamic level), update here
     }
 }

@@ -6,9 +6,8 @@ import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 
 export class Game {
-    // TODO Make the internals readonly
+    // TODO Better structure all of this
     static Config = {
-        // TODO Add useful config options here
         ScreenDimensions: {
             width: 1280,
             height: 720
@@ -35,7 +34,6 @@ export class Game {
                 linearDamping: 0.35,
                 impulseFactor: 1,
                 restitution: 0.95,
-                radius: 0.48,
             }
         },
         MapGeneration: {
@@ -45,6 +43,18 @@ export class Game {
         FinishTiles: {
             min: 1,
             max: 7
+        },
+        Player: {
+            color: 0x00aaee,
+            radius: 0.48,
+        },
+        Wall: {
+            color: 0x3d3d3d,
+            size: 1
+        },
+        Finish: {
+            color: 0x00ff00,
+            size: 1
         }
     };
 
@@ -60,11 +70,11 @@ export class Game {
     }
 
     async init() {
+        // Set up PIXI application
         this.app = new PIXI.Application();
-        await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height }); // TODO Fix deprecation
-        document.body.appendChild(this.app.canvas); // TODO Fix deprecation
+        await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
+        document.body.appendChild(this.app.canvas);
 
-        // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
         // TODO See if I can convert this to an arrow function
         this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
 
@@ -76,6 +86,7 @@ export class Game {
 
     reset() {
         // Empty PIXI containers
+        // TODO Is there a more elegant way of doing this?
         this.levelContainer?.removeChildren();
         this.app?.stage.removeChildren();
 
@@ -101,19 +112,21 @@ export class Game {
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
-        // TODO Regenerate level and place player and finish tiles
-        // Generate a map
+        // Regenerate level and place player and finish tiles
         const { map: levelMap, openSpaces} = MapGenerator.generateFromCellularAutomata(
             Game.Config.WorldDimensions.width, 
             Game.Config.WorldDimensions.height,
             Game.Config.MapGeneration.wallChance,
             Game.Config.MapGeneration.smoothingSteps
         );
-        MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
+
+        // Use text renderer for debug purposes
+        // MapGenerator.renderMap(levelMap); 
+
+        // Construct the level and finish tiles (among other entities)
         this.level = new Level(this.world, this.levelContainer, levelMap, openSpaces);
 
         // Find a random valid starting spot for player
-        // TODO Better place to do this?
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
 
         // Construct a player at a given location

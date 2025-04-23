@@ -3,15 +3,16 @@ import { Game } from '../core/Game';
 import * as planck from 'planck-js';
 import * as PIXI from 'pixi.js';
 
+// TODO Maybe have an implements for Entity that contain a body and sprite
 export class Player {
     private body: planck.Body;
-    public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
+    public sprite: PIXI.Graphics;
 
     constructor(world: planck.World, levelContainer: PIXI.Container | null, x: number, y: number) {
         // Create player
-        const playerRadius = Game.Config.Physics.Player.radius;
-
-        this.body = world.createDynamicBody(planck.Vec2(x + 0.5, y + 0.5));
+        const playerRadius = Game.Config.Player.radius;
+        const center = new planck.Vec2(x + Game.Config.Wall.size / 2, y + Game.Config.Wall.size / 2); // Place in the center of whatever tile space it is at
+        this.body = world.createDynamicBody(center);
         this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
 
         this.body.createFixture(new planck.Circle(playerRadius), {
@@ -23,9 +24,10 @@ export class Player {
             filterMaskBits: Game.Config.Physics.Collision.categoryWall | Game.Config.Physics.Collision.categoryFinish
         });
 
-        // TODO Understand how PIXI.Graphic generates a renderable entity
-        this.sprite = new PIXI.Graphics(); // TODO Convert to sprite with an image / texture from an assets folder
-        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, playerRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
+        this.sprite = new PIXI.Graphics();
+        this.sprite
+            .circle(0, 0, playerRadius * Game.Config.PixelsPerMeter)
+            .fill(Game.Config.Player.color);
         this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
         this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
         levelContainer?.addChild(this.sprite);

@@ -21,8 +21,8 @@ export class Level {
     // TODO Make as a "robust" wall object
     private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
     private finishTiles: LevelEntity[];
-    // TODO Rename visitedFloors to open or empty tiles
-    constructor(world: planck.World, stage: PIXI.Container | undefined, levelMap: number[][], visitedFloors: string[]) {
+
+    constructor(world: planck.World, stage: PIXI.Container | undefined, levelMap: number[][], openSpaces: string[]) {
         // TODO Reconsider when we might have more than just walls in a level
         this.walls = [];
         this.finishTiles = [];
@@ -95,7 +95,7 @@ export class Level {
         // TODO Figure out how many to randomly generate
         const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
         for (let i = 0; i < numFinishTiles; i++) {
-            const [x, y] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");
+            const [x, y] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
             const width = 1;
             const height = 1;
             const color = 0x00ff00; // TODO Choose a better color or make it configurable

@@ -3,18 +3,18 @@ import { Game } from '../core/Game';
 import * as planck from 'planck-js';
 import * as PIXI from 'pixi.js';
 
-export class Ball {
+export class Player {
     private body: planck.Body;
     public sprite: PIXI.Graphics; // TODO Convert to sprite with an image from an assets folder
 
     constructor(world: planck.World, stage: PIXI.Container | undefined, x: number, y: number) {
-        // Create ball
-        // TODO Figure out if I externalize / centralize ball configuration
-        const ballRadius = 0.48;
+        // Create player
+        // TODO Figure out if I externalize / centralize player configuration
+        const playerRadius = 0.48;
 
         // TODO Look at echoes for examples of how Box2D creates bodies and fixtures
         this.body = world.createDynamicBody(planck.Vec2(x + 0.5, y + 0.5));
-        this.body.createFixture(new planck.Circle(ballRadius), {
+        this.body.createFixture(new planck.Circle(playerRadius), {
             restitution: 0.95,
             friction: 0,
             density: 1,
@@ -25,7 +25,7 @@ export class Ball {
 
         // TODO Understand how PIXI.Graphic generates a renderable entity
         this.sprite = new PIXI.Graphics(); // TODO Convert to sprite with an image / texture from an assets folder
-        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, ballRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
+        this.sprite.beginFill(0x00aaee).drawCircle(0, 0, playerRadius * Game.Config.PixelsPerMeter).endFill(); // TODO Fix deprecation
         this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
         this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
         stage?.addChild(this.sprite);
@@ -35,13 +35,13 @@ export class Ball {
         // TODO Rewrite this to make it repulse from instead of attract to position
         // TODO How can we make sure we've properly map a click from screen coordinates to Box2D meter coordinates?
         // Convert target to world coordinates (meters)
-        const ballPos = this.body.getPosition();
+        const playerPos = this.body.getPosition();
         const targetWorld = {
             x: target.x / Game.Config.PixelsPerMeter,
             y: target.y / Game.Config.PixelsPerMeter
         };
-        const deltaX = ballPos.x - targetWorld.x;
-        const deltaY = ballPos.y - targetWorld.y;
+        const deltaX = playerPos.x - targetWorld.x;
+        const deltaY = playerPos.y - targetWorld.y;
         const length = Math.hypot(deltaX, deltaY);
 
         // Tune this value for desired impulse strength

@@ -1,5 +1,5 @@
 type MapData = {
-    map: number[][], visitedFloors: string[]
+    map: number[][], openSpaces: string[]
 }
 
 export class MapGenerator {
@@ -9,7 +9,7 @@ export class MapGenerator {
         // TODO Better way to handle this
         const WIDTH = width;
         const HEIGHT = height;
-        const WALL_CHANCE = 0.45; // 45% chance tile starts as wall
+        const WALL_CHANCE = 0.45; // Chance that any given space is a tile
         const SMOOTHING_STEPS = 4;
 
         // Initialize the map
@@ -23,7 +23,7 @@ export class MapGenerator {
                     if (x === 0 || y === 0 || x === WIDTH-1 || y === HEIGHT-1) {
                         map[y][x] = 1; // Border walls
                     } else {
-                        map[y][x] = Math.random() < WALL_CHANCE ? 1 : 0; // 1 = Wall, 0 = Floor
+                        map[y][x] = Math.random() < WALL_CHANCE ? 1 : 0; // 1 = Wall, 0 = Open
                     }
                 }
             }
@@ -50,12 +50,12 @@ export class MapGenerator {
 
                     // Cellular automata logic:
                     // If more than 4 neighboring walls, make this a wall
-                    // Else if less than 4 neighboring walls, make this a floor
+                    // Else if less than 4 neighboring walls, make this a open space
                     // Else(If exactly 4 neighboring walls),  keep this as is
                     if (walls > 4) {
                         newMap[y][x] = 1; // Wall
                     } else if (walls < 4) {
-                        newMap[y][x] = 0; // Floor
+                        newMap[y][x] = 0; // Open space
                     } else {
                         newMap[y][x] = map[y][x]; // Keep current
                     }
@@ -89,7 +89,7 @@ export class MapGenerator {
             let startY: number = Math.floor(HEIGHT / 2);
 
             if (map[startY][startX] === 1) {
-                // If starting point is a wall, find nearest floor
+                // If starting point is a wall, find nearest open space
                 for (let y = 0; y < HEIGHT; y++) {
                     for (let x = 0; x < WIDTH; x++) {
                         if (map[y][x] === 0) {
@@ -123,7 +123,7 @@ export class MapGenerator {
                 }
             }
 
-            // Mark unreachable floors back into walls
+            // Mark unreachable open spaces back into walls
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
                     const key = `${x},${y}`;
@@ -135,7 +135,7 @@ export class MapGenerator {
 
             return {
                 map,
-                visitedFloors: Array.from(visited)
+                openSpaces: Array.from(visited)
             };
         }
 

@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck-js';
 import { InputManager } from './InputManager.ts';
-import { Ball } from '../entities/Ball.ts';
+import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 
@@ -31,7 +31,7 @@ export class Game {
 
     private app: PIXI.Application | null = null;;
     private world: planck.World | null = null;
-    private ball: Ball | null = null;
+    private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
 
@@ -78,19 +78,19 @@ export class Game {
 
         // TODO Regenerate level and place player and finish tiles
         // Generate a map
-        const { map: levelMap, visitedFloors} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
+        const { map: levelMap, openSpaces} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
-        this.level = new Level(this.world, this.app?.stage, levelMap, visitedFloors);
+        this.level = new Level(this.world, this.app?.stage, levelMap, openSpaces);
 
         // Find a random valid starting spot for player
         // TODO Better place to do this?
-        const [startX, startY] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");
+        const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
 
-        // Construct a ball at a given location
-        this.ball = new Ball(this.world, this.app?.stage, Number(startX), Number(startY));
+        // Construct a player at a given location
+        this.player = new Player(this.world, this.app?.stage, Number(startX), Number(startY));
 
         // Reset the Input Manager (to clear out event listener and have latest player object)
-        this.input.reset(this.ball);
+        this.input.reset(this.player);
         
     }
 
@@ -124,7 +124,7 @@ export class Game {
         // TODO How do I use 16.666ms as the time step AND limit the update delta to that?
         this.world?.step(1 / 60);
 
-        this.ball?.update();
+        this.player?.update();
     
         this.level?.update();
     
@@ -132,8 +132,8 @@ export class Game {
         // // Smooth camera follow
     // const cameraSpeed = 0.0; // TODO Lower = smoother
 
-    // const targetPivotX: number | undefined = this.ball?.sprite.x;
-    // const targetPivotY: number | undefined = this.ball?.sprite.y;
+    // const targetPivotX: number | undefined = this.player?.sprite.x;
+    // const targetPivotY: number | undefined = this.player?.sprite.y;
 
         // (this.app && targetPivotX) && (this.app.stage.pivot.x += (targetPivotX - this.app.stage.pivot.x) * cameraSpeed);
         // (this.app && targetPivotY) && (this.app.stage.pivot.y += (targetPivotY - this.app.stage.pivot.y) * cameraSpeed);

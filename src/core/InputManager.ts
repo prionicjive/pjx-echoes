@@ -1,14 +1,14 @@
-import { Ball } from '../entities/Ball.ts';
+import { Player } from '../entities/Player.ts';
 
 export class InputManager {
-    private player: Ball | null = null;
+    private player: Player | null = null;
     private boundPointerDown: (e: MouseEvent) => void;
 
     constructor() {
         this.boundPointerDown = this.onPointerDown.bind(this);
     }
     
-    reset(player: Ball) {
+    reset(player: Player) {
         this.player = player;
 
         // Remove listener (if existing) and re-add listening

@@ -28,10 +28,10 @@ export class Level {
 
         // Start with the level boundaries themselves
         const levelScaffold: WallScaffold[] = [
-            { x: 0, y: -1, width: Game.Config.WorldDimensions.width, height: 1, color: 0xff0000 }, // Top
-            { x: 0, y: Game.Config.WorldDimensions.height, width: Game.Config.WorldDimensions.width, height: 1, color: 0xff0000 }, // Bottom
-            { x: -1, y: 0, width: 1, height: Game.Config.WorldDimensions.height, color: 0xff0000 }, // Left
-            { x: Game.Config.WorldDimensions.width, y: 0, width: 1, height: Game.Config.WorldDimensions.height, color: 0xff0000 } // Right
+            { x: 0, y: -1, width: Game.Config.LevelDimensions.width, height: 1, color: 0xff0000 }, // Top
+            { x: 0, y: Game.Config.LevelDimensions.height, width: Game.Config.LevelDimensions.width, height: 1, color: 0xff0000 }, // Bottom
+            { x: -1, y: 0, width: 1, height: Game.Config.LevelDimensions.height, color: 0xff0000 }, // Left
+            { x: Game.Config.LevelDimensions.width, y: 0, width: 1, height: Game.Config.LevelDimensions.height, color: 0xff0000 } // Right
         ];
 
         // Add the walls from the level map

@@ -11,20 +11,23 @@ type WallScaffold = {
     color: number;
 }
 
-type Wall = {
+type LevelEntity = {
     body: planck.Body;
     sprite: PIXI.Graphics;
 }
 
 export class Level {
     // TODO Make as a "robust" wall object
-    private walls: Wall[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
+    private walls: LevelEntity[]; // TODO Consider what happens when we move to sprite instead of PIXI.Graphics
+    private finishTiles: LevelEntity[];
     constructor(world: planck.World, stage: PIXI.Container, levelMap: number[][]) {
         // TODO Reconsider when we might have more than just walls in a level
         this.walls = [];
+        this.finishTiles = [];
 
         // Convert level map to level scaffold constructing simple wall objects.
         // Do calculation world (Meter) space and NOT pixels
+        // TODO Break all these generative steps into their own functions
 
         // Start with the level boundaries themselves
         const levelScaffold: WallScaffold[] = [
@@ -43,7 +46,7 @@ export class Level {
                         y: y,
                         width: 1,
                         height: 1,
-                        color: 0x3d3d3d
+                        color: 0x3d3d3d // TODO Choose a better color or make it configurable
                     });
                 }
             }
@@ -59,7 +62,10 @@ export class Level {
             const center = new planck.Vec2(x + width / 2, y + height / 2);
             wallBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
               restitution: 0.95,
-              friction: 0
+              friction: 0,
+              userData: "WALL",
+              filterCategoryBits: Game.Config.Physics.CategoryWall,
+              filterMaskBits: Game.Config.Physics.CategoryPlayer
             });
 
             // TODO Figure out what to do when using an actual sprite with textures
@@ -78,8 +84,56 @@ export class Level {
             sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
             stage.addChild(sprite);
 
+            // TODO Don't really need this now but could be useful later
             this.walls.push({ body: wallBody, sprite });
         });
+
+        // TODO Add finish tiles for the player to reach
+        // TODO Figure out how many to randomly generate
+        for (let i = 0; i < 4; i++) {
+            const x = Math.random() * (Game.Config.WorldDimensions.width - 1);
+            const y = Math.random() * (Game.Config.WorldDimensions.height - 1);
+            const width = 1;
+            const height = 1;
+            const color = 0x00ff00; // TODO Choose a better color or make it configurable
+
+            // TODO Refer to echoes and Box2D docs on how to be set up the tiles, fixtures and such
+            // TODO Do we need to dispose of bodies and fixtures?
+            // TODO HOw do we flag these as static?
+            const finishBody = world.createBody();
+            const center = new planck.Vec2(x + width / 2, y + height / 2);
+            finishBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
+                isSensor: true,
+                userData: "FINISH",
+                filterCategoryBits: Game.Config.Physics.CategoryFinish,
+                filterMaskBits: Game.Config.Physics.CategoryPlayer,
+            });
+
+            // TODO Figure out what to do when using an actual sprite with textures
+            const sprite = new PIXI.Graphics();
+            sprite
+                .beginFill(color)
+                .drawRect(
+                    x * Game.Config.PixelsPerMeter, 
+                    y * Game.Config.PixelsPerMeter, 
+                    width * Game.Config.PixelsPerMeter, 
+                    height * Game.Config.PixelsPerMeter
+                )
+                .endFill(); // TODO Fix deprecation
+
+            sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
+            sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
+            stage.addChild(sprite);
+
+            // TODO Don't really need this now but could be useful later
+        this.finishTiles.push({ body: finishBody, sprite });
+        }
+
+        // TODO Add other entities
+    }
+
+    onBeginContact(contact: planck.Contact) {
+        console.log(contact);
     }
 
     update() {

@@ -1,3 +1,5 @@
+import { Game } from '../core/Game';
+
 import * as planck from 'planck-js';
 import * as PIXI from 'pixi.js';
 
@@ -18,7 +20,10 @@ export class Ball {
         this.body.createFixture(new planck.Circle(ballRadius), {
             restitution: 0.95,
             friction: 0,
-            density: 1
+            density: 1,
+            userData: "PLAYER",
+            filterCategoryBits: Game.Config.Physics.CategoryPlayer,
+            filterMaskBits: Game.Config.Physics.CategoryWall | Game.Config.Physics.CategoryFinish
         });
 
         // TODO Understand how PIXI.Graphic generates a renderable entity

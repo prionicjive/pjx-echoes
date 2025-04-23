@@ -14,10 +14,15 @@ export class Game {
             height: 720
         },
         WorldDimensions: {
-            width: 80,
-            height: 45
+            width: 32,
+            height: 32
         },
-        PixelsPerMeter: 16
+        PixelsPerMeter: 16,
+        Physics: {
+            CategoryPlayer: 0x0001,
+            CategoryWall: 0x0002,
+            CategoryFinish: 0x0004,
+        }
     };
 
     private app: PIXI.Application | null = null;;
@@ -41,6 +46,35 @@ export class Game {
         const { map: levelMap, visitedFloors} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
         this.level = new Level(this.world, this.app.stage, levelMap);
+
+        // Set up contact listeners
+        this.world.on('begin-contact', (contact) => {
+            const fixtureA = contact.getFixtureA();
+            const fixtureB = contact.getFixtureB();
+
+            const aType = fixtureA.getUserData();
+            const bType = fixtureB.getUserData();
+
+            if (
+                (aType === "PLAYER" && bType === "FINISH") ||
+                (aType === "FINISH" && bType === "PLAYER")
+            ) {
+                // TODO Handle player reaching finish tile
+                console.log("Player reached finish tile!");
+
+                // TODO Regenerate level and place player and finish tiles
+            } else if (
+                (aType === "PLAYER" && bType === "WALL") ||
+                (aType === "WALL" && bType === "PLAYER")
+            ) {
+                // TODO Handle player reaching finish tile
+                console.log("Player hit a wall!");
+
+                // TODO Regenerate level and place player and finish tiles
+            }
+        });
+
+        // TODO Better place to do this?
 
         // Find a random valid starting spot
         const [startX, startY] = visitedFloors[Math.floor(Math.random() * visitedFloors.length)].split(",");

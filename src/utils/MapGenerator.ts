@@ -1,11 +1,10 @@
-type MapData = {
+interface MapData {
     map: number[][], openSpaces: string[]
 }
 
 export class MapGenerator {
     // Generate map from cellular automata
     static generateFromCellularAutomata(mapWidth: number, mapHeight: number, wallChance: number, smoothingSteps: number): MapData {
-
         // Initialize the map
         function generateMap(): MapData {
             let map: number[][] = [];
@@ -28,9 +27,7 @@ export class MapGenerator {
             }
 
             // Step 3: Ensure connectivity
-            const correctedMapData = ensureConnectivity(map);
-
-            return correctedMapData;
+            return ensureConnectivity(map);
         }
 
         // Smoothing: Cellular Automata step
@@ -42,10 +39,12 @@ export class MapGenerator {
                 for (let x = 0; x < mapWidth; x++) {
                     let walls = countWallsAround(map, x, y);
 
-                    // Cellular automata logic:
-                    // If more than 4 neighboring walls, make this a wall
-                    // Else if less than 4 neighboring walls, make this a open space
-                    // Else(If exactly 4 neighboring walls),  keep this as is
+                    /** 
+                        Cellular automata logic:
+                        - If more than 4 neighboring walls, make this a wall
+                        - Else if less than 4 neighboring walls, make this an open space
+                        - Else if exactly 4 neighboring walls, keep this as is
+                    **/
                     if (walls > 4) {
                         newMap[y][x] = 1; // Wall
                     } else if (walls < 4) {
@@ -58,14 +57,18 @@ export class MapGenerator {
             return newMap;
         }
 
-        // Helper: Count walls around a tile
+        // Count walls around a tile
         function countWallsAround(map: number[][], x: number, y: number): number {
             let count = 0;
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
-                    if (dx === 0 && dy === 0) continue;
+                    if (dx === 0 && dy === 0) {
+                        continue;
+                    }
+
                     let nx = x + dx;
                     let ny = y + dy;
+                    
                     if (nx < 0 || ny < 0 || nx >= mapWidth || ny >= mapHeight) {
                         count++; // Out of bounds = treated as wall
                     } else if (map[ny][nx] === 1) {

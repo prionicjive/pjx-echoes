@@ -1,6 +1,7 @@
 import { Game } from '../core/Game';
+import { Entity } from './types';
 
-import * as planck from 'planck-js';
+import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { MathUtils } from '../utils/MathUtils';
 
@@ -12,14 +13,9 @@ type WallScaffold = {
     color: number;
 }
 
-type LevelEntity = {
-    body: planck.Body;
-    sprite: PIXI.Graphics; // TODO Consider what to do when we use an actual textured sprite
-}
-
 export class Level {
-    private walls: LevelEntity[];
-    private finishTiles: LevelEntity[];
+    private walls: Entity[];
+    private finishTiles: Entity[];
 
     constructor(world: planck.World, levelContainer: PIXI.Container | null, levelMap: number[][], openSpaces: string[]) {
         // TODO Reconsider when we might have more than just walls in a level

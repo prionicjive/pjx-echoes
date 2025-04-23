@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import planck from 'planck-js';
+import planck from 'planck';
 import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
@@ -13,8 +13,8 @@ export class Game {
             height: 720
         },
         WorldDimensions: {
-            width: 200,
-            height: 200
+            width: 32,
+            height: 32
         },
         PixelsPerMeter: 16,
         Camera: {
@@ -67,6 +67,9 @@ export class Game {
 
     constructor() {
         this.input = new InputManager();
+
+        // Set up input event handlers
+        window.addEventListener('mousedown', this.handlePointerDown.bind(this));
     }
 
     async init() {
@@ -85,6 +88,8 @@ export class Game {
     }
 
     reset() {
+        // TODO Consider how / what to reset or destroy and rebuild
+
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
         this.levelContainer?.removeChildren();
@@ -133,11 +138,7 @@ export class Game {
         this.player = new Player(this.world, this.levelContainer, Number(startX), Number(startY));
 
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();
-
-        // Reset the Input Manager (to clear out event listener and have latest player object)
-        this.input.reset(this.player, this.levelContainer);
-        
+        this.instantlyCenterCamera();  
     }
 
     onBeginContact(contact: planck.Contact) {
@@ -233,5 +234,14 @@ export class Game {
             this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.WorldDimensions.width * Game.Config.PixelsPerMeter));
             this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.WorldDimensions.height * Game.Config.PixelsPerMeter));
         }
+    }
+
+    handlePointerDown(e: MouseEvent) {
+        if (!this.player || !this.levelContainer) return;
+
+        const levelPosition = { x: this.levelContainer.x, y: this.levelContainer.y };
+        const screenPosition = { x: e.clientX, y: e.clientY };
+
+        this.input.handleMouseClick(this.player, screenPosition, levelPosition);
     }
 }

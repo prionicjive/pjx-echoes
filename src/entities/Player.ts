@@ -1,12 +1,11 @@
 import { Game } from '../core/Game';
-
-import * as planck from 'planck-js';
+import { Entity } from './types';
+import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 
-// TODO Maybe have an implements for Entity that contain a body and sprite
-export class Player {
-    private body: planck.Body;
-    public sprite: PIXI.Graphics;
+export class Player implements Entity {
+    body: planck.Body;
+    sprite: PIXI.Graphics;
 
     constructor(world: planck.World, levelContainer: PIXI.Container | null, x: number, y: number) {
         // Create player

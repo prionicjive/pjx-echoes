@@ -4,32 +4,26 @@ type MapData = {
 
 export class MapGenerator {
     // Generate map from cellular automata
-    static generateFromCellularAutomata(width: number, height: number): MapData {
-        // Map constants
-        // TODO Better way to handle this
-        const WIDTH = width;
-        const HEIGHT = height;
-        const WALL_CHANCE = 0.45; // Chance that any given space is a tile
-        const SMOOTHING_STEPS = 4;
+    static generateFromCellularAutomata(mapWidth: number, mapHeight: number, wallChance: number, smoothingSteps: number): MapData {
 
         // Initialize the map
         function generateMap(): MapData {
             let map: number[][] = [];
 
             // Step 1: Random fill
-            for (let y = 0; y < HEIGHT; y++) {
+            for (let y = 0; y < mapHeight; y++) {
                 map[y] = [];
-                for (let x = 0; x < WIDTH; x++) {
-                    if (x === 0 || y === 0 || x === WIDTH-1 || y === HEIGHT-1) {
+                for (let x = 0; x < mapWidth; x++) {
+                    if (x === 0 || y === 0 || x === mapWidth - 1 || y === mapHeight - 1) {
                         map[y][x] = 1; // Border walls
                     } else {
-                        map[y][x] = Math.random() < WALL_CHANCE ? 1 : 0; // 1 = Wall, 0 = Open
+                        map[y][x] = Math.random() < wallChance ? 1 : 0; // 1 = Wall, 0 = Open
                     }
                 }
             }
 
             // Step 2: Smooth the map
-            for (let i = 0; i < SMOOTHING_STEPS; i++) {
+            for (let i = 0; i < smoothingSteps; i++) {
                 map = smoothMap(map);
             }
 
@@ -43,9 +37,9 @@ export class MapGenerator {
         function smoothMap(map: number[][]): number[][] {
             let newMap: number[][] = [];
 
-            for (let y = 0; y < HEIGHT; y++) {
+            for (let y = 0; y < mapHeight; y++) {
                 newMap[y] = [];
-                for (let x = 0; x < WIDTH; x++) {
+                for (let x = 0; x < mapWidth; x++) {
                     let walls = countWallsAround(map, x, y);
 
                     // Cellular automata logic:
@@ -72,7 +66,7 @@ export class MapGenerator {
                     if (dx === 0 && dy === 0) continue;
                     let nx = x + dx;
                     let ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= WIDTH || ny >= HEIGHT) {
+                    if (nx < 0 || ny < 0 || nx >= mapWidth || ny >= mapHeight) {
                         count++; // Out of bounds = treated as wall
                     } else if (map[ny][nx] === 1) {
                         count++;
@@ -85,13 +79,13 @@ export class MapGenerator {
         // Flood fill to ensure connectivity
         function ensureConnectivity(map: number[][]): MapData {
             const visited = new Set<string>();
-            let startX: number = Math.floor(WIDTH / 2);
-            let startY: number = Math.floor(HEIGHT / 2);
+            let startX: number = Math.floor(mapWidth / 2);
+            let startY: number = Math.floor(mapHeight / 2);
 
             if (map[startY][startX] === 1) {
                 // If starting point is a wall, find nearest open space
-                for (let y = 0; y < HEIGHT; y++) {
-                    for (let x = 0; x < WIDTH; x++) {
+                for (let y = 0; y < mapHeight; y++) {
+                    for (let x = 0; x < mapWidth; x++) {
                         if (map[y][x] === 0) {
                             startX = x;
                             startY = y;
@@ -114,7 +108,7 @@ export class MapGenerator {
                     for (const [dx, dy] of [[1,0], [-1,0], [0,1], [0,-1]]) {
                         const nx = entry.x + dx;
                         const ny = entry.y + dy;
-                        if (nx >= 0 && ny >= 0 && nx < WIDTH && ny < HEIGHT) {
+                        if (nx >= 0 && ny >= 0 && nx < mapWidth && ny < mapHeight) {
                             if (map[ny][nx] === 0) {
                                 queue.push({x: nx, y: ny});
                             }
@@ -124,8 +118,8 @@ export class MapGenerator {
             }
 
             // Mark unreachable open spaces back into walls
-            for (let y = 0; y < HEIGHT; y++) {
-                for (let x = 0; x < WIDTH; x++) {
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
                     const key = `${x},${y}`;
                     if (map[y][x] === 0 && !visited.has(key)) {
                         map[y][x] = 1; // Wall it off

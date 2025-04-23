@@ -19,9 +19,21 @@ export class Game {
         },
         PixelsPerMeter: 8,
         Physics: {
-            CategoryPlayer: 0x0001,
-            CategoryWall: 0x0002,
-            CategoryFinish: 0x0004,
+            Collision: {
+                categoryPlayer: 0x0001,
+                categoryWall: 0x0002,
+                categoryFinish: 0x0004
+            },
+            Player: {
+                linearDamping: 0.35,
+                impulseFactor: 1,
+                restitution: 0.95,
+                radius: 0.48,
+            }
+        },
+        MapGeneration: {
+            wallChance: 0.45, // Chance that any given space is a wall
+            smoothingSteps: 4
         },
         FinishTiles: {
             min: 1,
@@ -78,7 +90,12 @@ export class Game {
 
         // TODO Regenerate level and place player and finish tiles
         // Generate a map
-        const { map: levelMap, openSpaces} = MapGenerator.generateFromCellularAutomata(Game.Config.WorldDimensions.width, Game.Config.WorldDimensions.height);
+        const { map: levelMap, openSpaces} = MapGenerator.generateFromCellularAutomata(
+            Game.Config.WorldDimensions.width, 
+            Game.Config.WorldDimensions.height,
+            Game.Config.MapGeneration.wallChance,
+            Game.Config.MapGeneration.smoothingSteps
+        );
         MapGenerator.renderMap(levelMap); // TODO This is ONLY here for debug purposes
         this.level = new Level(this.world, this.app?.stage, levelMap, openSpaces);
 

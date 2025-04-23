@@ -67,8 +67,8 @@ export class Level {
               restitution: 0.95,
               friction: 0,
               userData: "WALL",
-              filterCategoryBits: Game.Config.Physics.CategoryWall,
-              filterMaskBits: Game.Config.Physics.CategoryPlayer
+              filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
+              filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
             });
 
             // TODO Figure out what to do when using an actual sprite with textures
@@ -108,8 +108,8 @@ export class Level {
             finishBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
                 isSensor: true,
                 userData: "FINISH",
-                filterCategoryBits: Game.Config.Physics.CategoryFinish,
-                filterMaskBits: Game.Config.Physics.CategoryPlayer,
+                filterCategoryBits: Game.Config.Physics.Collision.categoryFinish,
+                filterMaskBits: Game.Config.Physics.Collision.categoryPlayer,
             });
 
             // TODO Figure out what to do when using an actual sprite with textures

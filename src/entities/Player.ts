@@ -9,18 +9,18 @@ export class Player {
 
     constructor(world: planck.World, stage: PIXI.Container | undefined, x: number, y: number) {
         // Create player
-        // TODO Figure out if I externalize / centralize player configuration
-        const playerRadius = 0.48;
+        const playerRadius = Game.Config.Physics.Player.radius;
 
-        // TODO Look at echoes for examples of how Box2D creates bodies and fixtures
         this.body = world.createDynamicBody(planck.Vec2(x + 0.5, y + 0.5));
+        this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
+
         this.body.createFixture(new planck.Circle(playerRadius), {
-            restitution: 0.95,
+            restitution: Game.Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
             userData: "PLAYER",
-            filterCategoryBits: Game.Config.Physics.CategoryPlayer,
-            filterMaskBits: Game.Config.Physics.CategoryWall | Game.Config.Physics.CategoryFinish
+            filterCategoryBits: Game.Config.Physics.Collision.categoryPlayer,
+            filterMaskBits: Game.Config.Physics.Collision.categoryWall | Game.Config.Physics.Collision.categoryFinish
         });
 
         // TODO Understand how PIXI.Graphic generates a renderable entity
@@ -45,7 +45,7 @@ export class Player {
         const length = Math.hypot(deltaX, deltaY);
 
         // Tune this value for desired impulse strength
-        const impulseScale = 3.0; // TODO Try different values but see what is done in echoes
+        const impulseScale = Game.Config.Physics.Player.impulseFactor;
 
         // Calculate impulse vector (direction * scale)
         const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);

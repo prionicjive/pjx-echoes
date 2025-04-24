@@ -73,4 +73,4 @@ Pull requests, suggestions, and feedback are welcome! Feel free to open an issue
 
 ## License
 
-[Add your license here]
+[MIT License](LICENSE)

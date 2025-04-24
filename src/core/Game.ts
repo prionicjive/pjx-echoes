@@ -5,6 +5,7 @@
 
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
+import gsap from 'gsap';
 import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
@@ -219,6 +220,8 @@ export class Game {
             this.lightMask = new PIXI.Graphics();
             this.lightSprite.mask = this.lightMask;
 
+            this.flickerLight(this.lightSprite);
+
             this.levelContainer.addChild(this.lightMask);
         }
         
@@ -228,6 +231,16 @@ export class Game {
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
     }
+
+    // TODO Put in some other Light-related file / class
+    flickerLight(lightSprite: PIXI.Sprite) {
+        gsap.to(lightSprite, {
+          alpha: () => 0.6 + Math.random() * 0.15,
+          duration: 0.5 + Math.random() * 0.5,
+          ease: 'power1.inOut',
+          onComplete: () => this.flickerLight(lightSprite)
+        });
+      }
 
     /**
      * Handles collision events from Planck.js, such as the player reaching a finish tile
@@ -441,6 +454,6 @@ export class Game {
         }
 
         this.lightMask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
-        this.lightMask.fill({ color: Game.Config.Light.color, alpha: 0.25 });
+        this.lightMask.fill();
     }
 }

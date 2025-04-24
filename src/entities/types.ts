@@ -3,5 +3,5 @@ import * as PIXI from 'pixi.js';
 
 export interface Entity {
     body: planck.Body;
-    sprite: PIXI.Graphics;
+    sprite: PIXI.Sprite;
 }

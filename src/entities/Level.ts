@@ -52,30 +52,30 @@ export class Level {
         levelScaffold.forEach(wallScaffold => {
             const { x, y, width, height, color } = wallScaffold;
             
-            const wallBody = world.createBody();
+            const wallBody = world.createBody(new planck.Vec2(x, y));
             
-            const center = new planck.Vec2(x + width / 2, y + height / 2);
-            wallBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
-              restitution: 0.95,
-              friction: 0,
-              userData: "WALL",
-              filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
-              filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
+            wallBody.createFixture(
+                new planck.Box(
+                    width / 2, 
+                    height / 2, 
+                    new planck.Vec2(width / 2, height / 2), 
+                    0
+                ), {
+                restitution: 0.95,
+                friction: 0,
+                userData: "WALL",
+                filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
+                filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
             });
 
-            // TODO Figure out what to do when using an actual sprite with textures
-            const sprite = new PIXI.Graphics();
-            sprite
-                .rect(
-                    x * Game.Config.PixelsPerMeter, 
-                    y * Game.Config.PixelsPerMeter, 
-                    width * Game.Config.PixelsPerMeter, 
-                    height * Game.Config.PixelsPerMeter
-                )
-                .fill(color);
-
+            // Create sprite
+            const sprite = PIXI.Sprite.from(Game.Config.Textures.wall);
             sprite.x = wallBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
+            sprite.width = width * Game.Config.PixelsPerMeter;
+            sprite.height = height * Game.Config.PixelsPerMeter;
+            sprite.tint = color;
+            
             levelContainer?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later
@@ -90,28 +90,30 @@ export class Level {
             const height = Game.Config.Finish.size;
             const color = Game.Config.Finish.color;
 
-            const finishBody = world.createBody();
-            const center = new planck.Vec2(Number(x) + width / 2, Number(y) + height / 2);
-            finishBody.createFixture(new planck.Box(width / 2, height / 2, center, 0), {
+            const finishBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
+
+            finishBody.createFixture(
+                new planck.Box(
+                    width / 2, 
+                    height / 2, 
+                    new planck.Vec2(width / 2, height / 2), 
+                    0
+                ), {
                 isSensor: true,
                 userData: "FINISH",
                 filterCategoryBits: Game.Config.Physics.Collision.categoryFinish,
                 filterMaskBits: Game.Config.Physics.Collision.categoryPlayer,
             });
 
-            // TODO Figure out what to do when using an actual sprite with textures
-            const sprite = new PIXI.Graphics();
-            sprite
-                .rect(
-                    Number(x) * Game.Config.PixelsPerMeter, 
-                    Number(y) * Game.Config.PixelsPerMeter, 
-                    width * Game.Config.PixelsPerMeter, 
-                    height * Game.Config.PixelsPerMeter
-                )
-                .fill(color);
-
+            // Create sprite
+            const sprite = PIXI.Sprite.from(Game.Config.Textures.finish);
             sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
             sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
+            sprite.width = width * Game.Config.PixelsPerMeter;
+            sprite.height = height * Game.Config.PixelsPerMeter;
+            sprite.tint = color;
+
+
             levelContainer?.addChild(sprite);
 
             // TODO Don't really need this now but could be useful later

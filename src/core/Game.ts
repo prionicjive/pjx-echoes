@@ -13,10 +13,10 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 128,
-            height: 72
+            width: 64,
+            height: 36
         },
-        PixelsPerMeter: 8,
+        PixelsPerMeter: 16,
         Camera: {
             lerpFactor: 0.05,
             DeadZone: {
@@ -55,6 +55,11 @@ export class Game {
         Finish: {
             color: 0x00ff00,
             size: 1
+        },
+        Textures: {
+            player: 'assets/textures/player.png',
+            wall: 'assets/textures/wall.png',
+            finish: 'assets/textures/finish.png'
         }
     };
 
@@ -78,6 +83,9 @@ export class Game {
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
         document.body.appendChild(this.app.canvas);
 
+        // Load assets
+        await this.loadAssets();
+
         // TODO See if I can convert this to an arrow function
         this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
 
@@ -85,6 +93,13 @@ export class Game {
         this.reset();
 
         // TODO Handle additional setup if needed
+    }
+
+    async loadAssets() {
+        // Load textures
+        await PIXI.Assets.load(Game.Config.Textures.player);
+        await PIXI.Assets.load(Game.Config.Textures.wall);
+        await PIXI.Assets.load(Game.Config.Textures.finish);
     }
 
     reset() {

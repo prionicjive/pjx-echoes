@@ -5,7 +5,7 @@ import * as PIXI from 'pixi.js';
 
 export class Player implements Entity {
     body: planck.Body;
-    sprite: PIXI.Graphics;
+    sprite: PIXI.Sprite;
 
     constructor(world: planck.World, levelContainer: PIXI.Container | null, x: number, y: number) {
         // Create player
@@ -23,12 +23,15 @@ export class Player implements Entity {
             filterMaskBits: Game.Config.Physics.Collision.categoryWall | Game.Config.Physics.Collision.categoryFinish
         });
 
-        this.sprite = new PIXI.Graphics();
-        this.sprite
-            .circle(0, 0, playerRadius * Game.Config.PixelsPerMeter)
-            .fill(Game.Config.Player.color);
-        this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
-        this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
+        // Generate sprite
+        this.sprite = PIXI.Sprite.from(Game.Config.Textures.player);
+        this.sprite.x = (this.body.getPosition().x - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
+        this.sprite.width = 2 * playerRadius * Game.Config.PixelsPerMeter;
+        this.sprite.height = 2 * playerRadius * Game.Config.PixelsPerMeter;
+        this.sprite.tint = Game.Config.Player.color;
+        
+        console.log("Player : ", this.sprite.x, this.sprite.y)
         levelContainer?.addChild(this.sprite);
     }
 
@@ -51,8 +54,8 @@ export class Player implements Entity {
     }
 
     update() {
-        this.sprite.x = this.body.getPosition().x * Game.Config.PixelsPerMeter;
-        this.sprite.y = this.body.getPosition().y * Game.Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
     }
 }

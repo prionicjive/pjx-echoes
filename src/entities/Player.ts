@@ -8,6 +8,7 @@
 
 import { Game } from '../core/Game';
 import { Entity } from './types';
+import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 
@@ -25,13 +26,12 @@ export class Player implements Entity {
      *
      * @param {planck.World} world - The Planck.js world to add the player to.
      * @param {PIXI.Container | null} levelContainer - Where to add the player's sprite for rendering.
-     * @param {number} x - Initial x position (in world units).
-     * @param {number} y - Initial y position (in world units).
+     * @param {Point} spawnPoint - Initial position (in world units).
      */
-    constructor(world: planck.World, levelContainer: PIXI.Container | null, x: number, y: number) {
+    constructor(world: planck.World, levelContainer: PIXI.Container | null, spawnPoint: Point) {
         // Place player in the center of the tile
         const playerRadius = Game.Config.Player.radius;
-        const center = new planck.Vec2(x + Game.Config.Wall.size / 2, y + Game.Config.Wall.size / 2);
+        const center = new planck.Vec2(spawnPoint.x + Game.Config.Wall.size / 2, spawnPoint.y + Game.Config.Wall.size / 2);
         this.body = world.createDynamicBody(center);
         this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
 
@@ -61,9 +61,9 @@ export class Player implements Entity {
      * Applies an impulse to the player body toward the given pixel position.
      * Used to move the player in response to input.
      *
-     * @param {{x: number, y: number}} levelRelativePositionInPixels - Target position in pixels, relative to the level.
+     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
      */
-    applyImpulseTowards(levelRelativePositionInPixels: {x: number, y: number}) {
+    applyImpulseTowards(levelRelativePositionInPixels: Point) {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         

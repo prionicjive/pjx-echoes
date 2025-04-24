@@ -223,7 +223,7 @@ export class Game {
         }
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.levelContainer, Number(startX), Number(startY));
+        this.player = new Player(this.world, this.levelContainer, {x: Number(startX), y: Number(startY)});
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
@@ -437,10 +437,10 @@ export class Game {
     
         this.lightMask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
         for (const pt of lightPoints) {
-            this.lightMask.lineTo(pt.x * Game.Config.PixelsPerMeter, pt.y * Game.Config.PixelsPerMeter);
+            this.lightMask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
         }
 
-        this.lightMask.lineTo(lightPoints[0].x * Game.Config.PixelsPerMeter, lightPoints[0].y * Game.Config.PixelsPerMeter);
+        this.lightMask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
         this.lightMask.fill({ color: Game.Config.Light.color, alpha: 0.25 });
     }
 }

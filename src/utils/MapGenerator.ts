@@ -1,3 +1,6 @@
+import { Point } from "../utils/types";
+
+
 // MapGenerator.ts
 /**
  * Utilities for procedural map/maze generation using cellular automata and flood fill.
@@ -68,7 +71,7 @@ export class MapGenerator {
             for (let y = 0; y < mapHeight; y++) {
                 newMap[y] = [];
                 for (let x = 0; x < mapWidth; x++) {
-                    let walls = countWallsAround(map, x, y);
+                    let walls = countWallsAround(map, { x, y });
 
                     /**
                         Cellular automata logic:
@@ -92,7 +95,7 @@ export class MapGenerator {
          * Counts the number of wall tiles around a given tile (8 neighbors).
          * Out-of-bounds is treated as a wall.
          */
-        function countWallsAround(map: number[][], x: number, y: number): number {
+        function countWallsAround(map: number[][], point: Point): number {
             let count = 0;
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
@@ -100,8 +103,8 @@ export class MapGenerator {
                         continue;
                     }
 
-                    let nx = x + dx;
-                    let ny = y + dy;
+                    let nx = point.x + dx;
+                    let ny = point.y + dy;
                     
                     if (nx < 0 || ny < 0 || nx >= mapWidth || ny >= mapHeight) {
                         count++; // Out of bounds = treated as wall
@@ -137,7 +140,7 @@ export class MapGenerator {
             }
 
             // Flood fill from the starting open space
-            const queue: {x: number, y: number}[] = [{x: startX, y: startY}];
+            const queue: Point[] = [{x: startX, y: startY}];
             while (queue.length > 0) {
                 const entry = queue.pop();
 

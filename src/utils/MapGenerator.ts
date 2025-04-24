@@ -1,15 +1,41 @@
+// MapGenerator.ts
+/**
+ * Utilities for procedural map/maze generation using cellular automata and flood fill.
+ * Produces a random but playable map for each game session.
+ *
+ * @module MapGenerator
+ */
+
+/**
+ * Represents the result of a map generation operation.
+ * @typedef {Object} MapData
+ * @property {number[][]} map - The generated map (2D array: 1 = wall, 0 = open)
+ * @property {string[]} openSpaces - Array of open tile positions as "x,y" strings
+ */
 interface MapData {
     map: number[][], openSpaces: string[]
 }
 
+/**
+ * MapGenerator provides static methods for generating and rendering procedural maps.
+ */
 export class MapGenerator {
-    // Generate map from cellular automata
+    /**
+     * Generates a map using cellular automata and ensures all open spaces are connected.
+     *
+     * @param {number} mapWidth - Width of the map in tiles.
+     * @param {number} mapHeight - Height of the map in tiles.
+     * @param {number} wallChance - Probability (0-1) that a tile starts as a wall.
+     * @param {number} smoothingSteps - Number of smoothing iterations to run.
+     * @returns {MapData} The generated map and list of open spaces.
+     */
     static generateFromCellularAutomata(mapWidth: number, mapHeight: number, wallChance: number, smoothingSteps: number): MapData {
-        // Initialize the map
+        // Helper to generate, smooth, and connect the map
         function generateMap(): MapData {
             let map: number[][] = [];
 
             // Step 1: Random fill
+            // Each tile is randomly set to wall or open, with borders always walls
             for (let y = 0; y < mapHeight; y++) {
                 map[y] = [];
                 for (let x = 0; x < mapWidth; x++) {
@@ -22,15 +48,20 @@ export class MapGenerator {
             }
 
             // Step 2: Smooth the map
+            // Cellular automata: tiles become walls/open based on neighbors
             for (let i = 0; i < smoothingSteps; i++) {
                 map = smoothMap(map);
             }
 
             // Step 3: Ensure connectivity
+            // Use flood fill to guarantee all open spaces are reachable
             return ensureConnectivity(map);
         }
 
-        // Smoothing: Cellular Automata step
+        /**
+         * Runs a cellular automata smoothing step over the map.
+         * Walls are created/removed based on the number of neighboring walls.
+         */
         function smoothMap(map: number[][]): number[][] {
             let newMap: number[][] = [];
 
@@ -39,7 +70,7 @@ export class MapGenerator {
                 for (let x = 0; x < mapWidth; x++) {
                     let walls = countWallsAround(map, x, y);
 
-                    /** 
+                    /**
                         Cellular automata logic:
                         - If more than 4 neighboring walls, make this a wall
                         - Else if less than 4 neighboring walls, make this an open space
@@ -57,7 +88,10 @@ export class MapGenerator {
             return newMap;
         }
 
-        // Count walls around a tile
+        /**
+         * Counts the number of wall tiles around a given tile (8 neighbors).
+         * Out-of-bounds is treated as a wall.
+         */
         function countWallsAround(map: number[][], x: number, y: number): number {
             let count = 0;
             for (let dy = -1; dy <= 1; dy++) {
@@ -79,14 +113,18 @@ export class MapGenerator {
             return count;
         }
 
-        // Flood fill to ensure connectivity
+        /**
+         * Ensures all open spaces are reachable (single connected component).
+         * Uses a flood fill from the center (or nearest open tile) to find reachable spaces.
+         * Any unreachable open space is converted to a wall.
+         */
         function ensureConnectivity(map: number[][]): MapData {
             const visited = new Set<string>();
             let startX: number = Math.floor(mapWidth / 2);
             let startY: number = Math.floor(mapHeight / 2);
 
+            // If the center is a wall, find the nearest open space
             if (map[startY][startX] === 1) {
-                // If starting point is a wall, find nearest open space
                 for (let y = 0; y < mapHeight; y++) {
                     for (let x = 0; x < mapWidth; x++) {
                         if (map[y][x] === 0) {
@@ -98,6 +136,7 @@ export class MapGenerator {
                 }
             }
 
+            // Flood fill from the starting open space
             const queue: {x: number, y: number}[] = [{x: startX, y: startY}];
             while (queue.length > 0) {
                 const entry = queue.pop();
@@ -108,6 +147,7 @@ export class MapGenerator {
                     if (visited.has(key)) continue;
                     visited.add(key);
 
+                    // Check all four cardinal directions
                     for (const [dx, dy] of [[1,0], [-1,0], [0,1], [0,-1]]) {
                         const nx = entry.x + dx;
                         const ny = entry.y + dy;
@@ -120,7 +160,7 @@ export class MapGenerator {
                 }
             }
 
-            // Mark unreachable open spaces back into walls
+            // Mark any unreachable open spaces as walls
             for (let y = 0; y < mapHeight; y++) {
                 for (let x = 0; x < mapWidth; x++) {
                     const key = `${x},${y}`;
@@ -139,7 +179,11 @@ export class MapGenerator {
         return generateMap();
     }
 
-    // Simple text rendering of a map
+    /**
+     * Renders a map to the console using ASCII art.
+     * Walls are shown as blocks, open spaces as spaces.
+     * @param {number[][]} map - The map to render.
+     */
     static renderMap(map: number[][]): void {
         console.clear();
         console.log(map.map(row => row.map(cell => cell ? "█" : " ").join("")).join("\n"));

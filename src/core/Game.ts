@@ -1,3 +1,8 @@
+// Game.ts
+// Main game controller for pjx-echoes.
+// Handles initialization, the main loop, entity management, input, and camera logic.
+// Everything flows through here!
+
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { InputManager } from './InputManager.ts';
@@ -6,58 +11,59 @@ import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 
 export class Game {
-    // TODO Better structure all of this
+    // Centralized game configuration
+    // Tweak these values to adjust screen size, world generation, physics, and asset paths.
     static Config = {
         ScreenDimensions: {
-            width: 1280,
+            width: 1280,     // Size of the visible game window (in pixels)
             height: 720
         },
         LevelDimensions: {
-            width: 64,
-            height: 36
+            width: 128,       // Width of the generated level (in grid units)
+            height: 72
         },
-        PixelsPerMeter: 16,
+        PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
-            lerpFactor: 0.05,
+            lerpFactor: 0.05, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
-                width: 320,
+                width: 320,   // Camera doesn't move unless player leaves this zone
                 height: 180
             }
         },
         Physics: {
             Collision: {
-                categoryPlayer: 0x0001,
+                categoryPlayer: 0x0001, // Bitmasks for Planck.js collision filtering
                 categoryWall: 0x0002,
                 categoryFinish: 0x0004
             },
             Player: {
-                linearDamping: 0.35,
-                impulseFactor: 1,
-                restitution: 0.95,
+                linearDamping: 0.35,    // How quickly the player slows down
+                impulseFactor: 1,       // How strong the impulse is on click
+                restitution: 0.95,      // Bounciness
             }
         },
         MapGeneration: {
             wallChance: 0.45, // Chance that any given space is a wall
-            smoothingSteps: 4
+            smoothingSteps: 4 // How many times to smooth the map
         },
         FinishTiles: {
-            min: 1,
+            min: 1,           // Min/max number of finish tiles per level
             max: 7
         },
         Player: {
-            color: 0x00aaee,
-            radius: 0.48,
+            color: 0x00aaee,  // Tint color for the player sprite
+            radius: 0.48,     // Physics radius of the player (in meters)
         },
         Wall: {
-            color: 0x3d3d3d,
-            size: 1
+            color: 0x3d3d3d,  // Tint color for walls
+            size: 1           // Wall size (in meters)
         },
         Finish: {
-            color: 0x00ff00,
-            size: 1
+            color: 0x00ff00,  // Tint color for finish tiles
+            size: 1           // Finish tile size (in meters)
         },
         Textures: {
-            player: 'assets/textures/player.png',
+            player: 'assets/textures/player.png', // Paths to texture assets
             wall: 'assets/textures/wall.png',
             finish: 'assets/textures/finish.png'
         }
@@ -70,6 +76,10 @@ export class Game {
     private level: Level | null = null;
     private input: InputManager;
 
+    /**
+     * Constructs the main Game instance.
+     * Sets up the input manager and attaches event listeners for mouse input.
+     */
     constructor() {
         this.input = new InputManager();
 
@@ -77,24 +87,33 @@ export class Game {
         window.addEventListener('mousedown', this.handlePointerDown.bind(this));
     }
 
+    /**
+     * Initializes the PIXI application, loads all required assets,
+     * and starts the main game loop.
+     * @async
+     * @returns {Promise<void>}
+     */
     async init() {
         // Set up PIXI application
         this.app = new PIXI.Application();
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
         document.body.appendChild(this.app.canvas);
 
-        // Load assets
+        // Preload textures before starting the game loop to avoid rendering glitches.
         await this.loadAssets();
 
-        // TODO See if I can convert this to an arrow function
+        // Start the main loop
         this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
-
-        // Call reset() to (re)initialize all the meaning bits
         this.reset();
 
         // TODO Handle additional setup if needed
     }
 
+    /**
+     * Loads all texture assets needed for the game before gameplay begins.
+     * @async
+     * @returns {Promise<void>}
+     */
     async loadAssets() {
         // Load textures
         await PIXI.Assets.load(Game.Config.Textures.player);
@@ -102,6 +121,10 @@ export class Game {
         await PIXI.Assets.load(Game.Config.Textures.finish);
     }
 
+    /**
+     * Resets the game state: clears containers, destroys physics bodies,
+     * and generates a fresh level and player.
+     */
     reset() {
         // TODO Consider how / what to reset or destroy and rebuild
 
@@ -156,6 +179,11 @@ export class Game {
         this.instantlyCenterCamera();  
     }
 
+    /**
+     * Handles collision events from Planck.js, such as the player reaching a finish tile
+     * or interacting with walls.
+     * @param {planck.Contact} contact - The collision contact event from Planck.js.
+     */
     onBeginContact(contact: planck.Contact) {
         const fixtureA = contact.getFixtureA();
         const fixtureB = contact.getFixtureB();
@@ -181,8 +209,12 @@ export class Game {
         }
     }
 
-    // TODO Maybe a better place for this?
-    instantlyCenterCamera() {
+    /**
+     * Instantly centers the camera on the player or the level, depending on which is smaller.
+     * Used at game start to avoid jarring camera jumps.
+     */
+     instantlyCenterCamera() {
+        // If the level is smaller than the screen, center it. Otherwise, center on the player.
         if (this.player?.sprite && this.levelContainer) {
             const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
             const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
@@ -197,6 +229,21 @@ export class Game {
                 const screenCenterX = Game.Config.ScreenDimensions.width / 2;
                 const targetX = -this.player.sprite.x + screenCenterX;
 
+                // World coordinates of screen center
+                const cameraX = -this.levelContainer.x;
+
+                // Get ball position relative to camera center
+                const offsetX = this.player.sprite.x - cameraX;
+
+                // Only move camera if the ball is outside the dead zone
+                let moveX = 0;
+
+                if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
+                    moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
+                } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
+                    moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
+                }
+
                 // Move the camera a little bit toward the target each frame
                 this.levelContainer.x += (targetX - this.levelContainer.x);
                 // Keep camera inside the world edges
@@ -209,6 +256,21 @@ export class Game {
                 // Camera target position: center the ball on the screen
                 const screenCenterY = Game.Config.ScreenDimensions.height / 2;
                 const targetY = -this.player.sprite.y + screenCenterY;
+                
+                // World coordinates of screen center
+                const cameraY = -this.levelContainer.y;
+
+                // Get ball position relative to camera center
+                const offsetY = this.player.sprite.y - cameraY;
+
+                // Only move camera if the ball is outside the dead zone
+                let moveY = 0;
+
+                if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
+                    moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
+                } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
+                    moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
+                }
 
                 // Move the camera a little bit toward the target each frame
                 this.levelContainer.y += (targetY - this.levelContainer.y);
@@ -218,6 +280,10 @@ export class Game {
         }
     }
 
+    /**
+     * Called every frame. Steps physics, updates entities, and handles camera movement.
+     * @param {number} deltaMS - Time since the last frame, in milliseconds.
+     */
     update(deltaMS: number) {
         const deltaTime = deltaMS / 1000;
 
@@ -228,7 +294,18 @@ export class Game {
         this.player?.update();
         this.level?.update();
 
+        // Update camera
+        this.updateCamera();
+
         // TODO Any other entities to update?
+    }
+
+    /**
+     * Handles camera movement each frame, using soft-follow logic and dead zone.
+     */
+    updateCamera() {
+        // If the level is smaller than the screen, keep it centered.
+        // Otherwise, use soft-follow logic with a dead zone to track the player.
 
         // Smooth camera follow
         if (this.player?.sprite && this.levelContainer) {
@@ -296,6 +373,11 @@ export class Game {
         }
     }
 
+    /**
+     * Handles mouse click events: translates screen coordinates to world coordinates
+     * and applies an impulse to the player.
+     * @param {MouseEvent} e - The mouse event triggered by user input.
+     */
     handlePointerDown(e: MouseEvent) {
         if (!this.player || !this.levelContainer) return;
 

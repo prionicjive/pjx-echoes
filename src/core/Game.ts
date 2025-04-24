@@ -6,6 +6,7 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import gsap from 'gsap';
+import { PixiPlugin } from "gsap/PixiPlugin";
 import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
@@ -78,7 +79,9 @@ export class Game {
         Light: {
             numRays: 360,
             radius: 10,
-            color: 0xddbbbb
+            defaultColor: 0xddbbbb,
+            startColor: 0x2222ff,
+            endColor: 0x44dcff
         }
     };
 
@@ -122,6 +125,12 @@ export class Game {
         this.app = new PIXI.Application();
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
         document.body.appendChild(this.app.canvas);
+
+        // Register the GSAP Pixi plugin
+        gsap.registerPlugin(PixiPlugin);
+
+        // Give the plugin a reference to the PIXI object
+        PixiPlugin.registerPIXI(PIXI);
 
         // Set light related stuff
         // TODO Again, better way to do this?
@@ -214,13 +223,14 @@ export class Game {
             this.lightSprite.width = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter;
             this.lightSprite.height = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter; 
             this.lightSprite.blendMode = 'add';
-            this.lightSprite.tint = Game.Config.Light.color;
+            this.lightSprite.tint = Game.Config.Light.defaultColor;
             this.levelContainer.addChild(this.lightSprite);
 
             this.lightMask = new PIXI.Graphics();
             this.lightSprite.mask = this.lightMask;
 
             this.flickerLight(this.lightSprite);
+            this.oscillateLight(this.lightSprite, Game.Config.Light.startColor, Game.Config.Light.endColor);
 
             this.levelContainer.addChild(this.lightMask);
         }
@@ -235,13 +245,25 @@ export class Game {
     // TODO Put in some other Light-related file / class
     flickerLight(lightSprite: PIXI.Sprite) {
         gsap.to(lightSprite, {
-          alpha: () => 0.6 + Math.random() * 0.15,
+          alpha: 0.6 + Math.random() * 0.15,
           duration: 0.5 + Math.random() * 0.5,
           ease: 'power1.inOut',
           onComplete: () => this.flickerLight(lightSprite)
         });
       }
 
+    // TODO Put in some other light-related file / class
+    oscillateLight(lightSprite: PIXI.Sprite, startColor: number, endColor: number) {
+        gsap.fromTo(lightSprite, {
+            pixi: { tint: startColor},
+        }, {
+            duration: 2,
+            pixi: { tint: endColor },
+            yoyo: true,
+            repeat: -1
+        });
+    }
+    
     /**
      * Handles collision events from Planck.js, such as the player reaching a finish tile
      * or interacting with walls.

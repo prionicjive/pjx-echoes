@@ -9,6 +9,7 @@ import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
+import { LightUtils } from '../utils/LightUtils.ts';
 
 export class Game {
     // Centralized game configuration
@@ -22,7 +23,7 @@ export class Game {
             width: 128,       // Width of the generated level (in grid units)
             height: 72
         },
-        PixelsPerMeter: 8, // How many pixels represent one physics meter
+        PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -70,6 +71,9 @@ export class Game {
             player: '/assets/textures/player.png', // Paths to texture assets
             wall: '/assets/textures/wall.png',
             finish: '/assets/textures/finish.png'
+        },
+        Light: {
+            numRays: 360
         }
     };
 
@@ -79,6 +83,12 @@ export class Game {
     private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
+    private wallEdges: [{x: number, y: number}, {x: number, y: number}][] = []; // TODO Better place to put this?
+
+    // Lights
+    // TODO Better structured elsewhere?
+    // TODO Does this need to be in its own container so that it's rendered differently order wise?
+    private playerLight: PIXI.Graphics | null = null;
 
     /**
      * Constructs the main Game instance.
@@ -176,6 +186,17 @@ export class Game {
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
 
+        // Find edges of all walls for the given map
+        // TODO Consider what might need to be done if the level is ever dynamic
+        // TODO Better place to put this?
+        this.wallEdges = LightUtils.getWallEdgesFromMap(levelMap, Game.Config.Wall.size);
+
+        // Construct the PIXI light object
+        this.playerLight = new PIXI.Graphics();
+        this.levelContainer.addChild(this.playerLight);
+
+        console.log("Wall edges: ", this.wallEdges);
+
         // Construct a player at a given location
         this.player = new Player(this.world, this.levelContainer, Number(startX), Number(startY));
 
@@ -265,6 +286,9 @@ export class Game {
         // Update player and level
         this.player?.update();
         this.level?.update();
+
+        // Now, render the lights!
+        this.renderLights();
 
         // Update camera
         this.updateCamera(deltaTime);
@@ -361,5 +385,32 @@ export class Game {
         const levelPosition = { x: this.levelContainer.x, y: this.levelContainer.y };
 
         this.input.handleMouseClick(this.player, screenPosition, levelPosition);
+    }
+
+    renderLights() {
+        if (!this.playerLight ||  !this.player) return;
+
+        const playerPos = {
+            x: this.player?.body.getPosition().x,
+            y: this.player?.body.getPosition().y
+        };
+
+        // Build out the light points in world space (Meters)
+        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays);
+
+        // TODO What about light radius (In terms of pixel or meters)?
+        this.playerLight.clear();
+    
+        const gradientColor = 0xffffcc;
+    
+        this.playerLight.beginFill(gradientColor, 0.5);
+        this.playerLight.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
+    
+        for (const pt of lightPoints) {
+            this.playerLight.lineTo(pt.x * Game.Config.PixelsPerMeter, pt.y * Game.Config.PixelsPerMeter);
+        }
+    
+        this.playerLight.lineTo(lightPoints[0].x * Game.Config.PixelsPerMeter, lightPoints[0].y * Game.Config.PixelsPerMeter);
+        this.playerLight.endFill();
     }
 }

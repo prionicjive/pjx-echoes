@@ -10,14 +10,13 @@
  * LightUtils provides static helper functions for light operations commonly needed in this game.
  */
 export class LightUtils {
-
-/**
+    
+    /**
      * Gets wall edges for all map tiles facing open space
      * @param {number[][]} map - The map to check.
      * @returns {[{x: number, y: number}, {x: number, y: number}][]} - The array of edges.
      */
-    static getWallEdgesFromMap(map: number[][], tileSize: number): [{x: number, y: number}, {x: number, y: number}][] {
-        // TODO Should this be housed somewhere else?
+    static getValidEdgesForMap(map: number[][], tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
         const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
 
         const mapWidth = map[0].length;
@@ -25,32 +24,66 @@ export class LightUtils {
 
         for (let y = 0; y < mapHeight; y++) {
             for (let x = 0; x < mapWidth; x++) {
-                if (map[y][x] === 1) { // 1 = wall
+                // Find valid edges for each tile and add them to the master list of edges
+                this.getValidEdgesForTile(map, x, y, tileSize).forEach(edge => edges.push(edge));
+            }
+        }
 
-                    const tileX = x * tileSize;
-                    const tileY = y * tileSize;
+        return edges;
+    }
 
-                    // Check neighbors in clock-wise fashionand add only outer edges
-                    if (y > 0 && map[y - 1][x] === 0) {
-                        // Top edge
-                        edges.push([{ x: tileX, y: tileY }, { x: tileX + tileSize, y: tileY }]);
-                    }
+    /**
+     * Gets edges facing open space in a given search area.
+     * @param {number[][]} map - The map to check.
+     * @returns {[{x: number, y: number}, {x: number, y: number}][]} - The array of edges.
+     */
+    static getValidEdgesForArea(map: number[][], origin: {x: number, y: number}, searchRadius: number, tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
+        const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
 
-                    if (x < mapWidth - 1 && map[y][x + 1] === 0) {
-                        // Right edge
-                        edges.push([{ x: tileX + tileSize, y: tileY }, { x: tileX + tileSize, y: tileY + tileSize }]);
-                    }
+        // Get an AABB in tile coords
+        const minTileX = Math.max(0, Math.floor((origin.x - searchRadius) / tileSize));
+        const maxTileX = Math.min(map[0].length - 1, Math.ceil((origin.x + searchRadius) / tileSize));
+        const minTileY = Math.max(0, Math.floor((origin.y - searchRadius) / tileSize));
+        const maxTileY = Math.min(map.length - 1, Math.ceil((origin.y + searchRadius) / tileSize));
 
-                    if (y < mapHeight - 1 && map[y + 1][x] === 0) {
-                        // Bottom edge
-                        edges.push([{ x: tileX + tileSize, y: tileY + tileSize }, { x: tileX, y: tileY + tileSize }]);
-                    }
+        for (let y = minTileY; y <= maxTileY; y++) {
+            for (let x = minTileX; x <= maxTileX; x++) {
+                // Find valid edges for each tile and add them to the master list of edges
+                this.getValidEdgesForTile(map, x, y, tileSize).forEach(edge => edges.push(edge));
+            }
+        }
 
-                    if (x > 0 && map[y][x - 1] === 0) {
-                        // Left edge
-                        edges.push([{ x: tileX, y: tileY + tileSize }, { x: tileX, y: tileY }]);
-                    }
-                }
+        return edges;
+    }
+
+    static getValidEdgesForTile(map: number[][], x: number, y: number, tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
+        const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
+        const mapWidth = map[0].length;
+        const mapHeight = map.length;
+
+        if (map[y][x] === 1) { // 1 = wall
+            const tileX = x * tileSize;
+            const tileY = y * tileSize;
+
+            // Check neighbors in clock-wise fashionand add only outer edges
+            if (y > 0 && map[y - 1][x] === 0) {
+                // Top edge
+                edges.push([{ x: tileX, y: tileY }, { x: tileX + tileSize, y: tileY }]);
+            }
+
+            if (x < mapWidth - 1 && map[y][x + 1] === 0) {
+                // Right edge
+                edges.push([{ x: tileX + tileSize, y: tileY }, { x: tileX + tileSize, y: tileY + tileSize }]);
+            }
+
+            if (y < mapHeight - 1 && map[y + 1][x] === 0) {
+                // Bottom edge
+                edges.push([{ x: tileX + tileSize, y: tileY + tileSize }, { x: tileX, y: tileY + tileSize }]);
+            }
+
+            if (x > 0 && map[y][x - 1] === 0) {
+                // Left edge
+                edges.push([{ x: tileX, y: tileY + tileSize }, { x: tileX, y: tileY }]);
             }
         }
 

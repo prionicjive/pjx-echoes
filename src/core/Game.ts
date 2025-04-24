@@ -87,7 +87,7 @@ export class Game {
     private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
-    private wallEdges: [{x: number, y: number}, {x: number, y: number}][] = []; // TODO Better place to put this?
+    private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
     // Lights
     // TODO Better structured elsewhere?
@@ -188,19 +188,16 @@ export class Game {
             Game.Config.MapGeneration.smoothingSteps
         );
 
+        this.rawLevelMap = levelMap;
+
         // Use text renderer for debug purposes
-        // MapGenerator.renderMap(levelMap); 
+        // MapGenerator.renderMap(this.rawLevelMap); 
 
         // Construct the level and finish tiles (among other entities)
         this.level = new Level(this.world, this.levelContainer, levelMap, openSpaces);
 
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-
-        // Find edges of all walls for the given map
-        // TODO Consider what might need to be done if the level is ever dynamic
-        // TODO Better place to put this?
-        this.wallEdges = LightUtils.getWallEdgesFromMap(levelMap, Game.Config.Wall.size);
 
         // Set up light related stuff
         // TODO Better way or place  to do this?
@@ -421,7 +418,8 @@ export class Game {
         };
 
         // Build out the light points in world space (Meters)
-        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays, Game.Config.Light.radius);
+        const validEdges = LightUtils.getValidEdgesForArea(this.rawLevelMap, playerPos, Game.Config.Light.radius);
+        const lightPoints = LightUtils.buildLightPolygon(playerPos, validEdges, Game.Config.Light.numRays, Game.Config.Light.radius);
 
         // Update light sprite to be under where the player
         if (this.lightSprite) {

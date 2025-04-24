@@ -93,6 +93,8 @@ export class LightUtils {
      *   The starting point of the line segment.
      * @param {{ x: number, y: number }} segEnd
      *   The ending point of the line segment.
+     * @param {number} [maxDistance=Infinity]
+     *   The maximum distance along the ray to check for intersection.
      * @returns {{ x: number, y: number, distance: number } | null}
      *   The intersection point (with distance along the ray), or null if no intersection.
      */
@@ -102,7 +104,8 @@ export class LightUtils {
             direction: { x: number, y: number } 
         }, 
         segStart: { x: number, y: number }, 
-        segEnd: { x: number, y: number }
+        segEnd: { x: number, y: number },
+        maxDistance: number = Infinity
     ) {
         // Extract ray and segment components for clarity
         const r_px = ray.start.x;
@@ -131,11 +134,13 @@ export class LightUtils {
 
         // Intersection occurs if t > 0 (in front of the ray) and 0 <= u <= 1 (on the segment)
         if (t > 0 && u >= 0 && u <= 1) {
+            if (t * r_mag <= maxDistance) {
             return {
                 x: r_px + r_dx * t,
                 y: r_py + r_dy * t,
                 distance: t
             };
+            }
         }
 
         // No intersection found
@@ -150,6 +155,8 @@ export class LightUtils {
      *   The ray to cast, defined by a starting point and direction vector.
      * @param {[{x: number, y: number}, {x: number, y: number}][]} segments
      *   An array of line segments, each defined by two endpoints.
+     * @param {number} maxDistance
+     *   The maximum distance along the ray to check for intersection.
      * @returns {{ x: number, y: number, distance: number } | null}
      *   The closest intersection point (with distance along the ray), or null if no intersection.
      */
@@ -158,17 +165,27 @@ export class LightUtils {
             start: { x: number, y: number },
             direction: { x: number, y: number } 
         }, 
-        segments: [{x: number, y: number}, {x: number, y: number}][]
+        segments: [{x: number, y: number}, {x: number, y: number}][],
+        maxDistance: number
     ) {
         let closestIntersection: { x: number, y: number, distance: number } | null = null;
     
         // Check each segment for intersection with the ray
         for (const [a, b] of segments) {
-            const intersection = LightUtils.getRaySegmentIntersection(ray, a, b);
+            const intersection = LightUtils.getRaySegmentIntersection(ray, a, b, maxDistance);
             // If this intersection is closer than any previous one, remember it
             if (intersection && (!closestIntersection || intersection.distance < closestIntersection.distance)) {
                 closestIntersection = intersection;
             }
+        }
+
+        if (!closestIntersection) {
+            // No wall hit — project ray endpoint at radius
+            closestIntersection = {
+                x: ray.start.x + ray.direction.x * maxDistance,
+                y: ray.start.y + ray.direction.y * maxDistance,
+                distance: maxDistance
+            };
         }
     
         // Return the nearest intersection (or null if there were none)
@@ -186,13 +203,16 @@ export class LightUtils {
      *   An array of wall or obstacle segments, each defined by two endpoints.
      * @param {number} [numRays=360]
      *   The number of rays to cast (higher values = smoother polygon, but more computation).
+     * @param {number} lightRadius
+     *   The radius of the light source (In meters).
      * @returns {Array<{ x: number, y: number, angle: number }>}
      *   An array of intersection points (with angle), sorted to form a continuous polygon.
      */
     static buildLightPolygon(
         point: { x: number, y: number }, 
         segments: [{x: number, y: number}, {x: number, y: number}][],
-        numRays: number = 360
+        numRays: number = 360,
+        lightRadius: number
     ): { x: number, y: number, angle: number }[] {
         // Shoot rays outward from the point in all directions
         const rays = LightUtils.shootRaysFromPoint(point, numRays);
@@ -200,7 +220,7 @@ export class LightUtils {
     
         // For each ray, find the closest intersection with any segment
         for (const ray of rays) {
-            const hit = LightUtils.findClosestIntersection(ray, segments);
+            const hit = LightUtils.findClosestIntersection(ray, segments, lightRadius);
             if (hit) {
                 // Store the intersection point along with its angle from the origin
                 points.push({ ...hit, angle: Math.atan2(hit.y - point.y, hit.x - point.x) });

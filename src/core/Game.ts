@@ -73,7 +73,8 @@ export class Game {
             finish: '/assets/textures/finish.png'
         },
         Light: {
-            numRays: 360
+            numRays: 360,
+            lightRadius: 20,
         }
     };
 
@@ -396,7 +397,7 @@ export class Game {
         };
 
         // Build out the light points in world space (Meters)
-        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays);
+        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays, Game.Config.Light.lightRadius);
 
         // TODO What about light radius (In terms of pixel or meters)?
         this.playerLight.clear();

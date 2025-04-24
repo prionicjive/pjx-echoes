@@ -54,8 +54,6 @@ export class Player implements Entity {
         this.sprite.height = 2 * playerRadius * Game.Config.PixelsPerMeter;
         this.sprite.tint = Game.Config.Player.color;
         
-        // For debugging: log initial position
-        console.log("Player : ", this.sprite.x, this.sprite.y)
         levelContainer?.addChild(this.sprite);
     }
 

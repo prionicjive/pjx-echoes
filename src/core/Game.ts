@@ -215,68 +215,68 @@ export class Game {
      */
      instantlyCenterCamera() {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
-        if (this.player?.sprite && this.levelContainer) {
-            const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
-            const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
-            const screenWidth = Game.Config.ScreenDimensions.width;
-            const screenHeight = Game.Config.ScreenDimensions.height;
+        if (!this.player || !this.levelContainer) return;
 
-            // Center if level is smaller than screen
-            if (levelWidthInPixels <= screenWidth) {
-                this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
-            } else {
-                // Camera target position: center the ball on the screen
-                const screenCenterX = Game.Config.ScreenDimensions.width / 2;
-                const targetX = -this.player.sprite.x + screenCenterX;
+        const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
+        const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
+        const screenWidth = Game.Config.ScreenDimensions.width;
+        const screenHeight = Game.Config.ScreenDimensions.height;
 
-                // World coordinates of screen center
-                const cameraX = -this.levelContainer.x;
+        // Center if level is smaller than screen
+        if (levelWidthInPixels <= screenWidth) {
+            this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
+        } else {
+            // Camera target position: center the ball on the screen
+            const screenCenterX = Game.Config.ScreenDimensions.width / 2;
+            const targetX = -this.player.sprite.x + screenCenterX;
 
-                // Get ball position relative to camera center
-                const offsetX = this.player.sprite.x - cameraX;
+            // World coordinates of screen center
+            const cameraX = -this.levelContainer.x;
 
-                // Only move camera if the ball is outside the dead zone
-                let moveX = 0;
+            // Get ball position relative to camera center
+            const offsetX = this.player.sprite.x - cameraX;
 
-                if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
-                    moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
-                } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
-                    moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
-                }
+            // Only move camera if the ball is outside the dead zone
+            let moveX = 0;
 
-                // Move the camera a little bit toward the target each frame
-                this.levelContainer.x += (targetX - this.levelContainer.x);
-                // Keep camera inside the world edges
-                this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+            if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
+            } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
             }
 
-            if (levelHeightInPixels <= screenHeight) {
-                this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
-            } else {
-                // Camera target position: center the ball on the screen
-                const screenCenterY = Game.Config.ScreenDimensions.height / 2;
-                const targetY = -this.player.sprite.y + screenCenterY;
-                
-                // World coordinates of screen center
-                const cameraY = -this.levelContainer.y;
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.x += (targetX - this.levelContainer.x);
+            // Keep camera inside the world edges
+            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+        }
 
-                // Get ball position relative to camera center
-                const offsetY = this.player.sprite.y - cameraY;
+        if (levelHeightInPixels <= screenHeight) {
+            this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
+        } else {
+            // Camera target position: center the ball on the screen
+            const screenCenterY = Game.Config.ScreenDimensions.height / 2;
+            const targetY = -this.player.sprite.y + screenCenterY;
+            
+            // World coordinates of screen center
+            const cameraY = -this.levelContainer.y;
 
-                // Only move camera if the ball is outside the dead zone
-                let moveY = 0;
+            // Get ball position relative to camera center
+            const offsetY = this.player.sprite.y - cameraY;
 
-                if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
-                    moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
-                } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
-                    moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
-                }
+            // Only move camera if the ball is outside the dead zone
+            let moveY = 0;
 
-                // Move the camera a little bit toward the target each frame
-                this.levelContainer.y += (targetY - this.levelContainer.y);
-                // Keep camera inside the world edges
-                this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
+            if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
+            } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
             }
+
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.y += (targetY - this.levelContainer.y);
+            // Keep camera inside the world edges
+            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
         }
     }
 
@@ -308,68 +308,68 @@ export class Game {
         // Otherwise, use soft-follow logic with a dead zone to track the player.
 
         // Smooth camera follow
-        if (this.player?.sprite && this.levelContainer) {
-            const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
-            const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
-            const screenWidth = Game.Config.ScreenDimensions.width;
-            const screenHeight = Game.Config.ScreenDimensions.height;
+        if (!this.player || !this.player.sprite || !this.levelContainer) return;
 
-            // Center if level is smaller than screen
-            if (levelWidthInPixels <= screenWidth) {
-                this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
-            } else {
-                // Camera target position: center the ball on the screen
-                const screenCenterX = Game.Config.ScreenDimensions.width / 2;
+        const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
+        const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
+        const screenWidth = Game.Config.ScreenDimensions.width;
+        const screenHeight = Game.Config.ScreenDimensions.height;
 
-                // World coordinates of screen center
-                const cameraX = -this.levelContainer.x;
+        // Center if level is smaller than screen
+        if (levelWidthInPixels <= screenWidth) {
+            this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
+        } else {
+            // Camera target position: center the ball on the screen
+            const screenCenterX = Game.Config.ScreenDimensions.width / 2;
 
-                // Get ball position relative to camera center
-                const offsetX = this.player.sprite.x - cameraX;
+            // World coordinates of screen center
+            const cameraX = -this.levelContainer.x;
 
-                // Only move camera if the ball is outside the dead zone
-                let moveX = 0;
+            // Get ball position relative to camera center
+            const offsetX = this.player.sprite.x - cameraX;
 
-                if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
-                    moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
-                } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
-                    moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
-                }
+            // Only move camera if the ball is outside the dead zone
+            let moveX = 0;
 
-                // Move the camera a little bit toward the target each frame
-                this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor;
-
-                // Keep camera inside the world edges
-                this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+            if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
+            } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
+                moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
             }
 
-            if (levelHeightInPixels <= screenHeight) {
-                this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
-            } else {
-                // Camera target position: center the ball on the screen
-                const screenCenterY = Game.Config.ScreenDimensions.height / 2;
-                
-                // World coordinates of screen center
-                const cameraY = -this.levelContainer.y;
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor;
 
-                // Get ball position relative to camera center
-                const offsetY = this.player.sprite.y - cameraY;
+            // Keep camera inside the world edges
+            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+        }
 
-                // Only move camera if the ball is outside the dead zone
-                let moveY = 0;
+        if (levelHeightInPixels <= screenHeight) {
+            this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
+        } else {
+            // Camera target position: center the ball on the screen
+            const screenCenterY = Game.Config.ScreenDimensions.height / 2;
+            
+            // World coordinates of screen center
+            const cameraY = -this.levelContainer.y;
 
-                if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
-                    moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
-                } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
-                    moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
-                }
+            // Get ball position relative to camera center
+            const offsetY = this.player.sprite.y - cameraY;
 
-                // Move the camera a little bit toward the target each frame
-                this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor;
-                
-                // Keep camera inside the world edges
-                this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
+            // Only move camera if the ball is outside the dead zone
+            let moveY = 0;
+
+            if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
+            } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
+                moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
             }
+
+            // Move the camera a little bit toward the target each frame
+            this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor;
+            
+            // Keep camera inside the world edges
+            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
         }
     }
 
@@ -379,10 +379,14 @@ export class Game {
      * @param {MouseEvent} e - The mouse event triggered by user input.
      */
     handlePointerDown(e: MouseEvent) {
-        if (!this.player || !this.levelContainer) return;
-
+        if (!this.player || !this.levelContainer || !this.app) return;
+    
+        const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
+        const screenPosition = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        }
         const levelPosition = { x: this.levelContainer.x, y: this.levelContainer.y };
-        const screenPosition = { x: e.clientX, y: e.clientY };
 
         this.input.handleMouseClick(this.player, screenPosition, levelPosition);
     }

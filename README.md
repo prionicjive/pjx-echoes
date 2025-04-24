@@ -59,10 +59,10 @@ npm run build
 ## TODO
 
 ### Graphical Polish
+- Light occlusion or "fog of war" style lighting
 - Post processing bloom / glow shader and crt shader (From pixi-filters)
 - Post processing glitch shaders, for when colliding with wall
 - Particle trail effect for player
-- Light occlusion or "fog of war" style lighting
 - UI / HUD / Menus
 
 ### Map Maze improvement

@@ -2,6 +2,8 @@
 
 An exploration game rooted in navigating the unknown and unseen.
 
+[Playable via Netlify](https://pjx-echoes.netlify.app/)
+
 ## Features
 - Map / maze generation with rooms / caves, utilizing cellular automata and flood fill
 - Player impulse movement via Planck physics

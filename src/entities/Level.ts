@@ -58,10 +58,38 @@ export class Level {
 
         // Start with the outer boundaries of the level
         const levelScaffold: WallScaffold[] = [
-            { x: 0, y: -1, width: Game.Config.LevelDimensions.width, height: 1, color: 0xff0000 }, // Top
-            { x: 0, y: Game.Config.LevelDimensions.height, width: Game.Config.LevelDimensions.width, height: 1, color: 0xff0000 }, // Bottom
-            { x: -1, y: 0, width: 1, height: Game.Config.LevelDimensions.height, color: 0xff0000 }, // Left
-            { x: Game.Config.LevelDimensions.width, y: 0, width: 1, height: Game.Config.LevelDimensions.height, color: 0xff0000 } // Right
+            // Top
+            { 
+                x: 0, 
+                y: -Game.Config.OutOfBounds.thickness, 
+                width: Game.Config.LevelDimensions.width, 
+                height: Game.Config.OutOfBounds.thickness,
+                 color: Game.Config.OutOfBounds.color 
+            }, 
+            // Bottom
+            { 
+                x: 0, 
+                y: Game.Config.LevelDimensions.height, 
+                width: Game.Config.LevelDimensions.width, 
+                height: Game.Config.OutOfBounds.thickness, 
+                color: Game.Config.OutOfBounds.color 
+            },
+            // Left
+            { 
+                x: -Game.Config.OutOfBounds.thickness, 
+                y: 0,
+                width: Game.Config.OutOfBounds.thickness, 
+                height: Game.Config.LevelDimensions.height, 
+                color: Game.Config.OutOfBounds.color 
+            }, 
+            // Right
+            { 
+                x: Game.Config.LevelDimensions.width, 
+                y: 0, 
+                width: Game.Config.OutOfBounds.thickness, 
+                height: Game.Config.LevelDimensions.height, 
+                color: Game.Config.OutOfBounds.color 
+            }
         ];
 
         // Add walls from the map (1 = wall)

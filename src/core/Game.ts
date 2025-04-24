@@ -51,16 +51,20 @@ export class Game {
             max: 7
         },
         Player: {
-            color: 0x00aaee,  // Tint color for the player sprite
+            color: 0x32ddff,  // Tint color for the player sprite
             radius: 0.48,     // Physics radius of the player (in meters)
         },
         Wall: {
-            color: 0x3d3d3d,  // Tint color for walls
+            color: 0x444444,  // Tint color for walls
             size: 1           // Wall size (in meters)
         },
         Finish: {
-            color: 0x00ff00,  // Tint color for finish tiles
+            color: 0x2ddf03,  // Tint color for finish tiles
             size: 1           // Finish tile size (in meters)
+        },
+        OutOfBounds: {
+            color: 0x32ddff,
+            thickness: 0.5
         },
         Textures: {
             player: '/assets/textures/player.png', // Paths to texture assets

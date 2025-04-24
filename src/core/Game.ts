@@ -22,9 +22,9 @@ export class Game {
             width: 128,       // Width of the generated level (in grid units)
             height: 72
         },
-        PixelsPerMeter: 8, // How many pixels represent one physics meter
+        PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
-            lerpFactor: 0.05, // Smoothing factor for camera movement (0 = slow, 1 = instant)
+            lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
                 width: 320,   // Camera doesn't move unless player leaves this zone
                 height: 180
@@ -229,27 +229,11 @@ export class Game {
             // Camera target position: center the ball on the screen
             const screenCenterX = Game.Config.ScreenDimensions.width / 2;
             const targetX = -this.player.sprite.x + screenCenterX;
-
-            // World coordinates of screen center
-            const cameraX = -this.levelContainer.x;
-
-            // Get ball position relative to camera center
-            const offsetX = this.player.sprite.x - cameraX;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveX = 0;
-
-            if (offsetX < screenCenterX - Game.Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX - Game.Config.Camera.DeadZone.width / 2);
-            } else if (offsetX > screenCenterX + Game.Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX + Game.Config.Camera.DeadZone.width / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
             this.levelContainer.x += (targetX - this.levelContainer.x);
+
             // Keep camera inside the world edges
             this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
-        }
+         }
 
         if (levelHeightInPixels <= screenHeight) {
             this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
@@ -257,24 +241,8 @@ export class Game {
             // Camera target position: center the ball on the screen
             const screenCenterY = Game.Config.ScreenDimensions.height / 2;
             const targetY = -this.player.sprite.y + screenCenterY;
-            
-            // World coordinates of screen center
-            const cameraY = -this.levelContainer.y;
-
-            // Get ball position relative to camera center
-            const offsetY = this.player.sprite.y - cameraY;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveY = 0;
-
-            if (offsetY < screenCenterY - Game.Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY - Game.Config.Camera.DeadZone.height / 2);
-            } else if (offsetY > screenCenterY + Game.Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY + Game.Config.Camera.DeadZone.height / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
             this.levelContainer.y += (targetY - this.levelContainer.y);
+
             // Keep camera inside the world edges
             this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
         }
@@ -295,7 +263,7 @@ export class Game {
         this.level?.update();
 
         // Update camera
-        this.updateCamera();
+        this.updateCamera(deltaTime);
 
         // TODO Any other entities to update?
     }
@@ -303,7 +271,7 @@ export class Game {
     /**
      * Handles camera movement each frame, using soft-follow logic and dead zone.
      */
-    updateCamera() {
+    updateCamera(deltaTime: number) {
         // If the level is smaller than the screen, keep it centered.
         // Otherwise, use soft-follow logic with a dead zone to track the player.
 
@@ -338,7 +306,7 @@ export class Game {
             }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor;
+            this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor * deltaTime;
 
             // Keep camera inside the world edges
             this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
@@ -366,7 +334,7 @@ export class Game {
             }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor;
+            this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor * deltaTime;
             
             // Keep camera inside the world edges
             this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));

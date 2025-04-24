@@ -11,6 +11,7 @@ import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { GraphicsUtils } from '../utils/GraphicsUtils.ts';
+import { Segment } from '../utils/types';
 
 export class Game {
     // Centralized game configuration
@@ -88,6 +89,7 @@ export class Game {
     private level: Level | null = null;
     private input: InputManager;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
+    private validEdgesLookupTable: Segment[][][] = [];
 
     // Lights
     // TODO Better structured elsewhere?
@@ -188,7 +190,9 @@ export class Game {
             Game.Config.MapGeneration.smoothingSteps
         );
 
+        // Useful for look up information
         this.rawLevelMap = levelMap;
+        this.validEdgesLookupTable = LightUtils.getValidEdgesLookupForMap(this.rawLevelMap);
 
         // Use text renderer for debug purposes
         // MapGenerator.renderMap(this.rawLevelMap); 
@@ -418,7 +422,7 @@ export class Game {
         };
 
         // Build out the light points in world space (Meters)
-        const validEdges = LightUtils.getValidEdgesForArea(this.rawLevelMap, playerPos, Game.Config.Light.radius);
+        const validEdges = LightUtils.lookupValidEdgesForArea(this.validEdgesLookupTable, playerPos, Game.Config.Light.radius);
         const lightPoints = LightUtils.buildLightPolygon(playerPos, validEdges, Game.Config.Light.numRays, Game.Config.Light.radius);
 
         // Update light sprite to be under where the player
@@ -430,13 +434,13 @@ export class Game {
         // Draw mask
         this.lightMask.clear();
 
-        this.lightMask.beginFill(Game.Config.Light.color, 0.25);
+    
         this.lightMask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
         for (const pt of lightPoints) {
             this.lightMask.lineTo(pt.x * Game.Config.PixelsPerMeter, pt.y * Game.Config.PixelsPerMeter);
         }
 
         this.lightMask.lineTo(lightPoints[0].x * Game.Config.PixelsPerMeter, lightPoints[0].y * Game.Config.PixelsPerMeter);
-        this.lightMask.endFill();
+        this.lightMask.fill({ color: Game.Config.Light.color, alpha: 0.25 });
     }
 }

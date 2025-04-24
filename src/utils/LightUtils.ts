@@ -1,3 +1,5 @@
+import { Segment } from "../utils/types";
+
 // LightUtils.ts
 /**
  * A collection of light utility functions for pjx-echoes.
@@ -14,50 +16,52 @@ export class LightUtils {
     /**
      * Gets wall edges for all map tiles facing open space
      * @param {number[][]} map - The map to check.
-     * @returns {[{x: number, y: number}, {x: number, y: number}][]} - The array of edges.
+     * @returns {Segment[][][]} - The lookup table of edges for each tile in the map.
      */
-    static getValidEdgesForMap(map: number[][], tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
-        const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
+    static getValidEdgesLookupForMap(map: number[][], tileSize: number = 1): Segment[][][] {
+        const validEdgeLookupTable: Segment[][][] = [];
 
         const mapWidth = map[0].length;
         const mapHeight = map.length;
 
         for (let y = 0; y < mapHeight; y++) {
+            validEdgeLookupTable[y] = [];
             for (let x = 0; x < mapWidth; x++) {
                 // Find valid edges for each tile and add them to the master list of edges
-                this.getValidEdgesForTile(map, x, y, tileSize).forEach(edge => edges.push(edge));
+                validEdgeLookupTable[y][x] = this.getValidEdgesForTile(map, x, y, tileSize);
             }
         }
 
-        return edges;
+        return validEdgeLookupTable;
     }
 
     /**
      * Gets edges facing open space in a given search area.
      * @param {number[][]} map - The map to check.
-     * @returns {[{x: number, y: number}, {x: number, y: number}][]} - The array of edges.
+     * @returns {Segment[]} - The array of edges.
      */
-    static getValidEdgesForArea(map: number[][], origin: {x: number, y: number}, searchRadius: number, tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
-        const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
+    static lookupValidEdgesForArea(validEdgeLookupTable: Segment[][][], origin: {x: number, y: number}, searchRadius: number, tileSize: number = 1): Segment[] {
+        const edges: Segment[] = [];
 
         // Get an AABB in tile coords
         const minTileX = Math.max(0, Math.floor((origin.x - searchRadius) / tileSize));
-        const maxTileX = Math.min(map[0].length - 1, Math.ceil((origin.x + searchRadius) / tileSize));
+        const maxTileX = Math.min(validEdgeLookupTable[0].length - 1, Math.ceil((origin.x + searchRadius) / tileSize));
         const minTileY = Math.max(0, Math.floor((origin.y - searchRadius) / tileSize));
-        const maxTileY = Math.min(map.length - 1, Math.ceil((origin.y + searchRadius) / tileSize));
+        const maxTileY = Math.min(validEdgeLookupTable.length - 1, Math.ceil((origin.y + searchRadius) / tileSize));
 
         for (let y = minTileY; y <= maxTileY; y++) {
             for (let x = minTileX; x <= maxTileX; x++) {
                 // Find valid edges for each tile and add them to the master list of edges
-                this.getValidEdgesForTile(map, x, y, tileSize).forEach(edge => edges.push(edge));
+                const validEdges: Segment[] = validEdgeLookupTable[y][x];
+                validEdges.forEach(edge => edges.push(edge));
             }
         }
 
         return edges;
     }
 
-    static getValidEdgesForTile(map: number[][], x: number, y: number, tileSize: number = 1): [{x: number, y: number}, {x: number, y: number}][] {
-        const edges: [{x: number, y: number}, {x: number, y: number}][] = [];
+    static getValidEdgesForTile(map: number[][], x: number, y: number, tileSize: number = 1): Segment[] {
+        const edges: Segment[] = [];
         const mapWidth = map[0].length;
         const mapHeight = map.length;
 
@@ -68,22 +72,22 @@ export class LightUtils {
             // Check neighbors in clock-wise fashionand add only outer edges
             if (y > 0 && map[y - 1][x] === 0) {
                 // Top edge
-                edges.push([{ x: tileX, y: tileY }, { x: tileX + tileSize, y: tileY }]);
+                edges.push({ point1: { x: tileX, y: tileY }, point2: { x: tileX + tileSize, y: tileY } });
             }
 
             if (x < mapWidth - 1 && map[y][x + 1] === 0) {
                 // Right edge
-                edges.push([{ x: tileX + tileSize, y: tileY }, { x: tileX + tileSize, y: tileY + tileSize }]);
+                edges.push({ point1: { x: tileX + tileSize, y: tileY }, point2: { x: tileX + tileSize, y: tileY + tileSize } });
             }
 
             if (y < mapHeight - 1 && map[y + 1][x] === 0) {
                 // Bottom edge
-                edges.push([{ x: tileX + tileSize, y: tileY + tileSize }, { x: tileX, y: tileY + tileSize }]);
+                edges.push({ point1: { x: tileX + tileSize, y: tileY + tileSize }, point2: { x: tileX, y: tileY + tileSize } });
             }
 
             if (x > 0 && map[y][x - 1] === 0) {
                 // Left edge
-                edges.push([{ x: tileX, y: tileY + tileSize }, { x: tileX, y: tileY }]);
+                edges.push({ point1: { x: tileX, y: tileY + tileSize }, point2: { x: tileX, y: tileY } });
             }
         }
 
@@ -186,7 +190,7 @@ export class LightUtils {
      *
      * @param {{ start: { x: number, y: number }, direction: { x: number, y: number } }} ray
      *   The ray to cast, defined by a starting point and direction vector.
-     * @param {[{x: number, y: number}, {x: number, y: number}][]} segments
+     * @param {Segment[]} segments
      *   An array of line segments, each defined by two endpoints.
      * @param {number} maxDistance
      *   The maximum distance along the ray to check for intersection.
@@ -198,14 +202,14 @@ export class LightUtils {
             start: { x: number, y: number },
             direction: { x: number, y: number } 
         }, 
-        segments: [{x: number, y: number}, {x: number, y: number}][],
+        segments: Segment[],
         maxDistance: number
     ) {
         let closestIntersection: { x: number, y: number, distance: number } | null = null;
     
         // Check each segment for intersection with the ray
-        for (const [a, b] of segments) {
-            const intersection = LightUtils.getRaySegmentIntersection(ray, a, b, maxDistance);
+        for (const segment of segments) {
+            const intersection = LightUtils.getRaySegmentIntersection(ray, segment.point1, segment.point2, maxDistance);
             // If this intersection is closer than any previous one, remember it
             if (intersection && (!closestIntersection || intersection.distance < closestIntersection.distance)) {
                 closestIntersection = intersection;
@@ -232,7 +236,7 @@ export class LightUtils {
      *
      * @param {{ x: number, y: number }} point
      *   The origin point (e.g., the light source or player position).
-     * @param {[{x: number, y: number}, {x: number, y: number}][]} segments
+     * @param {Segment[]} segments
      *   An array of wall or obstacle segments, each defined by two endpoints.
      * @param {number} [numRays=360]
      *   The number of rays to cast (higher values = smoother polygon, but more computation).
@@ -243,7 +247,7 @@ export class LightUtils {
      */
     static buildLightPolygon(
         point: { x: number, y: number }, 
-        segments: [{x: number, y: number}, {x: number, y: number}][],
+        segments: Segment[],
         numRays: number = 360,
         lightRadius: number
     ): { x: number, y: number, angle: number }[] {

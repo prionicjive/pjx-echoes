@@ -22,7 +22,7 @@ export class Game {
             width: 128,       // Width of the generated level (in grid units)
             height: 72
         },
-        PixelsPerMeter: 16, // How many pixels represent one physics meter
+        PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -63,9 +63,9 @@ export class Game {
             size: 1           // Finish tile size (in meters)
         },
         Textures: {
-            player: 'assets/textures/player.png', // Paths to texture assets
-            wall: 'assets/textures/wall.png',
-            finish: 'assets/textures/finish.png'
+            player: '/assets/textures/player.png', // Paths to texture assets
+            wall: '/assets/textures/wall.png',
+            finish: '/assets/textures/finish.png'
         }
     };
 

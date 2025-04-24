@@ -10,6 +10,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
+import { GraphicsUtils } from '../utils/GraphicsUtils.ts';
 
 export class Game {
     // Centralized game configuration
@@ -20,8 +21,8 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 128,       // Width of the generated level (in grid units)
-            height: 72
+            width: 30,       // Width of the generated level (in grid units)
+            height: 30
         },
         PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
@@ -74,10 +75,12 @@ export class Game {
         },
         Light: {
             numRays: 360,
-            lightRadius: 20,
+            radius: 10,
+            color: 0xddbbbb
         }
     };
 
+    // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
     private app: PIXI.Application | null = null;
     private levelContainer: PIXI.Container | null = null;
     private world: planck.World | null = null;
@@ -90,7 +93,9 @@ export class Game {
     // TODO Better structured elsewhere?
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
     private playerLight: PIXI.Graphics | null = null;
-    private lightBlurFilter: PIXI.BlurFilter | null = null;
+    private gradientLightTexture: PIXI.Texture | null = null;
+    private lightSprite: PIXI.Sprite | null = null;
+    private lightMask: PIXI.Graphics | null = null;
 
     /**
      * Constructs the main Game instance.
@@ -115,10 +120,9 @@ export class Game {
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
         document.body.appendChild(this.app.canvas);
 
-        // Set up filters
+        // Set light related stuff
         // TODO Again, better way to do this?
-        this.lightBlurFilter = new PIXI.BlurFilter();
-        this.lightBlurFilter.blur = 10;
+        this.gradientLightTexture = GraphicsUtils.createRadialGradientTexture();
 
         // Preload textures before starting the game loop to avoid rendering glitches.
         await this.loadAssets();
@@ -198,18 +202,25 @@ export class Game {
         // TODO Better place to put this?
         this.wallEdges = LightUtils.getWallEdgesFromMap(levelMap, Game.Config.Wall.size);
 
-        // Construct the PIXI light object
+        // Set up light related stuff
+        // TODO Better way or place  to do this?
         this.playerLight = new PIXI.Graphics();
 
-        // TODO Better way to set up filters
-        if (this.lightBlurFilter) {
-            this.playerLight.filters = [this.lightBlurFilter];
+        if(this.gradientLightTexture) {
+            this.lightSprite = new PIXI.Sprite(this.gradientLightTexture);
+            this.lightSprite.anchor.set(Game.Config.Wall.size / 2);
+            this.lightSprite.width = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter;
+            this.lightSprite.height = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter; 
+            this.lightSprite.blendMode = 'add';
+            this.lightSprite.tint = Game.Config.Light.color;
+            this.levelContainer.addChild(this.lightSprite);
+
+            this.lightMask = new PIXI.Graphics();
+            this.lightSprite.mask = this.lightMask;
+
+            this.levelContainer.addChild(this.lightMask);
         }
-
-        this.levelContainer.addChild(this.playerLight);
-
-        console.log("Wall edges: ", this.wallEdges);
-
+        
         // Construct a player at a given location
         this.player = new Player(this.world, this.levelContainer, Number(startX), Number(startY));
 
@@ -402,7 +413,7 @@ export class Game {
 
     renderLights() {
         // TODO What about handling multiple lights?
-        if (!this.playerLight ||  !this.player) return;
+        if (!this.playerLight ||  !this.player || !this.lightMask) return;
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -410,21 +421,24 @@ export class Game {
         };
 
         // Build out the light points in world space (Meters)
-        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays, Game.Config.Light.lightRadius);
+        const lightPoints = LightUtils.buildLightPolygon(playerPos, this.wallEdges, Game.Config.Light.numRays, Game.Config.Light.radius);
 
-        // TODO What about light radius (In terms of pixel or meters)?
-        this.playerLight.clear();
-    
-        const gradientColor = 0xffffcc;
-    
-        this.playerLight.beginFill(gradientColor, 0.25);
-        this.playerLight.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
-    
-        for (const pt of lightPoints) {
-            this.playerLight.lineTo(pt.x * Game.Config.PixelsPerMeter, pt.y * Game.Config.PixelsPerMeter);
+        // Update light sprite to be under where the player
+        if (this.lightSprite) {
+            this.lightSprite.x = playerPos.x * Game.Config.PixelsPerMeter;
+            this.lightSprite.y = playerPos.y * Game.Config.PixelsPerMeter;
         }
-    
-        this.playerLight.lineTo(lightPoints[0].x * Game.Config.PixelsPerMeter, lightPoints[0].y * Game.Config.PixelsPerMeter);
-        this.playerLight.endFill();
+        
+        // Draw mask
+        this.lightMask.clear();
+
+        this.lightMask.beginFill(Game.Config.Light.color, 0.25);
+        this.lightMask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
+        for (const pt of lightPoints) {
+            this.lightMask.lineTo(pt.x * Game.Config.PixelsPerMeter, pt.y * Game.Config.PixelsPerMeter);
+        }
+
+        this.lightMask.lineTo(lightPoints[0].x * Game.Config.PixelsPerMeter, lightPoints[0].y * Game.Config.PixelsPerMeter);
+        this.lightMask.endFill();
     }
 }

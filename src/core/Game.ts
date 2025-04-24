@@ -90,6 +90,7 @@ export class Game {
     // TODO Better structured elsewhere?
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
     private playerLight: PIXI.Graphics | null = null;
+    private lightBlurFilter: PIXI.BlurFilter | null = null;
 
     /**
      * Constructs the main Game instance.
@@ -113,6 +114,11 @@ export class Game {
         this.app = new PIXI.Application();
         await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
         document.body.appendChild(this.app.canvas);
+
+        // Set up filters
+        // TODO Again, better way to do this?
+        this.lightBlurFilter = new PIXI.BlurFilter();
+        this.lightBlurFilter.blur = 10;
 
         // Preload textures before starting the game loop to avoid rendering glitches.
         await this.loadAssets();
@@ -194,6 +200,12 @@ export class Game {
 
         // Construct the PIXI light object
         this.playerLight = new PIXI.Graphics();
+
+        // TODO Better way to set up filters
+        if (this.lightBlurFilter) {
+            this.playerLight.filters = [this.lightBlurFilter];
+        }
+
         this.levelContainer.addChild(this.playerLight);
 
         console.log("Wall edges: ", this.wallEdges);
@@ -389,6 +401,7 @@ export class Game {
     }
 
     renderLights() {
+        // TODO What about handling multiple lights?
         if (!this.playerLight ||  !this.player) return;
 
         const playerPos = {
@@ -404,7 +417,7 @@ export class Game {
     
         const gradientColor = 0xffffcc;
     
-        this.playerLight.beginFill(gradientColor, 0.5);
+        this.playerLight.beginFill(gradientColor, 0.25);
         this.playerLight.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
     
         for (const pt of lightPoints) {

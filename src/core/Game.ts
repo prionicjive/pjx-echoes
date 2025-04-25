@@ -79,7 +79,7 @@ export class Game {
         Light: {
             numRays: 360,
             radius: 10,
-            radiusVariance: 3,
+            radiusVariance: 5,
             defaultColor: 0xddbbbb,
             startColor: 0x55aaff,
             endColor: 0x77edff
@@ -303,11 +303,11 @@ export class Game {
         this.player?.update();
         this.level?.update();
 
-        // Now, render the lights!
-        this.renderLights();
-
         // Update camera
         this.updateCamera(deltaTime);
+
+        // Update and render the lights
+        this.updateAndRenderLights();
 
         // TODO Any other entities to update?
     }
@@ -403,9 +403,7 @@ export class Game {
         this.input.handleMouseClick(this.player, screenPosition, levelPosition);
     }
 
-    renderLights() {
-        // Push rendering to the Light object itself
-
+    updateAndRenderLights() {
         // TODO What about handling multiple lights?
         if (!this.playerLight ||  !this.player) return;
 
@@ -414,25 +412,6 @@ export class Game {
             y: this.player?.body.getPosition().y
         };
 
-        // Build out the light points in world space (Meters)
-        const validEdges = LightUtils.lookupValidEdgesForArea(this.validEdgesLookupTable, playerPos, this.playerLight.radius);
-        const lightPoints = LightUtils.buildLightPolygon(playerPos, validEdges, Game.Config.Light.numRays, this.playerLight.radius);
-
-        // Update light sprite to be under where the player
-        this.playerLight.sprite.width = this.playerLight.radius * 2 * Game.Config.PixelsPerMeter;
-        this.playerLight.sprite.height = this.playerLight.radius * 2 * Game.Config.PixelsPerMeter;
-        this.playerLight.sprite.x = playerPos.x * Game.Config.PixelsPerMeter;
-        this.playerLight.sprite.y = playerPos.y * Game.Config.PixelsPerMeter;
-        
-        // Draw mask
-        this.playerLight.mask.clear();
-
-        this.playerLight.mask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
-        for (const pt of lightPoints) {
-            this.playerLight.mask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
-        }
-
-        this.playerLight.mask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
-        this.playerLight.mask.fill();
+       this.playerLight.updateAndRender(playerPos, this.validEdgesLookupTable);
     }
 }

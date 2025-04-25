@@ -72,22 +72,22 @@ export class LightUtils {
             // Check neighbors in clock-wise fashionand add only outer edges
             if (position.y > 0 && map[position.y - 1][position.x] === 0) {
                 // Top edge
-                edges.push({ point1: { x: tileX, y: tileY }, point2: { x: tileX + tileSize, y: tileY } });
+                edges.push({ a: { x: tileX, y: tileY }, b: { x: tileX + tileSize, y: tileY } });
             }
 
             if (position.x < mapWidth - 1 && map[position.y][position.x + 1] === 0) {
                 // Right edge
-                edges.push({ point1: { x: tileX + tileSize, y: tileY }, point2: { x: tileX + tileSize, y: tileY + tileSize } });
+                edges.push({ a: { x: tileX + tileSize, y: tileY }, b: { x: tileX + tileSize, y: tileY + tileSize } });
             }
 
             if (position.y < mapHeight - 1 && map[position.y + 1][position.x] === 0) {
                 // Bottom edge
-                edges.push({ point1: { x: tileX + tileSize, y: tileY + tileSize }, point2: { x: tileX, y: tileY + tileSize } });
+                edges.push({ a: { x: tileX + tileSize, y: tileY + tileSize }, b: { x: tileX, y: tileY + tileSize } });
             }
 
             if (position.x > 0 && map[position.y][position.x - 1] === 0) {
                 // Left edge
-                edges.push({ point1: { x: tileX, y: tileY + tileSize }, point2: { x: tileX, y: tileY } });
+                edges.push({ a: { x: tileX, y: tileY + tileSize }, b: { x: tileX, y: tileY } });
             }
         }
 
@@ -149,10 +149,10 @@ export class LightUtils {
         const r_dx = ray.direction.x;
         const r_dy = ray.direction.y;
 
-        const s_px = seg.point1.x;
-        const s_py = seg.point1.y;
-        const s_dx = seg.point2.x - seg.point1.x;
-        const s_dy = seg.point2.y - seg.point1.y;
+        const s_px = seg.a.x;
+        const s_py = seg.a.y;
+        const s_dx = seg.b.x - seg.a.x;
+        const s_dy = seg.b.y - seg.a.y;
 
         // Calculate magnitudes for normalization and parallel check
         const r_mag = Math.sqrt(r_dx * r_dx + r_dy * r_dy);

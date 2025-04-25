@@ -12,6 +12,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
+import { CollisionUtils } from '../utils/CollisionUtils.ts';
 import { Segment } from '../utils/types';
 import { Light } from '../entities/Light.ts';
 
@@ -61,15 +62,15 @@ export class Game {
         },
         Wall: {
             color: 0x444444,  // Tint color for walls
-            size: 1           // Wall size (in meters)
+            size: 1,          // Wall size (in meters)
         },
         Finish: {
             color: 0x2ddf03,  // Tint color for finish tiles
             size: 1           // Finish tile size (in meters)
         },
-        OutOfBounds: {
-            color: 0x32ddff,
-            thickness: 0.5
+        Boundaries: {
+            color: 0x444444,
+            thickness: 1
         },
         Textures: {
             player: '/assets/textures/player.png', // Paths to texture assets
@@ -103,12 +104,16 @@ export class Game {
     private level: Level | null = null;
     private input: InputManager;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
-    private validEdgesLookupTable: Segment[][][] = [];
+    private validEdgesLookupTable: Segment[][][] = []; // TODO May need to deprecate this
+
+    // TODO Is this the better way to do edge detection?
+    private mergedEdges: Segment[] = [];
 
     // PIXI Containers for different groups of entities
     // TODO Better way to do this?
     private worldContainer: PIXI.Container;
     private wallsContainer: PIXI.Container;
+    private edgesContainer: PIXI.Container;
     private playerContainer: PIXI.Container;
     private finishTilesContainer: PIXI.Container;
     private lightsContainer: PIXI.Container;
@@ -130,6 +135,7 @@ export class Game {
         // TODO  Better way to do this?
         this.worldContainer = new PIXI.Container();
         this.wallsContainer = new PIXI.Container();
+        this.edgesContainer = new PIXI.Container();
         this.playerContainer = new PIXI.Container();
         this.finishTilesContainer = new PIXI.Container();
         this.lightsContainer = new PIXI.Container();
@@ -188,6 +194,7 @@ export class Game {
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
         this.wallsContainer.removeChildren();
+        this.edgesContainer.removeChildren();
         this.playerContainer.removeChildren();
         this.finishTilesContainer.removeChildren();
         this.lightsContainer.removeChildren();
@@ -196,6 +203,7 @@ export class Game {
 
         // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
         this.worldContainer.addChild(this.wallsContainer);
+        this.worldContainer.addChild(this.edgesContainer);
         this.worldContainer.addChild(this.playerContainer);
         this.worldContainer.addChild(this.finishTilesContainer);
         this.worldContainer.addChild(this.lightsContainer);
@@ -231,7 +239,12 @@ export class Game {
 
         // Useful for look up information
         this.rawLevelMap = levelMap;
-        this.validEdgesLookupTable = LightUtils.getValidEdgesLookupForMap(this.rawLevelMap);
+        this.validEdgesLookupTable = LightUtils.getValidEdgesLookupForMap(this.rawLevelMap); // TODO This might need to be deprecated
+
+        // TODO Is this the better way to do edge detection?
+        const horizontalEdges = CollisionUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size);
+        const verticalEdges = CollisionUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size)
+        this.mergedEdges = [...horizontalEdges, ...verticalEdges];
 
         // Use text renderer for debug purposes
         // MapGenerator.renderMap(this.rawLevelMap); 
@@ -241,10 +254,12 @@ export class Game {
         this.level = new Level(
             this.world, { 
                 wallsContainer: this.wallsContainer, 
-                finishTilesContainer: this.finishTilesContainer 
+                finishTilesContainer: this.finishTilesContainer,
+                edgesContainer: this.edgesContainer
             }, 
-            levelMap, 
-            openSpaces
+            this.rawLevelMap, 
+            openSpaces,
+            this.validEdgesLookupTable
         );
 
         // Find a random valid starting spot for player

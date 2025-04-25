@@ -7,10 +7,11 @@
  */
 
 import { Game } from '../core/Game';
-import { Entity } from './types';
+import { Entity, PhysicalEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { MathUtils } from '../utils/MathUtils';
+import { Segment } from '../utils/types';
 
 /**
  * Describes a wall or boundary to be created in the level.
@@ -33,6 +34,7 @@ type WallScaffold = {
 type LevelContainers = {
     wallsContainer: PIXI.Container;
     finishTilesContainer: PIXI.Container;
+    edgesContainer: PIXI.Container;
 }
 
 /**
@@ -42,7 +44,7 @@ type LevelContainers = {
  */
 export class Level {
     private walls: Entity[];
-    private finishTiles: Entity[];
+    private finishTiles: PhysicalEntity[];
 
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
@@ -51,8 +53,9 @@ export class Level {
      * @param {LevelContainers} levelContainers - Where to add sprites for the various level entities for rendering go.
      * @param {number[][]} levelMap - 2D array representing the map layout (1 = wall, 0 = open).
      * @param {string[]} openSpaces - Array of open tile positions as "x,y" strings.
+     * @param {Segment[][][]} validEdgesLookupTable - Precomputed lookup table for valid edges.
      */
-    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], openSpaces: string[]) {
+    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], openSpaces: string[], validEdgesLookupTable: Segment[][][]) {
         // Store references to wall and finish tile entities
         this.walls = [];
         this.finishTiles = [];
@@ -79,38 +82,57 @@ export class Level {
             }
         }
 
-        // Create physics bodies and sprites for each wall
+        // Create sprites for each wall
         wallScaffolding.forEach(wallScaffold => {
             const { x, y, width, height, color } = wallScaffold;
-            // Create a static body for the wall
-            const wallBody = world.createBody(new planck.Vec2(x, y));
-            wallBody.createFixture(
-                new planck.Box(
-                    width / 2, 
-                    height / 2, 
-                    new planck.Vec2(width / 2, height / 2), 
-                    0
-                ), {
-                restitution: 0.95,
-                friction: 0,
-                userData: "WALL",
-                filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
-                filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
-            });
 
             // Create a sprite for the wall
             const sprite = PIXI.Sprite.from(Game.Config.Textures.wall);
-            sprite.x = wallBody.getPosition().x * Game.Config.PixelsPerMeter;
-            sprite.y = wallBody.getPosition().y * Game.Config.PixelsPerMeter;
+            sprite.x = x * Game.Config.PixelsPerMeter;
+            sprite.y = y * Game.Config.PixelsPerMeter;
             sprite.width = width * Game.Config.PixelsPerMeter;
             sprite.height = height * Game.Config.PixelsPerMeter;
             sprite.tint = color;
             
-            levelContainers.wallsContainer.addChild(sprite);
+            //levelContainers.wallsContainer.addChild(sprite);
 
             // Store wall entity for future reference (could be useful for collision, etc.)
-            this.walls.push({ body: wallBody, sprite });
+            this.walls.push({ sprite });
         });
+
+        // Create single body and multiple fixtures for all the edges of the level
+        const levelBody = world.createBody();
+
+        // Also, while iterating, draw the edges of the walls
+        const edgeGraphics = new PIXI.Graphics();
+
+        for (let y = 0; y < validEdgesLookupTable.length; y++) {
+            for (let x = 0; x < validEdgesLookupTable[0].length; x++) {
+                // Find valid edges for each tile and add them to the master list of edges
+                const validEdges: Segment[] = validEdgesLookupTable[y][x];
+                validEdges.forEach(edge => {
+                    // Draw the edge
+                    edgeGraphics.moveTo(edge.a.x * Game.Config.PixelsPerMeter, edge.a.y * Game.Config.PixelsPerMeter);
+                    edgeGraphics.lineTo(edge.b.x * Game.Config.PixelsPerMeter, edge.b.y * Game.Config.PixelsPerMeter);
+                    edgeGraphics.stroke({width:Game.Config.Boundaries.thickness, color: Game.Config.Boundaries.color});
+
+                    // Create a fixture for the edge
+                    const shape = new planck.Edge(edge.a, edge.b);
+                    levelBody.createFixture(
+                        shape, {
+                            restitution: 0.95,
+                            friction: 0,
+                            userData: "WALL",
+                            filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
+                            filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
+                        }
+                    );
+                });
+            }
+        }
+
+        // Add the renderer edges to the proper container
+        levelContainers.edgesContainer.addChild(edgeGraphics);
 
         // Randomly place finish tiles in open spaces for the player to reach
         const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
@@ -139,8 +161,8 @@ export class Level {
 
             // Create a sprite for the finish tile
             const sprite = PIXI.Sprite.from(Game.Config.Textures.finish);
-            sprite.x = finishBody.getPosition().x * Game.Config.PixelsPerMeter;
-            sprite.y = finishBody.getPosition().y * Game.Config.PixelsPerMeter;
+            sprite.x = Number(x) * Game.Config.PixelsPerMeter;
+            sprite.y = Number(y) * Game.Config.PixelsPerMeter;
             sprite.width = width * Game.Config.PixelsPerMeter;
             sprite.height = height * Game.Config.PixelsPerMeter;
             sprite.tint = color;
@@ -160,9 +182,9 @@ export class Level {
 
     /**
      * Returns all finish tile entities in the level.
-     * @returns {Entity[]} Array of finish tile entities.
+     * @returns {PhysicalEntity[]} Array of finish tile entities.
      */
-    getFinishTiles(): Entity[] {
+    getFinishTiles(): PhysicalEntity[] {
         return this.finishTiles;
     }
 

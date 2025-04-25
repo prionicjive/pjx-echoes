@@ -65,6 +65,7 @@ export class Light {
     }
 
     renderStatic(validEdgesLookupTable: Segment[][][]) {
+        // TODO Better optimize, assuming radius doesn't change?
         // Build out the light points in world space (Meters)
         const validEdges = LightUtils.lookupValidEdgesForArea(validEdgesLookupTable, {x: this.sprite.x / Game.Config.PixelsPerMeter, y: this.sprite.y / Game.Config.PixelsPerMeter}, this.options.radius);
         const lightPoints = LightUtils.buildLightPolygon({x: this.sprite.x / Game.Config.PixelsPerMeter, y: this.sprite.y / Game.Config.PixelsPerMeter}, validEdges, this.options.numRays, this.options.radius);

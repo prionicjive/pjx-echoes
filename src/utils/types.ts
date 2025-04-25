@@ -4,6 +4,6 @@ export interface Point {
 }
 
 export interface Segment { 
-    point1: Point; 
-    point2: Point;
+    a: Point; 
+    b: Point;
 } 

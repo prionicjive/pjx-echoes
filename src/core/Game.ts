@@ -24,8 +24,8 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 128,       // Width of the generated level (in grid units)
-            height: 128
+            width: 32,       // Width of the generated level (in grid units)
+            height: 32
         },
         PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
@@ -98,13 +98,20 @@ export class Game {
 
     // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
     private app: PIXI.Application | null = null;
-    private levelContainer: PIXI.Container | null = null;
     private world: planck.World | null = null;
     private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
     private validEdgesLookupTable: Segment[][][] = [];
+
+    // PIXI Containers for different groups of entities
+    // TODO Better way to do this?
+    private worldContainer: PIXI.Container;
+    private wallsContainer: PIXI.Container;
+    private playerContainer: PIXI.Container;
+    private finishTilesContainer: PIXI.Container;
+    private lightsContainer: PIXI.Container;
 
     // Lights
     // TODO Better structured elsewhere?
@@ -118,6 +125,14 @@ export class Game {
      */
     constructor() {
         this.input = new InputManager();
+
+        // Instantiate PIXI containers
+        // TODO  Better way to do this?
+        this.worldContainer = new PIXI.Container();
+        this.wallsContainer = new PIXI.Container();
+        this.playerContainer = new PIXI.Container();
+        this.finishTilesContainer = new PIXI.Container();
+        this.lightsContainer = new PIXI.Container();
 
         // Set up input event handlers
         window.addEventListener('mousedown', this.handlePointerDown.bind(this));
@@ -172,12 +187,21 @@ export class Game {
 
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
-        this.levelContainer?.removeChildren();
+        this.wallsContainer.removeChildren();
+        this.playerContainer.removeChildren();
+        this.finishTilesContainer.removeChildren();
+        this.lightsContainer.removeChildren();
+        this.worldContainer.removeChildren();
         this.app?.stage.removeChildren();
 
-        // Create a big container that will hold the entire level (like a big carpet I can slide around)
-        this.levelContainer = new PIXI.Container();
-        this.app?.stage.addChild(this.levelContainer);
+        // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
+        this.worldContainer.addChild(this.wallsContainer);
+        this.worldContainer.addChild(this.playerContainer);
+        this.worldContainer.addChild(this.finishTilesContainer);
+        this.worldContainer.addChild(this.lightsContainer);
+
+        // Add this mondo world container add the only direct child to the  stage
+        this.app?.stage.addChild(this.worldContainer);
 
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -213,13 +237,21 @@ export class Game {
         // MapGenerator.renderMap(this.rawLevelMap); 
 
         // Construct the level and finish tiles (among other entities)
-        this.level = new Level(this.world, this.levelContainer, levelMap, openSpaces);
+        // TODO Add the walls and finish tiles to their own containers
+        this.level = new Level(
+            this.world, { 
+                wallsContainer: this.wallsContainer, 
+                finishTilesContainer: this.finishTilesContainer 
+            }, 
+            levelMap, 
+            openSpaces
+        );
 
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.levelContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.playerContainer, {x: Number(startX), y: Number(startY)});
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -229,8 +261,8 @@ export class Game {
         // Set up light related stuff
         // TODO Better way or place  to do this?
         this.playerLight = new Light(playerPos, Game.Config.PlayerLight);
-        this.levelContainer.addChild(this.playerLight.sprite);
-        this.levelContainer.addChild(this.playerLight.mask);
+        this.lightsContainer.addChild(this.playerLight.sprite);
+        this.lightsContainer.addChild(this.playerLight.mask);
 
         // Set up lights for finish tiles
         // TODO This is a bit of a hack, but it works for now
@@ -240,8 +272,8 @@ export class Game {
         if (finishTiles) {
             for (const tile of finishTiles) {
                 const finishLight = new Light({x: tile.body.getPosition().x + Game.Config.Wall.size / 2, y: tile.body.getPosition().y + Game.Config.Wall.size / 2}, Game.Config.FinishLight);
-                this.levelContainer.addChild(finishLight.sprite);
-                this.levelContainer.addChild(finishLight.mask);
+                this.lightsContainer.addChild(finishLight.sprite);
+                this.lightsContainer.addChild(finishLight.mask);
                 this.finishLights.push(finishLight);
             }
         }
@@ -286,7 +318,7 @@ export class Game {
      */
      instantlyCenterCamera() {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
-        if (!this.player || !this.levelContainer) return;
+        if (!this.player || !this.worldContainer) return;
 
         const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
         const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
@@ -295,27 +327,27 @@ export class Game {
 
         // Center if level is smaller than screen
         if (levelWidthInPixels <= screenWidth) {
-            this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
+            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
             const screenCenterX = Game.Config.ScreenDimensions.width / 2;
             const targetX = -this.player.sprite.x + screenCenterX;
-            this.levelContainer.x += (targetX - this.levelContainer.x);
+            this.worldContainer.x += (targetX - this.worldContainer.x);
 
             // Keep camera inside the world edges
-            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
          }
 
         if (levelHeightInPixels <= screenHeight) {
-            this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
+            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
             const screenCenterY = Game.Config.ScreenDimensions.height / 2;
             const targetY = -this.player.sprite.y + screenCenterY;
-            this.levelContainer.y += (targetY - this.levelContainer.y);
+            this.worldContainer.y += (targetY - this.worldContainer.y);
 
             // Keep camera inside the world edges
-            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
         }
     }
 
@@ -350,7 +382,7 @@ export class Game {
         // Otherwise, use soft-follow logic with a dead zone to track the player.
 
         // Smooth camera follow
-        if (!this.player || !this.player.sprite || !this.levelContainer) return;
+        if (!this.player || !this.player.sprite || !this.worldContainer) return;
 
         const levelWidthInPixels = Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter;
         const levelHeightInPixels = Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter;
@@ -359,13 +391,13 @@ export class Game {
 
         // Center if level is smaller than screen
         if (levelWidthInPixels <= screenWidth) {
-            this.levelContainer.x = (screenWidth - levelWidthInPixels) / 2;
+            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
             const screenCenterX = Game.Config.ScreenDimensions.width / 2;
 
             // World coordinates of screen center
-            const cameraX = -this.levelContainer.x;
+            const cameraX = -this.worldContainer.x;
 
             // Get ball position relative to camera center
             const offsetX = this.player.sprite.x - cameraX;
@@ -380,20 +412,20 @@ export class Game {
             }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.x -= moveX * Game.Config.Camera.lerpFactor * deltaTime;
+            this.worldContainer.x -= moveX * Game.Config.Camera.lerpFactor * deltaTime;
 
             // Keep camera inside the world edges
-            this.levelContainer.x = Math.min(0, Math.max(this.levelContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, Game.Config.ScreenDimensions.width - Game.Config.LevelDimensions.width * Game.Config.PixelsPerMeter));
         }
 
         if (levelHeightInPixels <= screenHeight) {
-            this.levelContainer.y = (screenHeight - levelHeightInPixels) / 2;
+            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
             const screenCenterY = Game.Config.ScreenDimensions.height / 2;
             
             // World coordinates of screen center
-            const cameraY = -this.levelContainer.y;
+            const cameraY = -this.worldContainer.y;
 
             // Get ball position relative to camera center
             const offsetY = this.player.sprite.y - cameraY;
@@ -408,10 +440,10 @@ export class Game {
             }
 
             // Move the camera a little bit toward the target each frame
-            this.levelContainer.y -= moveY * Game.Config.Camera.lerpFactor * deltaTime;
+            this.worldContainer.y -= moveY * Game.Config.Camera.lerpFactor * deltaTime;
             
             // Keep camera inside the world edges
-            this.levelContainer.y = Math.min(0, Math.max(this.levelContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, Game.Config.ScreenDimensions.height - Game.Config.LevelDimensions.height * Game.Config.PixelsPerMeter));
         }
     }
 
@@ -421,14 +453,14 @@ export class Game {
      * @param {MouseEvent} e - The mouse event triggered by user input.
      */
     handlePointerDown(e: MouseEvent) {
-        if (!this.player || !this.levelContainer || !this.app) return;
+        if (!this.player || !this.worldContainer || !this.app) return;
     
         const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
         const screenPosition = {
             x: e.clientX - rect.left,
             y: e.clientY - rect.top
         }
-        const levelPosition = { x: this.levelContainer.x, y: this.levelContainer.y };
+        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
         this.input.handleMouseClick(this.player, screenPosition, levelPosition);
     }

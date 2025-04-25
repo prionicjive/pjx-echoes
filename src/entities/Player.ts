@@ -25,15 +25,14 @@ export class Player implements Entity {
      * Adds the sprite to the provided PIXI container.
      *
      * @param {planck.World} world - The Planck.js world to add the player to.
-     * @param {PIXI.Container | null} levelContainer - Where to add the player's sprite for rendering.
+     * @param {PIXI.Container} container - Where to add the player's sprite for rendering.
      * @param {Point} spawnPoint - Initial position (in world units).
      */
-    constructor(world: planck.World, levelContainer: PIXI.Container | null, spawnPoint: Point) {
+    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
         // Place player in the center of the tile
         const playerRadius = Game.Config.Player.radius;
         const center = new planck.Vec2(spawnPoint.x + Game.Config.Wall.size / 2, spawnPoint.y + Game.Config.Wall.size / 2);
         this.body = world.createDynamicBody(center);
-        console.log(this.body.getPosition())
         this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
 
         // Add a circular fixture for collisions
@@ -55,7 +54,7 @@ export class Player implements Entity {
         this.sprite.height = 2 * playerRadius * Game.Config.PixelsPerMeter;
         this.sprite.tint = Game.Config.Player.color;
         
-        levelContainer?.addChild(this.sprite);
+        container.addChild(this.sprite);
     }
 
     /**

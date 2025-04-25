@@ -30,6 +30,11 @@ type WallScaffold = {
     color: number;
 }
 
+type LevelContainers = {
+    wallsContainer: PIXI.Container;
+    finishTilesContainer: PIXI.Container;
+}
+
 /**
  * The Level class generates and manages all static entities for a level,
  * including walls and finish tiles. Handles conversion from map data to
@@ -43,11 +48,11 @@ export class Level {
      * Creates a new Level instance, generating walls and finish tiles from the given map.
      *
      * @param {planck.World} world - The Planck.js world to add walls and tiles to.
-     * @param {PIXI.Container | null} levelContainer - Where to add sprites for rendering.
+     * @param {LevelContainers} levelContainers - Where to add sprites for the various level entities for rendering go.
      * @param {number[][]} levelMap - 2D array representing the map layout (1 = wall, 0 = open).
      * @param {string[]} openSpaces - Array of open tile positions as "x,y" strings.
      */
-    constructor(world: planck.World, levelContainer: PIXI.Container | null, levelMap: number[][], openSpaces: string[]) {
+    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], openSpaces: string[]) {
         // Store references to wall and finish tile entities
         this.walls = [];
         this.finishTiles = [];
@@ -57,46 +62,13 @@ export class Level {
         // TODO: Consider breaking generative steps into helper functions for clarity
 
         // Start with the outer boundaries of the level
-        const levelScaffold: WallScaffold[] = [
-            // Top
-            { 
-                x: 0, 
-                y: -Game.Config.OutOfBounds.thickness, 
-                width: Game.Config.LevelDimensions.width, 
-                height: Game.Config.OutOfBounds.thickness,
-                 color: Game.Config.OutOfBounds.color 
-            }, 
-            // Bottom
-            { 
-                x: 0, 
-                y: Game.Config.LevelDimensions.height, 
-                width: Game.Config.LevelDimensions.width, 
-                height: Game.Config.OutOfBounds.thickness, 
-                color: Game.Config.OutOfBounds.color 
-            },
-            // Left
-            { 
-                x: -Game.Config.OutOfBounds.thickness, 
-                y: 0,
-                width: Game.Config.OutOfBounds.thickness, 
-                height: Game.Config.LevelDimensions.height, 
-                color: Game.Config.OutOfBounds.color 
-            }, 
-            // Right
-            { 
-                x: Game.Config.LevelDimensions.width, 
-                y: 0, 
-                width: Game.Config.OutOfBounds.thickness, 
-                height: Game.Config.LevelDimensions.height, 
-                color: Game.Config.OutOfBounds.color 
-            }
-        ];
+        const wallScaffolding: WallScaffold[] = [];
 
         // Add walls from the map (1 = wall)
         for (let y = 0; y < levelMap.length; y++) {
             for (let x = 0; x < levelMap[y].length; x++) {
                 if (levelMap[y][x] === 1) {
-                    levelScaffold.push({
+                    wallScaffolding.push({
                         x: x,
                         y: y,
                         width: Game.Config.Wall.size,
@@ -108,7 +80,7 @@ export class Level {
         }
 
         // Create physics bodies and sprites for each wall
-        levelScaffold.forEach(wallScaffold => {
+        wallScaffolding.forEach(wallScaffold => {
             const { x, y, width, height, color } = wallScaffold;
             // Create a static body for the wall
             const wallBody = world.createBody(new planck.Vec2(x, y));
@@ -134,7 +106,7 @@ export class Level {
             sprite.height = height * Game.Config.PixelsPerMeter;
             sprite.tint = color;
             
-            levelContainer?.addChild(sprite);
+            levelContainers.wallsContainer.addChild(sprite);
 
             // Store wall entity for future reference (could be useful for collision, etc.)
             this.walls.push({ body: wallBody, sprite });
@@ -172,7 +144,7 @@ export class Level {
             sprite.width = width * Game.Config.PixelsPerMeter;
             sprite.height = height * Game.Config.PixelsPerMeter;
             sprite.tint = color;
-            levelContainer?.addChild(sprite);
+            levelContainers.finishTilesContainer.addChild(sprite);
 
             this.finishTiles.push({ body: finishBody, sprite });
         }

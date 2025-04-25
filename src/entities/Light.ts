@@ -21,8 +21,12 @@ export class Light {
     public mask: PIXI.Graphics = new PIXI.Graphics();
     private options: LightOptions;
 
+    // TODO There's gotta be a better way to have default / starting values that might be tweened
+    private defaultRadius: number = 1;
+
     constructor(pos: Point, options: LightOptions) {
         this.options = options;
+        this.defaultRadius = options.radius;
 
         this.sprite = new PIXI.Sprite(GraphicsUtils.getRadialGradientTexture());
 
@@ -109,17 +113,19 @@ export class Light {
     // TODO Put in some other Light-related file / class
     flickerAlpha() {
         gsap.to(this.sprite, {
-            alpha: 0.6 + Math.random() * 0.15,
+            pixi: {
+                alpha: 0.6 + Math.random() * 0.15
+            },
             duration: 0.5 + Math.random() * 0.5,
             ease: 'power1.inOut',
             onComplete: () => this.flickerAlpha()
         });
     }
-    
+
     // TODO Put in some other Light-related file / class
     flickerRadius() {
-        gsap.to(this, {
-            radius: this.options.radius + Math.random() * this.options.radiusVariance, 
+        gsap.to(this.options, {
+            radius: this.defaultRadius + Math.random() * this.options.radiusVariance, 
             duration: 1.5 + Math.random() * 0.5,
             ease: 'power1.inOut',
             onComplete: () => this.flickerRadius()

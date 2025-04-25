@@ -1,88 +1,142 @@
-import { Segment } from "./types";
+import { Point, Segment } from "./types";
   
 export class CollisionUtils {
-    static createMergedHorizontalEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
-        const edgeSegments: Segment[] = [];
-      
-        const height = tileMap.length;
-        const width = tileMap[0].length;
-      
-        for (let y = 0; y < height; y++) {
-          let startX = null; // Tracks where an edge should begin
-      
-          for (let x = 0; x <= width; x++) {
-            const wall = x < width && tileMap[y][x]; // Is the current tile a wall?
-            const isAboveOpen = y > 0 ? !tileMap[y - 1][x] : false; // Is the tile above open?
-      
-            // Only start if we are (on a wall AND the above is open OR we are not on a wall and the above is not open) AND we haven't already started an edge
-            const shouldStart = (wall == isAboveOpen) && startX === null; 
-            // End only if we have already started an edge and (we're wall and it's not open above OR we're not wall and it is open above) or we are at the end of the row
-            const shouldEnd = (startX !== null && (wall != isAboveOpen)) || x === width; 
-      
-            // Mark where the edge starts
-            if (shouldStart) {
-              startX = x;
-            }
-      
-            if (shouldEnd && startX !== null) {
-              // Construct the full edge
-              const ax = startX * tileSize;
-              const ay = y * tileSize;
-              const bx = x * tileSize;
-              const by = y * tileSize;
-      
-              // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: {x: ax, y: ay}, b: {x: bx, y: by} });
-      
-              // Reset the start position
-              startX = null;
-            }
-          }
+        /**
+     * Generates an array of ray objects radiating outward from a given point.
+     * Each ray is defined by a starting position and a direction vector.
+     *
+     * @param {Point} point - The origin point from which to shoot rays.
+     * @param {number} [numRays=360] - The number of rays to generate (spread evenly in a circle).
+     * @returns {Array<{ start: Point, direction: Point }>} 
+     *   An array of rays, each with a start position and normalized direction vector.
+     */
+    static shootRaysFromPoint(point: Point, numRays: number = 360) {
+        const rays = [];
+    
+        for (let i = 0; i < numRays; i++) {
+            const angle = (i / numRays) * Math.PI * 2;
+            const dx = Math.cos(angle);
+            const dy = Math.sin(angle);
+    
+            rays.push({
+                start: { x: point.x, y: point.y },
+                direction: { x: dx, y: dy }
+            });
         }
-      
-        return edgeSegments;
-    }    
+    
+        return rays;
+    }
 
-    static createMergedVerticalEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
-        const edgeSegments: Segment[] = [];
-      
-        const height = tileMap.length;
-        const width = tileMap[0].length;
-      
-        for (let x = 0; x < width; x++) {
-          let startY = null; // Tracks where an edge should begin
-      
-          for (let y = 0; y <= height; y++) {
-            const wall = y < height && tileMap[y][x]; // Is the current tile a wall?
-            const isLeftOpen = x > 0 ? !tileMap[y]?.[x - 1] : false; // Is the tile to the left open? (We say it's open to the left of the very first column)
-      
-            // Only start if we are on a wall, the left is open AND we haven't already started an edge
-            const shouldStart = (wall == isLeftOpen) && startY === null; 
-            // End only if we have already started an edge and (we're a wall and it's not open to the left OR we're not a wall and it's open to the left) or we are at the end of the column
-            const shouldEnd = (startY !== null && (wall != isLeftOpen)) || y === height;
-      
-            // Mark where the edge starts
-            if (shouldStart) {
-              startY = y;
-            }
-      
-            if (shouldEnd && startY !== null) {
-              // Construct the full edge
-              const ax = x * tileSize;
-              const ay = startY * tileSize;
-              const bx = x * tileSize;
-              const by = y * tileSize;
-      
-              // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: {x: ax, y: ay}, b: {x: bx, y: by} });
-      
-              // Reset the start position
-              startY = null;
-            }
-          }
+    /**
+     * Calculates the intersection point (if any) between a ray and a line segment.
+     * Useful for 2D raycasting, e.g., for lighting, visibility, or collision checks.
+     *
+     * @param {{ start: Point, direction: Point }} ray
+     *   The ray, defined by a starting point and a (normalized) direction vector.
+     * @param {Point} segStart
+     *   The starting point of the line segment.
+     * @param {Point} segEnd
+     *   The ending point of the line segment.
+     * @param {number} [maxDistance=Infinity]
+     *   The maximum distance along the ray to check for intersection.
+     * @returns {{ point: Point, distance: number } | null}
+     *   The intersection point (with distance along the ray), or null if no intersection.
+     */
+    static getRaySegmentIntersection(
+        ray: { 
+            start: Point, 
+            direction: Point 
+        }, 
+        seg: Segment,
+        maxDistance: number = Infinity
+    ) {
+        // Extract ray and segment components for clarity
+        const r_px = ray.start.x;
+        const r_py = ray.start.y;
+        const r_dx = ray.direction.x;
+        const r_dy = ray.direction.y;
+
+        const s_px = seg.a.x;
+        const s_py = seg.a.y;
+        const s_dx = seg.b.x - seg.a.x;
+        const s_dy = seg.b.y - seg.a.y;
+
+        // Calculate magnitudes for normalization and parallel check
+        const r_mag = Math.sqrt(r_dx * r_dx + r_dy * r_dy);
+        const s_mag = Math.sqrt(s_dx * s_dx + s_dy * s_dy);
+
+        // Check if the ray and segment are parallel (no intersection)
+        if (r_dx / r_mag === s_dx / s_mag && r_dy / r_mag === s_dy / s_mag) {
+            return null;
         }
-      
-        return edgeSegments;
+
+        // Solve for intersection using parametric equations
+        // t = distance along the ray, u = position along the segment (0 to 1)
+        const t = ((s_px - r_px) * s_dy - (s_py - r_py) * s_dx) / (r_dx * s_dy - r_dy * s_dx);
+        const u = ((s_px - r_px) * r_dy - (s_py - r_py) * r_dx) / (r_dx * s_dy - r_dy * s_dx);
+
+        // Intersection occurs if t > 0 (in front of the ray) and 0 <= u <= 1 (on the segment)
+        if (t > 0 && u >= 0 && u <= 1) {
+            if (t * r_mag <= maxDistance) {
+            return {
+                point: { 
+                    x: r_px + r_dx * t, 
+                    y: r_py + r_dy * t 
+                },
+                distance: t
+            };
+            }
+        }
+
+        // No intersection found
+        return null;
+    }
+
+    /**
+     * Finds the closest intersection point (if any) between a ray and a set of line segments.
+     * Useful for raycasting against multiple obstacles—returns the nearest hit along the ray.
+     *
+     * @param {{ start: Point, direction: Point }} ray
+     *   The ray to cast, defined by a starting point and direction vector.
+     * @param {Segment[]} segments
+     *   An array of line segments, each defined by two endpoints.
+     * @param {number} maxDistance
+     *   The maximum distance along the ray to check for intersection.
+     * @returns {{ point: Point, distance: number } | null}
+     *   The closest intersection point (with distance along the ray), or null if no intersection.
+     */
+    static findClosestIntersection(
+        ray: { 
+            start: Point,
+            direction: Point 
+        }, 
+        segments: Segment[],
+        maxDistance: number
+    ) {
+        let closestIntersection: { point: Point, distance: number } | null = null;
+    
+        // Check each segment for intersection with the ray
+        for (const segment of segments) {
+            const intersection = CollisionUtils.getRaySegmentIntersection(ray, segment, maxDistance);
+            // If this intersection is closer than any previous one, remember it
+            if (intersection && (!closestIntersection || intersection.distance < closestIntersection.distance)) {
+                closestIntersection = intersection;
+            }
+        }
+
+        if (!closestIntersection) {
+            // No wall hit — project ray endpoint at radius
+            closestIntersection = {
+                point: {
+                    x: ray.start.x + ray.direction.x * maxDistance,
+                    y: ray.start.y + ray.direction.y * maxDistance
+                },
+                distance: maxDistance
+            };
+        }
+    
+        // Return the nearest intersection (or null if there were none)
+        return closestIntersection;
     } 
     
     static isSegmentInBounds(segment: Segment, bounds: { minX: number; maxX: number; minY: number; maxY: number }) {

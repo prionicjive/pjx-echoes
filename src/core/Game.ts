@@ -10,8 +10,7 @@ import { PixiPlugin } from "gsap/PixiPlugin";
 import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
-import { MapGenerator } from '../utils/MapGenerator.ts';
-import { LightUtils } from '../utils/LightUtils.ts';
+import { MapUtils } from '../utils/MapUtils.ts';
 import { CollisionUtils } from '../utils/CollisionUtils.ts';
 import { Segment } from '../utils/types';
 import { Light } from '../entities/Light.ts';
@@ -28,7 +27,7 @@ export class Game {
             width: 64,       // Width of the generated level (in grid units)
             height: 64
         },
-        PixelsPerMeter: 8, // How many pixels represent one physics meter
+        PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -70,7 +69,7 @@ export class Game {
         },
         Boundaries: {
             color: 0x444444,
-            thickness: 1
+            thickness: 2
         },
         Textures: {
             player: '/assets/textures/player.png', // Paths to texture assets
@@ -104,7 +103,6 @@ export class Game {
     private level: Level | null = null;
     private input: InputManager;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
-    private validEdgesLookupTable: Segment[][][] = []; // TODO May need to deprecate this
 
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -230,7 +228,7 @@ export class Game {
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
         // Regenerate level and place player and finish tiles
-        const { map: levelMap, openSpaces} = MapGenerator.generateFromCellularAutomata(
+        const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
             Game.Config.LevelDimensions.width, 
             Game.Config.LevelDimensions.height,
             Game.Config.MapGeneration.wallChance,
@@ -239,11 +237,10 @@ export class Game {
 
         // Useful for look up information
         this.rawLevelMap = levelMap;
-        this.validEdgesLookupTable = LightUtils.getValidEdgesLookupForMap(this.rawLevelMap); // TODO This might need to be deprecated
 
         // TODO Is this the better way to do edge detection?
-        const horizontalEdges = CollisionUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size);
-        const verticalEdges = CollisionUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size)
+        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size);
+        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap, Game.Config.Wall.size)
         this.mergedEdges = [...horizontalEdges, ...verticalEdges];
 
         // Use text renderer for debug purposes

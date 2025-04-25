@@ -8,7 +8,8 @@ An exploration game rooted in navigating the unknown and unseen.
 - Map / maze generation with rooms / caves, utilizing cellular automata and flood fill
 - Player impulse movement via Planck physics
 - Generation of a new map / maze upon reaching a finish tile
-- Soft follow camera when world is larger than single screen, with dead zone.
+- Soft follow camera when world is larger than single screen, with dead zone
+- Dynamic lighting system with raycasted light occlusion and support for mutliple lights
 
 ## Tech Stack
 
@@ -59,7 +60,6 @@ npm run build
 ## TODO
 
 ### Graphical Polish
-- Light occlusion or "fog of war" style lighting
 - Post processing bloom / glow shader and crt shader (From pixi-filters)
 - Post processing glitch shaders, for when colliding with wall
 - Particle trail effect for player

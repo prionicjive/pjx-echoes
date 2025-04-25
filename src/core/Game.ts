@@ -259,7 +259,7 @@ export class Game {
             }, 
             this.rawLevelMap, 
             openSpaces,
-            this.validEdgesLookupTable
+            this.mergedEdges
         );
 
         // Find a random valid starting spot for player

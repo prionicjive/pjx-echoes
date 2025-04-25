@@ -52,10 +52,10 @@ export class Level {
      * @param {planck.World} world - The Planck.js world to add walls and tiles to.
      * @param {LevelContainers} levelContainers - Where to add sprites for the various level entities for rendering go.
      * @param {number[][]} levelMap - 2D array representing the map layout (1 = wall, 0 = open).
-     * @param {string[]} openSpaces - Array of open tile positions as "x,y" strings.
-     * @param {Segment[][][]} validEdgesLookupTable - Precomputed lookup table for valid edges.
+     * @param {string[]} validSpaces - Array of valid open tile positions as "x,y" strings.
+     * @param {Segment[]} edgesList - List of valid edges.
      */
-    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], openSpaces: string[], validEdgesLookupTable: Segment[][][]) {
+    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], validSpaces: string[], edgesList: Segment[]) {
         // Store references to wall and finish tile entities
         this.walls = [];
         this.finishTiles = [];
@@ -68,6 +68,7 @@ export class Level {
         const wallScaffolding: WallScaffold[] = [];
 
         // Add walls from the map (1 = wall)
+        // TODO MAY not actually need this!
         for (let y = 0; y < levelMap.length; y++) {
             for (let x = 0; x < levelMap[y].length; x++) {
                 if (levelMap[y][x] === 1) {
@@ -106,29 +107,23 @@ export class Level {
         // Also, while iterating, draw the edges of the walls
         const edgeGraphics = new PIXI.Graphics();
 
-        for (let y = 0; y < validEdgesLookupTable.length; y++) {
-            for (let x = 0; x < validEdgesLookupTable[0].length; x++) {
-                // Find valid edges for each tile and add them to the master list of edges
-                const validEdges: Segment[] = validEdgesLookupTable[y][x];
-                validEdges.forEach(edge => {
-                    // Draw the edge
-                    edgeGraphics.moveTo(edge.a.x * Game.Config.PixelsPerMeter, edge.a.y * Game.Config.PixelsPerMeter);
-                    edgeGraphics.lineTo(edge.b.x * Game.Config.PixelsPerMeter, edge.b.y * Game.Config.PixelsPerMeter);
-                    edgeGraphics.stroke({width:Game.Config.Boundaries.thickness, color: Game.Config.Boundaries.color});
+        for (const edge of edgesList){
+            // Draw the edge
+            edgeGraphics.moveTo(edge.a.x * Game.Config.PixelsPerMeter, edge.a.y * Game.Config.PixelsPerMeter);
+            edgeGraphics.lineTo(edge.b.x * Game.Config.PixelsPerMeter, edge.b.y * Game.Config.PixelsPerMeter);
+            edgeGraphics.stroke({width:Game.Config.Boundaries.thickness, color: Game.Config.Boundaries.color});
 
-                    // Create a fixture for the edge
-                    const shape = new planck.Edge(edge.a, edge.b);
-                    levelBody.createFixture(
-                        shape, {
-                            restitution: 0.95,
-                            friction: 0,
-                            userData: "WALL",
-                            filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
-                            filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
-                        }
-                    );
-                });
-            }
+            // Create a fixture for the edge
+            const shape = new planck.Edge(edge.a, edge.b);
+            levelBody.createFixture(
+                shape, {
+                    restitution: 0.95,
+                    friction: 0,
+                    userData: "WALL",
+                    filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
+                    filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
+                }
+            );
         }
 
         // Add the renderer edges to the proper container
@@ -138,7 +133,7 @@ export class Level {
         const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
-            const [x, y] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
             const width = Game.Config.Finish.size;
             const height = Game.Config.Finish.size;
             const color = Game.Config.Finish.color;

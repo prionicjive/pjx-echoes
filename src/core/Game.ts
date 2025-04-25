@@ -11,7 +11,6 @@ import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
-import { CollisionUtils } from '../utils/CollisionUtils.ts';
 import { Segment } from '../utils/types';
 import { Light } from '../entities/Light.ts';
 

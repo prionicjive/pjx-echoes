@@ -33,6 +33,7 @@ export class Player implements Entity {
         const playerRadius = Game.Config.Player.radius;
         const center = new planck.Vec2(spawnPoint.x + Game.Config.Wall.size / 2, spawnPoint.y + Game.Config.Wall.size / 2);
         this.body = world.createDynamicBody(center);
+        console.log(this.body.getPosition())
         this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
 
         // Add a circular fixture for collisions

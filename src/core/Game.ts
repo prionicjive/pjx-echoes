@@ -24,10 +24,10 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 64,       // Width of the generated level (in grid units)
-            height: 64
+            width: 128,       // Width of the generated level (in grid units)
+            height: 128
         },
-        PixelsPerMeter: 16, // How many pixels represent one physics meter
+        PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -76,14 +76,24 @@ export class Game {
             wall: '/assets/textures/wall.png',
             finish: '/assets/textures/finish.png'
         },
-        Light: {
+        PlayerLight: {
             numRays: 360,
             radius: 10,
             radiusVariance: 5,
-            defaultColor: 0xddbbbb,
+            alpha: 0.6,
+            alphaVariance: 0.16,
             startColor: 0x55aaff,
             endColor: 0x77edff
-        }
+        },
+        FinishLight: {
+            numRays: 360,
+            radius: 10,
+            radiusVariance: 5,
+            alpha: 0.6,
+            alphaVariance: 0.16,
+            startColor: 0x2ddf03,
+            endColor: 0x27ffc3
+        } 
     };
 
     // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
@@ -100,6 +110,7 @@ export class Game {
     // TODO Better structured elsewhere?
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
     private playerLight: Light | null = null;
+    private finishLights: Light[] = [];
 
     /**
      * Constructs the main Game instance.
@@ -206,15 +217,34 @@ export class Game {
 
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-
-        // Set up light related stuff
-        // TODO Better way or place  to do this?
-        this.playerLight = new Light(Game.Config.Light.radius);
-        this.levelContainer.addChild(this.playerLight.sprite);
-        this.levelContainer.addChild(this.playerLight.mask);
         
         // Construct a player at a given location
         this.player = new Player(this.world, this.levelContainer, {x: Number(startX), y: Number(startY)});
+
+        const playerPos = {
+            x: this.player?.body.getPosition().x,
+            y: this.player?.body.getPosition().y
+        };
+
+        // Set up light related stuff
+        // TODO Better way or place  to do this?
+        this.playerLight = new Light(playerPos, Game.Config.PlayerLight);
+        this.levelContainer.addChild(this.playerLight.sprite);
+        this.levelContainer.addChild(this.playerLight.mask);
+
+        // Set up lights for finish tiles
+        // TODO This is a bit of a hack, but it works for now
+        this.finishLights = [];
+        const finishTiles = this.level?.getFinishTiles();
+
+        if (finishTiles) {
+            for (const tile of finishTiles) {
+                const finishLight = new Light({x: tile.body.getPosition().x + Game.Config.Wall.size / 2, y: tile.body.getPosition().y + Game.Config.Wall.size / 2}, Game.Config.FinishLight);
+                this.levelContainer.addChild(finishLight.sprite);
+                this.levelContainer.addChild(finishLight.mask);
+                this.finishLights.push(finishLight);
+            }
+        }
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
@@ -413,5 +443,9 @@ export class Game {
         };
 
        this.playerLight.updateAndRender(playerPos, this.validEdgesLookupTable);
+
+       for (const light of this.finishLights) {
+           light.renderStatic(this.validEdgesLookupTable);
+       }
     }
 }

@@ -83,5 +83,19 @@ export class CollisionUtils {
         }
       
         return edgeSegments;
-    }  
+    } 
+    
+    static isSegmentInBounds(segment: Segment, bounds: { minX: number; maxX: number; minY: number; maxY: number }) {
+        const minX = Math.min(segment.a.x, segment.b.x);
+        const maxX = Math.max(segment.a.x, segment.b.x);
+        const minY = Math.min(segment.a.y, segment.b.y);
+        const maxY = Math.max(segment.a.y, segment.b.y);
+      
+        return !(
+          maxX < bounds.minX ||
+          minX > bounds.maxX ||
+          maxY < bounds.minY ||
+          minY > bounds.maxY
+        );
+      }
 }

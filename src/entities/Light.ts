@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { Game } from '../core/Game';
 import { LightUtils } from '../utils/LightUtils';
+import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
 
 export interface LightOptions {
@@ -41,10 +42,17 @@ export class Light {
         this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
-    updateAndRender(pos: Point, validEdgesLookupTable: Segment[][][]) {
+    updateAndRender(pos: Point, allEdges: Segment[]) {
+        const lightBounds = {
+            minX: pos.x - this.options.radius,
+            maxX: pos.x + this.options.radius,
+            minY: pos.y - this.options.radius,
+            maxY: pos.y + this.options.radius,
+          };
+
         // Build out the light points in world space (Meters)
-        const validEdges = LightUtils.lookupValidEdgesForArea(validEdgesLookupTable, pos, this.options.radius);
-        const lightPoints = LightUtils.buildLightPolygon(pos, validEdges, this.options.numRays, this.options.radius);
+        const nearbyEdges = allEdges.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
+        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius);
 
         // Update light sprite to be under where the player
         this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
@@ -64,12 +72,24 @@ export class Light {
         this.mask.fill();
     }
 
-    renderStatic(validEdgesLookupTable: Segment[][][]) {
+    renderStatic(allEdges: Segment[]) {
         // TODO Better optimize, assuming radius doesn't change?
-        // Build out the light points in world space (Meters)
-        const validEdges = LightUtils.lookupValidEdgesForArea(validEdgesLookupTable, {x: this.sprite.x / Game.Config.PixelsPerMeter, y: this.sprite.y / Game.Config.PixelsPerMeter}, this.options.radius);
-        const lightPoints = LightUtils.buildLightPolygon({x: this.sprite.x / Game.Config.PixelsPerMeter, y: this.sprite.y / Game.Config.PixelsPerMeter}, validEdges, this.options.numRays, this.options.radius);
+        const pos: Point = {
+            x: this.sprite.x / Game.Config.PixelsPerMeter,
+            y: this.sprite.y / Game.Config.PixelsPerMeter
+        }
 
+        const lightBounds = {
+            minX: pos.x - this.options.radius,
+            maxX: pos.x + this.options.radius,
+            minY: pos.y - this.options.radius,
+            maxY: pos.y + this.options.radius,
+          };
+
+        // Build out the light points in world space (Meters)
+        const nearbyEdges = allEdges.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
+        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius);
+        
         // Update light sprite to be under where the player
         this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
         this.sprite.height = this.options.radius * 2 * Game.Config.PixelsPerMeter;

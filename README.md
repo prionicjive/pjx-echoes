@@ -10,6 +10,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Generation of a new map / maze upon reaching a finish tile
 - Soft follow camera when world is larger than single screen, with dead zone
 - Dynamic lighting system with raycasted light occlusion and support for mutliple lights
+- Edge calculation for light raycasting and level rendering
 
 ## Tech Stack
 

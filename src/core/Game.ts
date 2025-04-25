@@ -25,8 +25,8 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 32,       // Width of the generated level (in grid units)
-            height: 32
+            width: 64,       // Width of the generated level (in grid units)
+            height: 64
         },
         PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
@@ -489,10 +489,10 @@ export class Game {
             y: this.player?.body.getPosition().y
         };
 
-       this.playerLight.updateAndRender(playerPos, this.validEdgesLookupTable);
+       this.playerLight.updateAndRender(playerPos, this.mergedEdges);
 
        for (const light of this.finishLights) {
-           light.renderStatic(this.validEdgesLookupTable);
+           light.renderStatic(this.mergedEdges);
        }
     }
 }

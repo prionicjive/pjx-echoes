@@ -1,14 +1,20 @@
 import * as PIXI from 'pixi.js';
 
 export class GraphicsUtils {
-    static createRadialGradientTexture() {
+    static gradientLightTexture: PIXI.Texture;
+
+    static getRadialGradientTexture(): PIXI.Texture {
+        if (this.gradientLightTexture) {
+            return this.gradientLightTexture;
+        }
+
         const size = 256;
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
         const ctx = canvas.getContext('2d');
     
         if (!ctx) {
-            return null;
+            return new PIXI.Texture();
         }
 
         const gradient = ctx.createRadialGradient(
@@ -22,6 +28,7 @@ export class GraphicsUtils {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, size, size);
     
-        return PIXI.Texture.from(canvas);
+        this.gradientLightTexture = PIXI.Texture.from(canvas);
+        return this.gradientLightTexture;
     }    
 }

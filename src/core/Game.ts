@@ -12,8 +12,8 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapGenerator } from '../utils/MapGenerator.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
-import { GraphicsUtils } from '../utils/GraphicsUtils.ts';
 import { Segment } from '../utils/types';
+import { Light } from '../entities/Light.ts';
 
 export class Game {
     // Centralized game configuration
@@ -24,8 +24,8 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 30,       // Width of the generated level (in grid units)
-            height: 30
+            width: 64,       // Width of the generated level (in grid units)
+            height: 64
         },
         PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
@@ -79,9 +79,10 @@ export class Game {
         Light: {
             numRays: 360,
             radius: 10,
+            radiusVariance: 3,
             defaultColor: 0xddbbbb,
-            startColor: 0x2222ff,
-            endColor: 0x44dcff
+            startColor: 0x55aaff,
+            endColor: 0x77edff
         }
     };
 
@@ -98,10 +99,7 @@ export class Game {
     // Lights
     // TODO Better structured elsewhere?
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
-    private playerLight: PIXI.Graphics | null = null;
-    private gradientLightTexture: PIXI.Texture | null = null;
-    private lightSprite: PIXI.Sprite | null = null;
-    private lightMask: PIXI.Graphics | null = null;
+    private playerLight: Light | null = null;
 
     /**
      * Constructs the main Game instance.
@@ -131,10 +129,6 @@ export class Game {
 
         // Give the plugin a reference to the PIXI object
         PixiPlugin.registerPIXI(PIXI);
-
-        // Set light related stuff
-        // TODO Again, better way to do this?
-        this.gradientLightTexture = GraphicsUtils.createRadialGradientTexture();
 
         // Preload textures before starting the game loop to avoid rendering glitches.
         await this.loadAssets();
@@ -215,53 +209,15 @@ export class Game {
 
         // Set up light related stuff
         // TODO Better way or place  to do this?
-        this.playerLight = new PIXI.Graphics();
-
-        if(this.gradientLightTexture) {
-            this.lightSprite = new PIXI.Sprite(this.gradientLightTexture);
-            this.lightSprite.anchor.set(Game.Config.Wall.size / 2);
-            this.lightSprite.width = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter;
-            this.lightSprite.height = Game.Config.Light.radius * 2 * Game.Config.PixelsPerMeter; 
-            this.lightSprite.blendMode = 'add';
-            this.lightSprite.tint = Game.Config.Light.defaultColor;
-            this.levelContainer.addChild(this.lightSprite);
-
-            this.lightMask = new PIXI.Graphics();
-            this.lightSprite.mask = this.lightMask;
-
-            this.flickerLight(this.lightSprite);
-            this.oscillateLight(this.lightSprite, Game.Config.Light.startColor, Game.Config.Light.endColor);
-
-            this.levelContainer.addChild(this.lightMask);
-        }
+        this.playerLight = new Light(Game.Config.Light.radius);
+        this.levelContainer.addChild(this.playerLight.sprite);
+        this.levelContainer.addChild(this.playerLight.mask);
         
         // Construct a player at a given location
         this.player = new Player(this.world, this.levelContainer, {x: Number(startX), y: Number(startY)});
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
-    }
-
-    // TODO Put in some other Light-related file / class
-    flickerLight(lightSprite: PIXI.Sprite) {
-        gsap.to(lightSprite, {
-          alpha: 0.6 + Math.random() * 0.15,
-          duration: 0.5 + Math.random() * 0.5,
-          ease: 'power1.inOut',
-          onComplete: () => this.flickerLight(lightSprite)
-        });
-      }
-
-    // TODO Put in some other light-related file / class
-    oscillateLight(lightSprite: PIXI.Sprite, startColor: number, endColor: number) {
-        gsap.fromTo(lightSprite, {
-            pixi: { tint: startColor},
-        }, {
-            duration: 2,
-            pixi: { tint: endColor },
-            yoyo: true,
-            repeat: -1
-        });
     }
     
     /**
@@ -448,8 +404,10 @@ export class Game {
     }
 
     renderLights() {
+        // Push rendering to the Light object itself
+
         // TODO What about handling multiple lights?
-        if (!this.playerLight ||  !this.player || !this.lightMask) return;
+        if (!this.playerLight ||  !this.player) return;
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -457,25 +415,24 @@ export class Game {
         };
 
         // Build out the light points in world space (Meters)
-        const validEdges = LightUtils.lookupValidEdgesForArea(this.validEdgesLookupTable, playerPos, Game.Config.Light.radius);
-        const lightPoints = LightUtils.buildLightPolygon(playerPos, validEdges, Game.Config.Light.numRays, Game.Config.Light.radius);
+        const validEdges = LightUtils.lookupValidEdgesForArea(this.validEdgesLookupTable, playerPos, this.playerLight.radius);
+        const lightPoints = LightUtils.buildLightPolygon(playerPos, validEdges, Game.Config.Light.numRays, this.playerLight.radius);
 
         // Update light sprite to be under where the player
-        if (this.lightSprite) {
-            this.lightSprite.x = playerPos.x * Game.Config.PixelsPerMeter;
-            this.lightSprite.y = playerPos.y * Game.Config.PixelsPerMeter;
-        }
+        this.playerLight.sprite.width = this.playerLight.radius * 2 * Game.Config.PixelsPerMeter;
+        this.playerLight.sprite.height = this.playerLight.radius * 2 * Game.Config.PixelsPerMeter;
+        this.playerLight.sprite.x = playerPos.x * Game.Config.PixelsPerMeter;
+        this.playerLight.sprite.y = playerPos.y * Game.Config.PixelsPerMeter;
         
         // Draw mask
-        this.lightMask.clear();
+        this.playerLight.mask.clear();
 
-    
-        this.lightMask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
+        this.playerLight.mask.moveTo(playerPos.x * Game.Config.PixelsPerMeter, playerPos.y * Game.Config.PixelsPerMeter);
         for (const pt of lightPoints) {
-            this.lightMask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
+            this.playerLight.mask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
         }
 
-        this.lightMask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
-        this.lightMask.fill();
+        this.playerLight.mask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
+        this.playerLight.mask.fill();
     }
 }

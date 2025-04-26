@@ -7,7 +7,7 @@ import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
 
 export interface LightOptions {
-    radius: number;
+    radius: number; // TODO BAD PRACTICE - We are setting and using this directly, SHOULD be a radius property on the Light object
     startColor: number;
     endColor: number;
     radiusVariance: number;
@@ -16,17 +16,30 @@ export interface LightOptions {
     numRays: number;
 }
 
-export class Light {
+export interface Light {
+    sprite: PIXI.Sprite;
+    mask: PIXI.Graphics;
+    update: (pos: Point | null) => void;
+    render: () => void;
+}
+
+export class DynamicLight implements Light {
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics = new PIXI.Graphics();
+    
+    // Hidden privates
+    private _collisionData: Segment[] = [];
+    // TODO Do in conjunction with a static flag and compute on initial light creation
+    private _cachedLightPoints: { point: Point; angle: number }[] = [];
     private options: LightOptions;
 
     // TODO There's gotta be a better way to have default / starting values that might be tweened
     private defaultRadius: number = 1;
     private defaultAlpha: number = 1;
 
-    constructor(pos: Point, options: LightOptions) {
+    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {
         this.options = options;
+        this._collisionData = collisionData;
 
         // TODO better way to store default / starting values that could be tweened
         this.defaultRadius = options.radius;
@@ -51,67 +64,46 @@ export class Light {
         this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
-    updateAndRender(pos: Point, allEdges: Segment[]) {
+    update(pos: Point | null = null) {
+        let posToUse: Point | null = pos;
+
+        // Use the sprite's current position if no updated position is given
+        if (!posToUse) {
+            posToUse = { 
+                x: this.sprite.x / Game.Config.PixelsPerMeter,
+                y: this.sprite.y / Game.Config.PixelsPerMeter
+            };
+        }
+
         const lightBounds = {
-            minX: pos.x - this.options.radius,
-            maxX: pos.x + this.options.radius,
-            minY: pos.y - this.options.radius,
-            maxY: pos.y + this.options.radius,
+            minX: posToUse.x - this.options.radius,
+            maxX: posToUse.x + this.options.radius,
+            minY: posToUse.y - this.options.radius,
+            maxY: posToUse.y + this.options.radius,
           };
 
         // Build out the light points in world space (Meters)
-        const nearbyEdges = allEdges.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
-        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius);
+        // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
+        const nearbyEdges = this._collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
+        this._cachedLightPoints = LightUtils.buildLightPolygon(posToUse, nearbyEdges, this.options.numRays, this.options.radius);
 
         // Update light sprite to be under where the player
         this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
         this.sprite.height = this.options.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.x = pos.x * Game.Config.PixelsPerMeter;
-        this.sprite.y = pos.y * Game.Config.PixelsPerMeter;
-        
-        // Draw mask
-        this.mask.clear();
-
-        this.mask.moveTo(this.sprite.x, this.sprite.y);
-        for (const pt of lightPoints) {
-            this.mask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
-        }
-
-        this.mask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
-        this.mask.fill();
+        this.sprite.x = posToUse.x * Game.Config.PixelsPerMeter;
+        this.sprite.y = posToUse.y * Game.Config.PixelsPerMeter;
     }
 
-    renderStatic(allEdges: Segment[]) {
-        // TODO Better optimize, assuming radius doesn't change?
-        const pos: Point = {
-            x: this.sprite.x / Game.Config.PixelsPerMeter,
-            y: this.sprite.y / Game.Config.PixelsPerMeter
-        }
-
-        const lightBounds = {
-            minX: pos.x - this.options.radius,
-            maxX: pos.x + this.options.radius,
-            minY: pos.y - this.options.radius,
-            maxY: pos.y + this.options.radius,
-          };
-
-        // Build out the light points in world space (Meters)
-        const nearbyEdges = allEdges.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
-        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius); // TODO Have the radius stored more properly (Consider tween implications)
-        
-        // Update light sprite to be under where the player
-        this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.height = this.options.radius * 2 * Game.Config.PixelsPerMeter;
-        
+    render() {
         // Draw mask
         this.mask.clear();
 
         this.mask.moveTo(this.sprite.x, this.sprite.y);
-        for (const pt of lightPoints) {
+        for (const pt of this._cachedLightPoints) {
             this.mask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
         }
 
-        this.mask.lineTo(lightPoints[0].point.x * Game.Config.PixelsPerMeter, lightPoints[0].point.y * Game.Config.PixelsPerMeter);
+        this.mask.lineTo(this._cachedLightPoints[0].point.x * Game.Config.PixelsPerMeter, this._cachedLightPoints[0].point.y * Game.Config.PixelsPerMeter);
         this.mask.fill();
     }
 

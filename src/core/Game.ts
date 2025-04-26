@@ -13,7 +13,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
 import { Point, Segment } from '../utils/types';
-import { Light } from '../entities/Light.ts';
+import { Light, DynamicLight } from '../entities/Light.ts';
 
 export class Game {
     // Centralized game configuration
@@ -326,7 +326,7 @@ export class Game {
 
         // Set up light related stuff
         // TODO Better way or place  to do this?
-        this.playerLight = new Light(playerPos, Game.Config.PlayerLight);
+        this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Game.Config.PlayerLight);
         this.lightsContainer.addChild(this.playerLight.sprite);
         this.lightsContainer.addChild(this.playerLight.mask);
 
@@ -337,7 +337,12 @@ export class Game {
 
         if (finishTiles) {
             for (const tile of finishTiles) {
-                const finishLight = new Light({x: tile.body.getPosition().x + Game.Config.Wall.size / 2, y: tile.body.getPosition().y + Game.Config.Wall.size / 2}, Game.Config.FinishLight);
+                const finishLight = new DynamicLight({
+                    x: tile.body.getPosition().x + Game.Config.Wall.size / 2, 
+                    y: tile.body.getPosition().y + Game.Config.Wall.size / 2
+                },
+                this.mergedEdges,
+                 Game.Config.FinishLight);
                 this.lightsContainer.addChild(finishLight.sprite);
                 this.lightsContainer.addChild(finishLight.mask);
                 this.finishLights.push(finishLight);
@@ -355,7 +360,7 @@ export class Game {
                     x: torch.sprite.x / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2,
                     y: torch.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
                 }
-                const torchLight = new Light(pos, Game.Config.TorchLight);
+                const torchLight = new DynamicLight(pos, this.mergedEdges, Game.Config.TorchLight);
                 this.lightsContainer.addChild(torchLight.sprite);
                 this.lightsContainer.addChild(torchLight.mask);
                 this.torchLights.push(torchLight);
@@ -561,15 +566,19 @@ export class Game {
             y: this.player?.body.getPosition().y
         };
 
-       this.playerLight.updateAndRender(playerPos, this.mergedEdges);
+       this.playerLight.update(playerPos);
+       this.playerLight.render();
 
        // TODO Is something static even if it's radius might fluctuate??
        for (const light of this.finishLights) {
-           light.renderStatic(this.mergedEdges);
+           light.update(null);
+           light.render();
+
        }
 
        for (const light of this.torchLights) {
-           light.renderStatic(this.mergedEdges);
+           light.update(null);
+           light.render();
        }
     }
 }

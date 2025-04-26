@@ -34,6 +34,7 @@ type WallScaffold = {
 type LevelContainers = {
     wallsContainer: PIXI.Container;
     finishTilesContainer: PIXI.Container;
+    torchesContainer: PIXI.Container;
     edgesContainer: PIXI.Container;
 }
 
@@ -45,6 +46,7 @@ type LevelContainers = {
 export class Level {
     private walls: Entity[];
     private finishTiles: PhysicalEntity[];
+    private torches: Entity[];
 
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
@@ -59,6 +61,7 @@ export class Level {
         // Store references to wall and finish tile entities
         this.walls = [];
         this.finishTiles = [];
+        this.torches = [];
 
         // Convert level map to a list of wall/boundary objects (scaffolding)
         // All calculations in world (meter) space, not pixels
@@ -130,7 +133,7 @@ export class Level {
         levelContainers.edgesContainer.addChild(edgeGraphics);
 
         // Randomly place finish tiles in open spaces for the player to reach
-        const numFinishTiles = MathUtils.getRandomInt(Game.Config.FinishTiles.min, Game.Config.FinishTiles.max);
+        const numFinishTiles = Math.ceil(validSpaces.length * Game.Config.FinishTilesDensity);
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
@@ -165,6 +168,27 @@ export class Level {
 
             this.finishTiles.push({ body: finishBody, sprite });
         }
+
+        // Randomly place torches in open spaces for the player to reach
+        const numTorches = Math.ceil(validSpaces.length * Game.Config.TorchesDensity);
+        for (let i = 0; i < numTorches; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+            const width = Game.Config.Torch.size;
+            const height = Game.Config.Torch.size;
+            const color = Game.Config.Torch.color;
+
+            // Create a sprite for the finish tile
+            const sprite = PIXI.Sprite.from(Game.Config.Textures.torch);
+            sprite.x = Number(x) * Game.Config.PixelsPerMeter;
+            sprite.y = Number(y) * Game.Config.PixelsPerMeter;
+            sprite.width = width * Game.Config.PixelsPerMeter;
+            sprite.height = height * Game.Config.PixelsPerMeter;
+            sprite.tint = color;
+            levelContainers.torchesContainer.addChild(sprite);
+
+            this.torches.push({ sprite });
+        }
     }
 
     /**
@@ -181,6 +205,14 @@ export class Level {
      */
     getFinishTiles(): PhysicalEntity[] {
         return this.finishTiles;
+    }
+
+    /**
+     * Returns all torch entities in the level.
+     * @returns {Entity[]} Array of torch entities.
+     */
+    getTorches(): Entity[] {
+        return this.torches;
     }
 
     /**

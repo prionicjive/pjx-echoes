@@ -11,7 +11,7 @@ import { InputManager } from './InputManager.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
-import { Segment } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import { Light } from '../entities/Light.ts';
 
 export class Game {
@@ -50,10 +50,6 @@ export class Game {
             wallChance: 0.45, // Chance that any given space is a wall
             smoothingSteps: 4 // How many times to smooth the map
         },
-        FinishTiles: {
-            min: 1,           // Min/max number of finish tiles per level
-            max: 7
-        },
         Player: {
             color: 0x32ddff,  // Tint color for the player sprite
             radius: 0.48,     // Physics radius of the player (in meters)
@@ -61,6 +57,10 @@ export class Game {
         Wall: {
             color: 0x444444,  // Tint color for walls
             size: 1,          // Wall size (in meters)
+        },
+        Torch: {
+            color: 0xdfb503,  // Tint color for torches
+            size: 1           // Torch size (in meters)
         },
         Finish: {
             color: 0x2ddf03,  // Tint color for finish tiles
@@ -73,14 +73,15 @@ export class Game {
         Textures: {
             player: '/assets/textures/player.png', // Paths to texture assets
             wall: '/assets/textures/wall.png',
+            torch: '/assets/textures/torch.png',
             finish: '/assets/textures/finish.png'
         },
         PlayerLight: {
             numRays: 360,
             radius: 10,
             radiusVariance: 5,
-            alpha: 0.6,
-            alphaVariance: 0.16,
+            alpha: 0.5,
+            alphaVariance: 0.4,
             startColor: 0x55aaff,
             endColor: 0x77edff
         },
@@ -88,11 +89,22 @@ export class Game {
             numRays: 360,
             radius: 10,
             radiusVariance: 5,
-            alpha: 0.6,
-            alphaVariance: 0.16,
+            alpha: 0.5,
+            alphaVariance: 0.4,
             startColor: 0x2ddf03,
             endColor: 0x27ffc3
-        } 
+        },
+        TorchLight: {
+            numRays: 360,
+            radius: 5,
+            radiusVariance: 2.5,
+            alpha: 0.5,
+            alphaVariance: 0.4,
+            startColor: 0xdfb503,
+            endColor: 0xab3347
+        },
+        FinishTilesDensity: 0.001,
+        TorchesDensity: 0.007
     };
 
     // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
@@ -113,6 +125,7 @@ export class Game {
     private edgesContainer: PIXI.Container;
     private playerContainer: PIXI.Container;
     private finishTilesContainer: PIXI.Container;
+    private torchesContainer: PIXI.Container;
     private lightsContainer: PIXI.Container;
 
     // Lights
@@ -120,6 +133,7 @@ export class Game {
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
     private playerLight: Light | null = null;
     private finishLights: Light[] = [];
+    private torchLights: Light[] = [];
 
     /**
      * Constructs the main Game instance.
@@ -135,6 +149,7 @@ export class Game {
         this.edgesContainer = new PIXI.Container();
         this.playerContainer = new PIXI.Container();
         this.finishTilesContainer = new PIXI.Container();
+        this.torchesContainer = new PIXI.Container();
         this.lightsContainer = new PIXI.Container();
 
         // Set up input event handlers
@@ -179,6 +194,7 @@ export class Game {
         await PIXI.Assets.load(Game.Config.Textures.player);
         await PIXI.Assets.load(Game.Config.Textures.wall);
         await PIXI.Assets.load(Game.Config.Textures.finish);
+        await PIXI.Assets.load(Game.Config.Textures.torch);
     }
 
     /**
@@ -194,16 +210,19 @@ export class Game {
         this.edgesContainer.removeChildren();
         this.playerContainer.removeChildren();
         this.finishTilesContainer.removeChildren();
+        this.torchesContainer.removeChildren();
         this.lightsContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app?.stage.removeChildren();
 
         // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
+        // ORDER IS IMPORTANT
         this.worldContainer.addChild(this.wallsContainer);
         this.worldContainer.addChild(this.edgesContainer);
-        this.worldContainer.addChild(this.playerContainer);
-        this.worldContainer.addChild(this.finishTilesContainer);
         this.worldContainer.addChild(this.lightsContainer);
+        this.worldContainer.addChild(this.finishTilesContainer);
+        this.worldContainer.addChild(this.torchesContainer);
+        this.worldContainer.addChild(this.playerContainer);
 
         // Add this mondo world container add the only direct child to the  stage
         this.app?.stage.addChild(this.worldContainer);
@@ -251,7 +270,8 @@ export class Game {
             this.world, { 
                 wallsContainer: this.wallsContainer, 
                 finishTilesContainer: this.finishTilesContainer,
-                edgesContainer: this.edgesContainer
+                edgesContainer: this.edgesContainer,
+                torchesContainer: this.torchesContainer
             }, 
             this.rawLevelMap, 
             openSpaces,
@@ -286,6 +306,24 @@ export class Game {
                 this.lightsContainer.addChild(finishLight.sprite);
                 this.lightsContainer.addChild(finishLight.mask);
                 this.finishLights.push(finishLight);
+            }
+        }
+
+        // Set up torch lights
+        // TODO This is a bit of a hack, but it works for now
+        this.torchLights = [];
+        const torches = this.level?.getTorches();
+
+        if (torches) {
+            for (const torch of torches) {
+                const pos: Point = {
+                    x: torch.sprite.x / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2,
+                    y: torch.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
+                }
+                const torchLight = new Light(pos, Game.Config.TorchLight);
+                this.lightsContainer.addChild(torchLight.sprite);
+                this.lightsContainer.addChild(torchLight.mask);
+                this.torchLights.push(torchLight);
             }
         }
 
@@ -487,7 +525,12 @@ export class Game {
 
        this.playerLight.updateAndRender(playerPos, this.mergedEdges);
 
+       // TODO Is something static even if it's radius might fluctuate??
        for (const light of this.finishLights) {
+           light.renderStatic(this.mergedEdges);
+       }
+
+       for (const light of this.torchLights) {
            light.renderStatic(this.mergedEdges);
        }
     }

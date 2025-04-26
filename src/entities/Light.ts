@@ -23,13 +23,18 @@ export class Light {
 
     // TODO There's gotta be a better way to have default / starting values that might be tweened
     private defaultRadius: number = 1;
+    private defaultAlpha: number = 1;
 
     constructor(pos: Point, options: LightOptions) {
         this.options = options;
+
+        // TODO better way to store default / starting values that could be tweened
         this.defaultRadius = options.radius;
+        this.defaultAlpha = options.alpha;
 
         this.sprite = new PIXI.Sprite(GraphicsUtils.getRadialGradientTexture());
 
+        // TODO Better way to calculate anchor?
         this.sprite.anchor.set(Game.Config.Wall.size / 2);
         this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
         this.sprite.height = this.options.radius * 2 * Game.Config.PixelsPerMeter; 
@@ -92,7 +97,7 @@ export class Light {
 
         // Build out the light points in world space (Meters)
         const nearbyEdges = allEdges.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
-        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius);
+        const lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.options.radius); // TODO Have the radius stored more properly (Consider tween implications)
         
         // Update light sprite to be under where the player
         this.sprite.width = this.options.radius * 2 * Game.Config.PixelsPerMeter;
@@ -114,7 +119,7 @@ export class Light {
     flickerAlpha() {
         gsap.to(this.sprite, {
             pixi: {
-                alpha: 0.5 + Math.random() * 0.4
+                alpha: this.defaultAlpha + Math.random() * this.options.alphaVariance
             },
             duration: 0.5 + Math.random() * 2.5,
             ease: 'power1.inOut',
@@ -134,7 +139,7 @@ export class Light {
 
     // TODO Put in some other light-related file / class
     oscillateColor(startColor: number, endColor: number) {
-        gsap.fromTo(this.sprite, {
+        const tween =gsap.fromTo(this.sprite, {
             pixi: { tint: startColor},
         }, {
             duration: 1.5 + (Math.random() * 2),
@@ -143,5 +148,8 @@ export class Light {
             delay: Math.random() * 2,
             repeat: -1
         });
+
+        // Randomize the starting point
+        tween.progress(Math.random());
     }
 }

@@ -114,9 +114,9 @@ export class Light {
     flickerAlpha() {
         gsap.to(this.sprite, {
             pixi: {
-                alpha: 0.6 + Math.random() * 0.15
+                alpha: 0.5 + Math.random() * 0.4
             },
-            duration: 0.5 + Math.random() * 0.5,
+            duration: 0.5 + Math.random() * 2.5,
             ease: 'power1.inOut',
             onComplete: () => this.flickerAlpha()
         });
@@ -137,9 +137,10 @@ export class Light {
         gsap.fromTo(this.sprite, {
             pixi: { tint: startColor},
         }, {
-            duration: 2,
+            duration: 1.5 + (Math.random() * 2),
             pixi: { tint: endColor },
             yoyo: true,
+            delay: Math.random() * 2,
             repeat: -1
         });
     }

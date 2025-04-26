@@ -4,6 +4,7 @@
 // Everything flows through here!
 
 import * as PIXI from 'pixi.js';
+import { CRTFilter } from 'pixi-filters';
 import planck from 'planck';
 import gsap from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
@@ -128,6 +129,10 @@ export class Game {
     private torchesContainer: PIXI.Container;
     private lightsContainer: PIXI.Container;
 
+    // Filters
+    // TODO Do we need to have these here?
+    private crtFilter: CRTFilter
+
     // Lights
     // TODO Better structured elsewhere?
     // TODO Does this need to be in its own container so that it's rendered differently order wise?
@@ -151,6 +156,18 @@ export class Game {
         this.finishTilesContainer = new PIXI.Container();
         this.torchesContainer = new PIXI.Container();
         this.lightsContainer = new PIXI.Container();
+
+        // Instantiate filters
+        this.crtFilter = new CRTFilter({
+            curvature: 1,
+            lineWidth: 1.0,
+            lineContrast: 0.25,
+            vignetting: 0.3,
+            vignettingAlpha: 0.4,
+            noise: 0.2,
+            noiseSize: 1,
+            time: performance.now() * 0.001
+        });
 
         // Set up input event handlers
         window.addEventListener('mousedown', this.handlePointerDown.bind(this));
@@ -177,9 +194,13 @@ export class Game {
         // Preload textures before starting the game loop to avoid rendering glitches.
         await this.loadAssets();
 
+        // Set up post-processing
+        // TODO Find out how to dynamically alter these
+        this.setupPostProcessingFilters();
+
         // Start the main loop
-        this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
-        this.reset();
+    this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
+    this.reset();
 
         // TODO Handle additional setup if needed
     }
@@ -198,8 +219,22 @@ export class Game {
     }
 
     /**
+     * Sets up post-processing filters for the game.
+     */
+    setupPostProcessingFilters() {
+        if(!this.app) {
+            return;
+        }
+
+        // TODO Set up other filters
+
+        // Apply to the lighting container
+        this.app.stage.filters = [this.crtFilter];
+    }
+
+    /**
      * Resets the game state: clears containers, destroys physics bodies,
-     * and generates a fresh level and player.
+ * and generates a fresh level and player.
      */
     reset() {
         // TODO Consider how / what to reset or destroy and rebuild
@@ -421,6 +456,9 @@ export class Game {
         this.updateAndRenderLights();
 
         // TODO Any other entities to update?
+    
+        // TODO Update any changing values for filters
+        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
     }
 
     /**

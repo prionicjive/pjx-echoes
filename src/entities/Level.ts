@@ -10,7 +10,6 @@ import { Game } from '../core/Game';
 import { Entity, PhysicalEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { MathUtils } from '../utils/MathUtils';
 import { Segment } from '../utils/types';
 
 /**

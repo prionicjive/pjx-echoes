@@ -24,10 +24,10 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 64,       // Width of the generated level (in grid units)
-            height: 64
+            width: 32,       // Width of the generated level (in grid units)
+            height: 228
         },
-        PixelsPerMeter: 16, // How many pixels represent one physics meter
+        PixelsPerMeter: 8, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -79,27 +79,27 @@ export class Game {
         },
         PlayerLight: {
             numRays: 360,
-            radius: 10,
+            baseRadius: 10,
             radiusVariance: 5,
-            alpha: 0.5,
+            baseAlpha: 0.5,
             alphaVariance: 0.4,
             startColor: 0x55aaff,
             endColor: 0x77edff
         },
         FinishLight: {
             numRays: 360,
-            radius: 10,
+            baseRadius: 10,
             radiusVariance: 5,
-            alpha: 0.5,
+            baseAlpha: 0.5,
             alphaVariance: 0.4,
             startColor: 0x2ddf03,
             endColor: 0x27ffc3
         },
         TorchLight: {
             numRays: 360,
-            radius: 5,
+            baseRadius: 5,
             radiusVariance: 2.5,
-            alpha: 0.5,
+            baseAlpha: 0.5,
             alphaVariance: 0.4,
             startColor: 0xdfb503,
             endColor: 0xab3347

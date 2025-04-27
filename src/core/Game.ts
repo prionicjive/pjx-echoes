@@ -13,7 +13,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
 import { Point, Segment } from '../utils/types';
-import { Light, DynamicLight } from '../entities/Light.ts';
+import { Light, DynamicLight, StaticLight } from '../entities/Light.ts';
 
 export class Game {
     // Centralized game configuration
@@ -24,10 +24,10 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 32,       // Width of the generated level (in grid units)
-            height: 228
+            width: 128,       // Width of the generated level (in grid units)
+            height: 128
         },
-        PixelsPerMeter: 8, // How many pixels represent one physics meter
+        PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
             lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
             DeadZone: {
@@ -104,8 +104,8 @@ export class Game {
             startColor: 0xdfb503,
             endColor: 0xab3347
         },
-        FinishTilesDensity: 0.001,
-        TorchesDensity: 0.007
+        FinishTilesDensity: 0.0001,
+        TorchesDensity: 0.0007
     };
 
     // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
@@ -337,7 +337,7 @@ export class Game {
 
         if (finishTiles) {
             for (const tile of finishTiles) {
-                const finishLight = new DynamicLight({
+                const finishLight = new StaticLight({
                     x: tile.body.getPosition().x + Game.Config.Wall.size / 2, 
                     y: tile.body.getPosition().y + Game.Config.Wall.size / 2
                 },
@@ -360,7 +360,7 @@ export class Game {
                     x: torch.sprite.x / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2,
                     y: torch.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
                 }
-                const torchLight = new DynamicLight(pos, this.mergedEdges, Game.Config.TorchLight);
+                const torchLight = new StaticLight(pos, this.mergedEdges, Game.Config.TorchLight);
                 this.lightsContainer.addChild(torchLight.sprite);
                 this.lightsContainer.addChild(torchLight.mask);
                 this.torchLights.push(torchLight);

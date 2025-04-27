@@ -40,8 +40,8 @@ export abstract class Light {
         this.lightPoints = [];
         this.options = options;
 
-        this.radius = this.options.baseRadius;
-        this.alpha = this.options.baseAlpha;
+        this.radius = (this.options.baseRadius - this.options.radiusVariance) + (Math.random() * this.options.radiusVariance * 2); // Determine a radius based on config
+        this.alpha = (this.options.baseAlpha - this.options.alphaVariance) + (Math.random() * this.options.alphaVariance * 2); // Determine a alpha based on config
         this.tint = this.options.startColor;
         this.tweenables = {}
 
@@ -175,6 +175,121 @@ export class DynamicLight extends Light {
     }
 
     // TODO Put in some other light-related file / class
+    private oscillateColor(startColor: number, endColor: number) {
+        // Kill any previous tweens
+        if (this.colorTween) {
+            this.colorTween.kill();
+        }
+
+        this.colorTween = gsap.fromTo(this.tweenables, {
+            tint: startColor,
+        }, {
+            duration: 1.5 + (Math.random() * 2),
+            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
+            yoyo: true,
+            delay: Math.random() * 2,
+            repeat: -1
+        });
+
+        // Randomize the starting point
+        this.colorTween.progress(Math.random());
+    }
+}
+
+export class StaticLight extends Light {
+    // Needed for tweens
+    private colorTween?: gsap.core.Tween;
+    private alphaTween?: gsap.core.Tween;
+
+    private lastPos: Point;
+   
+    constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
+        super(pos, collisionData, options);
+
+        // Set up values we assume will RARELY change
+        this.lastPos = pos;
+
+        // Compute the light points that should rarely change
+        this.computeLightPoints(pos);
+
+        // Set up tween-related goodness
+        this.setupTweens();
+    }
+
+    // Compute the light polygon only once, or if forced
+    private computeLightPoints(pos: Point) {
+        const lightBounds = {
+            minX: pos.x - this.radius,
+            maxX: pos.x + this.radius,
+            minY: pos.y - this.radius,
+            maxY: pos.y + this.radius,
+          };
+
+        // Build out the light points in world space (Meters)
+        const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
+        this.lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.radius);
+    }
+
+    // Essentially only updating tweenable values that don't invalidate the light points
+    public update(pos: Point | null = null) {
+         // Set applicable values based on what's been tween
+         this.alpha = this.tweenables.alpha;
+         this.tint = this.tweenables.tint;
+ 
+         this.sprite.tint = this.tint;
+         this.sprite.alpha = this.alpha;
+    }
+
+    // Optionally, allow manual recomputation if needed
+    public recomputeLightPoints(pos?: Point, collisionData?: Segment[], radius?: number) {
+        // Update sprite position if new position is provided
+        if (pos) {
+            this.lastPos = { ...pos };
+            this.sprite.x = pos.x * Game.Config.PixelsPerMeter;
+            this.sprite.y = pos.y * Game.Config.PixelsPerMeter;
+        }
+
+        // If collision data of the world has changed, update it
+        if (collisionData) {
+            this.collisionData = collisionData;
+        }
+
+        // If radius has changed, adjust the sprite
+        if (radius !== undefined) {
+            this.radius = radius;
+            this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
+            this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter;
+        }
+        
+        // Compute the light points once again
+        this.computeLightPoints(this.lastPos);
+    }
+
+    protected setupTweens() {
+        // Set up tweenable properties
+        this.tweenables = {
+            radius: this.radius,
+            alpha: this.alpha,
+            tint: this.tint
+        };
+        this.flickerAlpha();
+        this.oscillateColor(this.options.startColor, this.options.endColor);      
+    }
+
+    private flickerAlpha() {
+        // Kill any previous tweens
+        if (this.alphaTween) {
+            this.alphaTween.kill();
+        }
+
+        this.alphaTween = gsap.to(this.tweenables, {
+            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
+            duration: 0.5 + Math.random() * 2.5,
+            ease: 'power1.inOut',
+            onComplete: () => this.flickerAlpha()
+        });
+    }
+
     private oscillateColor(startColor: number, endColor: number) {
         // Kill any previous tweens
         if (this.colorTween) {

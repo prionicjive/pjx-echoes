@@ -26,7 +26,7 @@ export abstract class Light {
     protected options: LightOptions;
 
     // Catch all for tweenable values
-    protected radius: number;
+    public radius: number;
     protected alpha: number;
     protected tint: number;
     protected tweenables: { [key: string]: any};
@@ -201,6 +201,8 @@ export class StaticLight extends Light {
     private colorTween?: gsap.core.Tween;
     private alphaTween?: gsap.core.Tween;
 
+    // This is needed to keep track of the position in case it itself hasn't changed but radius or collision data has, 
+    // which would be used to invalidate and regenerate the light points
     private lastPos: Point;
    
     constructor(pos: Point, collisionData: Segment[], options: LightOptions) {

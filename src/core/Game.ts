@@ -566,19 +566,42 @@ export class Game {
             y: this.player?.body.getPosition().y
         };
 
+        // Player light is always on screen
        this.playerLight.update(playerPos);
        this.playerLight.render();
 
-       // TODO Is something static even if it's radius might fluctuate??
-       for (const light of this.finishLights) {
-           light.update(null);
-           light.render();
+       // See if lights are on screen and render them if they are
+       const screenLeft = -this.worldContainer.x;
+        const screenTop = -this.worldContainer.y;
+        const screenRight = screenLeft + Game.Config.ScreenDimensions.width;
+        const screenBottom = screenTop + Game.Config.ScreenDimensions.height;
 
-       }
+        const allLights: Light[] = [...this.finishLights, ...this.torchLights];
 
-       for (const light of this.torchLights) {
+       for (const light of allLights) {
            light.update(null);
-           light.render();
+
+           if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
+                light.sprite.visible = true;
+                light.mask.visible = true;
+                light.render();
+            } else {
+                light.sprite.visible = false;
+                light.mask.visible = false;
+            }
        }
+    }
+
+    isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
+        const x = light.sprite.x;
+        const y = light.sprite.y;
+        const r = light.radius * Game.Config.PixelsPerMeter; // If radius is in meters
+    
+        return (
+            x + r > screenLeft &&
+            x - r < screenRight &&
+            y + r > screenTop &&
+            y - r < screenBottom
+        );
     }
 }

@@ -13,7 +13,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
 import { Point, Segment } from '../utils/types';
-import { Light, DynamicLight, StaticLight } from '../entities/Light.ts';
+import { Light, StaticLight, DynamicLight, PlayerLight, FinishLight, TorchLight } from '../entities/Light.ts';
 
 export class Game {
     // Centralized game configuration
@@ -355,7 +355,7 @@ export class Game {
 
         // Set up light related stuff
         // TODO Better way or place  to do this?
-        this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Game.Config.PlayerLight);
+        this.playerLight = new PlayerLight(playerPos, this.mergedEdges, Game.Config.PlayerLight);
 
         // Set up lights for finish tiles
         // TODO This is a bit of a hack, but it works for now
@@ -364,7 +364,7 @@ export class Game {
 
         if (finishTiles) {
             for (const tile of finishTiles) {
-                const finishLight = new StaticLight({
+                const finishLight = new FinishLight({
                     x: tile.body.getPosition().x + Game.Config.Wall.size / 2, 
                     y: tile.body.getPosition().y + Game.Config.Wall.size / 2
                 },
@@ -385,7 +385,7 @@ export class Game {
                     x: torch.sprite.x / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2,
                     y: torch.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
                 }
-                const torchLight = new StaticLight(pos, this.mergedEdges, Game.Config.TorchLight);
+                const torchLight = new TorchLight(pos, this.mergedEdges, Game.Config.TorchLight);
                 this.torchLights.push(torchLight);
             }
         }

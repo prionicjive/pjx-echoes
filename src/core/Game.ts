@@ -129,6 +129,9 @@ export class Game {
     private torchesContainer: PIXI.Container;
     private lightmapContainer: PIXI.Container;
 
+    private blackBgRect: PIXI.Graphics;
+    private whiteBgRect: PIXI.Graphics;
+
     // Lightmap used for our render-to-texture'ing and post processing of lights
     private lightmapTexture: PIXI.RenderTexture;
     private lightmapSprite: PIXI.Sprite;
@@ -166,10 +169,18 @@ export class Game {
         const screenHeight = Game.Config.ScreenDimensions.height;
         this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
-        this.lightmapSprite.blendMode = 'add'; // Can be either 'multiply' or 'add', depending on the desired effect
+        this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
         this.lightmapSprite.width = screenWidth; // Make sure the lightmap sprite is as big as the screen
         this.lightmapSprite.height = screenHeight;
         this.lightmapContainer = new PIXI.Container();
+
+        // Set up white and black background rects
+        this.blackBgRect = new PIXI.Graphics();
+        this.blackBgRect.rect(0, 0, screenWidth, screenHeight);
+        this.blackBgRect.fill(0x000000);
+        this.whiteBgRect = new PIXI.Graphics();
+        this.whiteBgRect.rect(0, 0, screenWidth, screenHeight);
+        this.whiteBgRect.fill(0xffffff);
 
         // Instantiate filters
         this.crtFilter = new CRTFilter({
@@ -196,7 +207,7 @@ export class Game {
     async init() {
         // Set up PIXI application
         this.app = new PIXI.Application();
-        await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height });
+        await this.app.init({ width: Game.Config.ScreenDimensions.width, height: Game.Config.ScreenDimensions.height, backgroundColor: 0xffffff });
         document.body.appendChild(this.app.canvas);
 
         // Register the GSAP Pixi plugin
@@ -263,6 +274,9 @@ export class Game {
         this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app?.stage.removeChildren();
+
+        // Draw a full screen white texture for proper blending effects with post-processing
+        this.app?.stage.addChild(this.whiteBgRect);
 
         // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
         // ORDER IS IMPORTANT
@@ -628,7 +642,18 @@ export class Game {
        }
 
        // Render all lights to the render texture (lightmap)
-        this.app?.renderer.render({container: this.lightmapContainer, target: this.lightmapTexture, clear: true});
+       // Clear the RTT to white by rendering the white rectangle first
+       this.app?.renderer.render({
+            container: this.blackBgRect,
+            target: this.lightmapTexture,
+            clear: true // This clears to transparent, but then you immediately draw white over it
+        });
+
+        this.app?.renderer.render({
+            container: this.lightmapContainer, 
+            target: this.lightmapTexture, 
+            clear: false
+        });
         
         // Set the lightmap container back
         // Shift the lightmap container to take world "camera" into account

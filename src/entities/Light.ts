@@ -54,7 +54,7 @@ export abstract class Light {
         this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter; 
         this.sprite.x = this.pos.x * Game.Config.PixelsPerMeter;
         this.sprite.y = this.pos.y * Game.Config.PixelsPerMeter;
-        this.sprite.blendMode = 'add';
+        this.sprite.blendMode = 'normal';
         this.sprite.tint = options.startColor;
 
         // Set up the light mask

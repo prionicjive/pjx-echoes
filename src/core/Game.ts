@@ -24,8 +24,8 @@ export class Game {
             height: 720
         },
         LevelDimensions: {
-            width: 128,       // Width of the generated level (in grid units)
-            height: 128
+            width: 32,       // Width of the generated level (in grid units)
+            height: 64
         },
         PixelsPerMeter: 16, // How many pixels represent one physics meter
         Camera: {
@@ -127,7 +127,11 @@ export class Game {
     private playerContainer: PIXI.Container;
     private finishTilesContainer: PIXI.Container;
     private torchesContainer: PIXI.Container;
-    private lightsContainer: PIXI.Container;
+    private lightmapContainer: PIXI.Container;
+
+    // Lightmap used for our render-to-texture'ing and post processing of lights
+    private lightmapTexture: PIXI.RenderTexture;
+    private lightmapSprite: PIXI.Sprite;
 
     // Filters
     // TODO Do we need to have these here?
@@ -155,7 +159,17 @@ export class Game {
         this.playerContainer = new PIXI.Container();
         this.finishTilesContainer = new PIXI.Container();
         this.torchesContainer = new PIXI.Container();
-        this.lightsContainer = new PIXI.Container();
+        
+        // Set up basic lightmap-related things
+        // This doesn't get added to the world, it is just used for rendering lights to a texture
+        const screenWidth = Game.Config.ScreenDimensions.width;
+        const screenHeight = Game.Config.ScreenDimensions.height;
+        this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
+        this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
+        this.lightmapSprite.blendMode = 'add'; // Can be either 'multiply' or 'add', depending on the desired effect
+        this.lightmapSprite.width = screenWidth; // Make sure the lightmap sprite is as big as the screen
+        this.lightmapSprite.height = screenHeight;
+        this.lightmapContainer = new PIXI.Container();
 
         // Instantiate filters
         this.crtFilter = new CRTFilter({
@@ -199,8 +213,8 @@ export class Game {
         this.setupPostProcessingFilters();
 
         // Start the main loop
-    this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
-    this.reset();
+        this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
+        this.reset();
 
         // TODO Handle additional setup if needed
     }
@@ -246,15 +260,16 @@ export class Game {
         this.playerContainer.removeChildren();
         this.finishTilesContainer.removeChildren();
         this.torchesContainer.removeChildren();
-        this.lightsContainer.removeChildren();
+        this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app?.stage.removeChildren();
 
         // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
         // ORDER IS IMPORTANT
+        this.app?.stage.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
+        // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
         this.worldContainer.addChild(this.wallsContainer);
         this.worldContainer.addChild(this.edgesContainer);
-        this.worldContainer.addChild(this.lightsContainer);
         this.worldContainer.addChild(this.finishTilesContainer);
         this.worldContainer.addChild(this.torchesContainer);
         this.worldContainer.addChild(this.playerContainer);
@@ -327,8 +342,6 @@ export class Game {
         // Set up light related stuff
         // TODO Better way or place  to do this?
         this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Game.Config.PlayerLight);
-        this.lightsContainer.addChild(this.playerLight.sprite);
-        this.lightsContainer.addChild(this.playerLight.mask);
 
         // Set up lights for finish tiles
         // TODO This is a bit of a hack, but it works for now
@@ -342,9 +355,7 @@ export class Game {
                     y: tile.body.getPosition().y + Game.Config.Wall.size / 2
                 },
                 this.mergedEdges,
-                 Game.Config.FinishLight);
-                this.lightsContainer.addChild(finishLight.sprite);
-                this.lightsContainer.addChild(finishLight.mask);
+                Game.Config.FinishLight);
                 this.finishLights.push(finishLight);
             }
         }
@@ -361,8 +372,6 @@ export class Game {
                     y: torch.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
                 }
                 const torchLight = new StaticLight(pos, this.mergedEdges, Game.Config.TorchLight);
-                this.lightsContainer.addChild(torchLight.sprite);
-                this.lightsContainer.addChild(torchLight.mask);
                 this.torchLights.push(torchLight);
             }
         }
@@ -566,12 +575,29 @@ export class Game {
             y: this.player?.body.getPosition().y
         };
 
-        // Player light is always on screen
-       this.playerLight.update(playerPos);
-       this.playerLight.render();
+        // Get camera offset
+        const cameraOffset = {
+            x: -this.worldContainer.x,
+            y: -this.worldContainer.y
+        };
 
-       // See if lights are on screen and render them if they are
-       const screenLeft = -this.worldContainer.x;
+        // Before rendering to texture, make sure we clear out any old lights from the lightmap container
+        this.lightmapContainer.removeChildren();
+
+        // Player light is always on screen
+        this.playerLight.update(playerPos);
+        this.playerLight.render();
+
+        this.playerLight.sprite.x = ((playerPos.x * Game.Config.PixelsPerMeter) - cameraOffset.x);
+        this.playerLight.sprite.y = ((playerPos.y * Game.Config.PixelsPerMeter) - cameraOffset.y);
+        this.playerLight.mask.x = this.playerLight.sprite.x;
+        this.playerLight.mask.y = this.playerLight.sprite.y;
+
+        this.lightmapContainer.addChild(this.playerLight.sprite);
+        this.lightmapContainer.addChild(this.playerLight.mask);
+
+        // See if lights are on screen and render them if they are
+        const screenLeft = -this.worldContainer.x;
         const screenTop = -this.worldContainer.y;
         const screenRight = screenLeft + Game.Config.ScreenDimensions.width;
         const screenBottom = screenTop + Game.Config.ScreenDimensions.height;
@@ -584,12 +610,30 @@ export class Game {
            if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
                 light.sprite.visible = true;
                 light.mask.visible = true;
+
+                light.sprite.x = ((light.pos.x * Game.Config.PixelsPerMeter) - cameraOffset.x);
+                light.sprite.y = ((light.pos.y * Game.Config.PixelsPerMeter) - cameraOffset.y);
+                light.mask.x = light.sprite.x;
+                light.mask.y = light.sprite.y;
+                
                 light.render();
+
+                // Add sprite and mask to the lightmap container
+                this.lightmapContainer.addChild(light.sprite);
+                this.lightmapContainer.addChild(light.mask);
             } else {
                 light.sprite.visible = false;
                 light.mask.visible = false;
             }
        }
+
+       // Render all lights to the render texture (lightmap)
+        this.app?.renderer.render({container: this.lightmapContainer, target: this.lightmapTexture, clear: true});
+        
+        // Set the lightmap container back
+        // Shift the lightmap container to take world "camera" into account
+        this.lightmapContainer.x = 0;
+        this.lightmapContainer.y = 0;
     }
 
     isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {

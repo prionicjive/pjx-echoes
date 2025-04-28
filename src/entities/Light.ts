@@ -19,6 +19,7 @@ export interface LightOptions {
 export abstract class Light {
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
+    public pos: Point;
     protected collisionData: Segment[];
     protected lightPoints: { point: Point; angle: number }[];
 
@@ -36,6 +37,7 @@ export abstract class Light {
             throw new Error("Light cannot be instantiated directly");
         }
 
+        this.pos = pos;
         this.collisionData = collisionData;
         this.lightPoints = [];
         this.options = options;
@@ -50,8 +52,8 @@ export abstract class Light {
         this.sprite.anchor.set(Game.Config.Wall.size / 2);
         this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
         this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter; 
-        this.sprite.x = pos.x * Game.Config.PixelsPerMeter;
-        this.sprite.y = pos.y * Game.Config.PixelsPerMeter;
+        this.sprite.x = this.pos.x * Game.Config.PixelsPerMeter;
+        this.sprite.y = this.pos.y * Game.Config.PixelsPerMeter;
         this.sprite.blendMode = 'add';
         this.sprite.tint = options.startColor;
 
@@ -65,15 +67,22 @@ export abstract class Light {
     abstract update(pos: Point | null): void;
 
     public render() {
+        // Assume this.pos is the light's world position in meters
+        const centerX = this.pos.x * Game.Config.PixelsPerMeter;
+        const centerY = this.pos.y * Game.Config.PixelsPerMeter;
+
         // Draw mask
         this.mask.clear();
 
-        this.mask.moveTo(this.sprite.x, this.sprite.y);
+        this.mask.moveTo(0, 0);
         for (const pt of this.lightPoints) {
-            this.mask.lineTo(pt.point.x * Game.Config.PixelsPerMeter, pt.point.y * Game.Config.PixelsPerMeter);
+            this.mask.lineTo((pt.point.x * Game.Config.PixelsPerMeter) - centerX, (pt.point.y * Game.Config.PixelsPerMeter) - centerY);
         }
 
-        this.mask.lineTo(this.lightPoints[0].point.x * Game.Config.PixelsPerMeter, this.lightPoints[0].point.y * Game.Config.PixelsPerMeter);
+        this.mask.lineTo(
+            (this.lightPoints[0].point.x * Game.Config.PixelsPerMeter) - centerX, 
+            (this.lightPoints[0].point.y * Game.Config.PixelsPerMeter) - centerY
+        );
         this.mask.fill();
     };
 
@@ -108,14 +117,14 @@ export class DynamicLight extends Light {
     }
 
     public update(pos: Point | null = null) {
-        let posToUse: Point | null = pos;
-
         // Use the sprite's current position if no updated position is given
-        if (!posToUse) {
-            posToUse = { 
+        if (!pos) {
+            this.pos = { 
                 x: this.sprite.x / Game.Config.PixelsPerMeter,
                 y: this.sprite.y / Game.Config.PixelsPerMeter
             };
+        } else {
+            this.pos = {...pos};
         }
 
         // Set applicable values based on what's been tween
@@ -124,22 +133,22 @@ export class DynamicLight extends Light {
         this.tint = this.tweenables.tint;
 
         const lightBounds = {
-            minX: posToUse.x - this.radius,
-            maxX: posToUse.x + this.radius,
-            minY: posToUse.y - this.radius,
-            maxY: posToUse.y + this.radius,
+            minX: this.pos.x - this.radius,
+            maxX: this.pos.x + this.radius,
+            minY: this.pos.y - this.radius,
+            maxY: this.pos.y + this.radius,
           };
 
         // Build out the light points in world space (Meters)
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
-        this.lightPoints = LightUtils.buildLightPolygon(posToUse, nearbyEdges, this.options.numRays, this.radius);
+        this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
 
         // Update light sprite to be under where the player
         this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
         this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.x = posToUse.x * Game.Config.PixelsPerMeter;
-        this.sprite.y = posToUse.y * Game.Config.PixelsPerMeter;
+        this.sprite.x = this.pos.x * Game.Config.PixelsPerMeter;
+        this.sprite.y = this.pos.y * Game.Config.PixelsPerMeter;
         this.sprite.tint = this.tint;
         this.sprite.alpha = this.alpha;
     }
@@ -233,6 +242,7 @@ export class StaticLight extends Light {
     }
 
     // Essentially only updating tweenable values that don't invalidate the light points
+    // @ts-ignore
     public update(pos: Point | null = null) {
          // Set applicable values based on what's been tween
          this.alpha = this.tweenables.alpha;
@@ -246,6 +256,7 @@ export class StaticLight extends Light {
     public recomputeLightPoints(pos?: Point, collisionData?: Segment[], radius?: number) {
         // Update sprite position if new position is provided
         if (pos) {
+            this.pos = {...pos };
             this.lastPos = { ...pos };
             this.sprite.x = pos.x * Game.Config.PixelsPerMeter;
             this.sprite.y = pos.y * Game.Config.PixelsPerMeter;

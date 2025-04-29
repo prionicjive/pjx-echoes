@@ -61,7 +61,7 @@ export class World {
 
         // Instantiate PIXI containers
         // TODO  Better way to do this?
-        this.worldContainer = new PIXI.Container();
+        this.worldContainer = new PIXI.Container({isRenderGroup: true});
         this.wallsContainer = new PIXI.Container();
         this.edgesContainer = new PIXI.Container();
         this.playerContainer = new PIXI.Container();

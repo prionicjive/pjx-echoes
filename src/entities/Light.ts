@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { GraphicsUtils } from '../utils/GraphicsUtils';
-import { Game } from '../core/Game';
+import { Config } from '../core/Config';
 import { LightUtils } from '../utils/LightUtils';
 import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
@@ -47,11 +47,11 @@ export abstract class Light {
 
         // Set up the light sprite
         this.sprite = new PIXI.Sprite(GraphicsUtils.getRadialGradientTexture());
-        this.sprite.anchor.set(Game.Config.Wall.size / 2);
-        this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter; 
-        this.sprite.x = this.pos.x * Game.Config.PixelsPerMeter;
-        this.sprite.y = this.pos.y * Game.Config.PixelsPerMeter;
+        this.sprite.anchor.set(Config.Wall.size / 2);
+        this.sprite.width = this.radius * 2 * Config.PixelsPerMeter;
+        this.sprite.height = this.radius * 2 * Config.PixelsPerMeter; 
+        this.sprite.x = this.pos.x * Config.PixelsPerMeter;
+        this.sprite.y = this.pos.y * Config.PixelsPerMeter;
         this.sprite.blendMode = 'normal';
         this.sprite.tint = options.startColor;
 
@@ -67,30 +67,30 @@ export abstract class Light {
         }
 
         // Update light sprite to be under where the position is
-        this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter;
-        this.sprite.x = this.pos.x * Game.Config.PixelsPerMeter;
-        this.sprite.y = this.pos.y * Game.Config.PixelsPerMeter;
+        this.sprite.width = this.radius * 2 * Config.PixelsPerMeter;
+        this.sprite.height = this.radius * 2 * Config.PixelsPerMeter;
+        this.sprite.x = this.pos.x * Config.PixelsPerMeter;
+        this.sprite.y = this.pos.y * Config.PixelsPerMeter;
         this.sprite.tint = this.tint;
         this.sprite.alpha = this.alpha;
     }
 
     public render() {
         // Assume this.pos is the light's world position in meters
-        const centerX = this.pos.x * Game.Config.PixelsPerMeter;
-        const centerY = this.pos.y * Game.Config.PixelsPerMeter;
+        const centerX = this.pos.x * Config.PixelsPerMeter;
+        const centerY = this.pos.y * Config.PixelsPerMeter;
 
         // Draw mask
         this.mask.clear();
 
         this.mask.moveTo(0, 0);
         for (const pt of this.lightPoints) {
-            this.mask.lineTo((pt.point.x * Game.Config.PixelsPerMeter) - centerX, (pt.point.y * Game.Config.PixelsPerMeter) - centerY);
+            this.mask.lineTo((pt.point.x * Config.PixelsPerMeter) - centerX, (pt.point.y * Config.PixelsPerMeter) - centerY);
         }
 
         this.mask.lineTo(
-            (this.lightPoints[0].point.x * Game.Config.PixelsPerMeter) - centerX, 
-            (this.lightPoints[0].point.y * Game.Config.PixelsPerMeter) - centerY
+            (this.lightPoints[0].point.x * Config.PixelsPerMeter) - centerX, 
+            (this.lightPoints[0].point.y * Config.PixelsPerMeter) - centerY
         );
         this.mask.fill();
     };
@@ -163,8 +163,8 @@ export class StaticLight extends Light {
         if (pos) {
             this.pos = {...pos };
             this.lastPos = { ...pos };
-            this.sprite.x = pos.x * Game.Config.PixelsPerMeter;
-            this.sprite.y = pos.y * Game.Config.PixelsPerMeter;
+            this.sprite.x = pos.x * Config.PixelsPerMeter;
+            this.sprite.y = pos.y * Config.PixelsPerMeter;
         }
 
         // If collision data of the world has changed, update it
@@ -175,8 +175,8 @@ export class StaticLight extends Light {
         // If radius has changed, adjust the sprite
         if (radius !== undefined) {
             this.radius = radius;
-            this.sprite.width = this.radius * 2 * Game.Config.PixelsPerMeter;
-            this.sprite.height = this.radius * 2 * Game.Config.PixelsPerMeter;
+            this.sprite.width = this.radius * 2 * Config.PixelsPerMeter;
+            this.sprite.height = this.radius * 2 * Config.PixelsPerMeter;
         }
         
         // Compute the light points once again

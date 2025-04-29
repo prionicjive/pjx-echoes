@@ -49,7 +49,7 @@ export class World {
     private playerLight: Light | null = null;
     private finishLights: Light[] = [];
     private torchLights: Light[] = [];
-    private fuelLights: Light[] = [];
+    private fuelLights: (Light | null)[] = [];
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -298,24 +298,36 @@ export class World {
         const fixtureA = contact.getFixtureA();
         const fixtureB = contact.getFixtureB();
 
-        const aType = fixtureA.getUserData();
-        const bType = fixtureB.getUserData();
+        const aData: any = fixtureA.getUserData();
+        const bData: any = fixtureB.getUserData();
+
+        //console.log("CONTACT!")
 
         if (
-            (aType === "PLAYER" && bType === "FINISH") ||
-            (aType === "FINISH" && bType === "PLAYER")
+            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typePlayer) ||
+            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typePlayer)
         ) {
-            // TODO Handle player reaching finish tile
             //console.log("Player reached finish tile!");
 
-            // Reset game to reinitialize everything
+            // Regenerate the world by reset game to reinitialize everything
             this.reset();
         } else if (
-            (aType === "PLAYER" && bType === "WALL") ||
-            (aType === "WALL" && bType === "PLAYER")
+            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeWall) ||
+            (aData.type === Config.Physics.Collision.typeWall && bData.type === Config.Physics.Collision.typePlayer)
         ) {
             // TODO Handle player hitting a wall
-            //console.log("Player hit a wall!");
+            // console.log("Player hit a wall!");
+        } else if (
+            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFuel) ||
+            (aData.type === Config.Physics.Collision.typeFuel && bData.type === Config.Physics.Collision.typePlayer)
+        ) {
+            // Pick up and remove fuel
+            //console.log("Player hit fuel!");
+            const fuelObj = aData.sprite ? aData : bData; // TODO Make this a little more foolproof
+            this.fuelTilesContainer.removeChild(fuelObj.sprite);
+
+            // Remove light - not by splicing / removing it but instead adding a null value at that index
+            this.fuelLights[fuelObj.index] = null;
         }
     }
 
@@ -513,9 +525,11 @@ export class World {
         const screenRight = screenLeft + this.viewportWidth;
         const screenBottom = screenTop + this.viewportHeight;
 
-        const allLights: Light[] = [...this.finishLights, ...this.torchLights, ...this.fuelLights];
+        const allLights: (Light | null)[] = [...this.finishLights, ...this.torchLights, ...this.fuelLights];
 
        for (const light of allLights) {
+           if (!light) continue;
+           
            light.update(null);
 
            if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {

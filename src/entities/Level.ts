@@ -47,7 +47,7 @@ export class Level {
     private walls: Entity[];
     private finishTiles: PhysicalEntity[];
     private torches: Entity[];
-    private fuelTiles: Entity[];
+    private fuelTiles: PhysicalEntity[];
 
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
@@ -112,11 +112,15 @@ export class Level {
         // Also, while iterating, draw the edges of the walls
         const edgeGraphics = new PIXI.Graphics();
 
+        let drawEdges = Config.Debug.drawEdges;
+
         for (const edge of edgesList){
             // Draw the edge
-            edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
-            edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
-            edgeGraphics.stroke({width:Config.Boundaries.thickness, color: Config.Boundaries.color});
+            if (drawEdges){
+                edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
+                edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
+                edgeGraphics.stroke({width:Config.Boundaries.thickness, color: Config.Boundaries.color});
+            }
 
             // Create a fixture for the edge
             const shape = new planck.Edge(edge.a, edge.b);
@@ -124,16 +128,18 @@ export class Level {
                 shape, {
                     restitution: 0.95,
                     friction: 0,
-                    userData: "WALL",
+                    userData: { type: Config.Physics.Collision.typeWall },
                     filterCategoryBits: Config.Physics.Collision.categoryWall,
                     filterMaskBits: Config.Physics.Collision.categoryPlayer
                 }
             );
         }
 
-        // Add the renderer edges to the proper container
-        levelContainers.edgesContainer.addChild(edgeGraphics);
-
+        if (drawEdges) {
+            // Add the renderer edges to the proper container
+            levelContainers.edgesContainer.addChild(edgeGraphics);
+        }
+        
         // Randomly place finish tiles in open spaces for the player to reach
         // TODO Lots of code duplication here that could be addressed
         const numFinishTiles = Math.ceil(validSpaces.length * Config.FinishTilesDensity);
@@ -144,6 +150,15 @@ export class Level {
             const height = Config.Finish.size;
             const color = Config.Finish.color;
 
+            // Create a sprite for the finish tile
+            const sprite = PIXI.Sprite.from(Config.Textures.finish);
+            sprite.x = Number(x) * Config.PixelsPerMeter;
+            sprite.y = Number(y) * Config.PixelsPerMeter;
+            sprite.width = width * Config.PixelsPerMeter;
+            sprite.height = height * Config.PixelsPerMeter;
+            sprite.tint = color;
+            levelContainers.finishTilesContainer.addChild(sprite);
+
             // Create a static body for the finish tile
             const finishBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
             finishBody.createFixture(
@@ -153,21 +168,15 @@ export class Level {
                     new planck.Vec2(width / 2, height / 2),
                     0
                 ), {
+                isSensor: true,
                 restitution: 0,
                 friction: 0,
-                userData: "FINISH",
+                userData: {
+                    type: Config.Physics.Collision.typeFinish,
+                },
                 filterCategoryBits: Config.Physics.Collision.categoryFinish,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer
             });
-
-            // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Config.Textures.finish);
-            sprite.x = Number(x) * Config.PixelsPerMeter;
-            sprite.y = Number(y) * Config.PixelsPerMeter;
-            sprite.width = width * Config.PixelsPerMeter;
-            sprite.height = height * Config.PixelsPerMeter;
-            sprite.tint = color;
-            levelContainers.finishTilesContainer.addChild(sprite);
 
             this.finishTiles.push({ body: finishBody, sprite });
         }
@@ -189,7 +198,9 @@ export class Level {
             sprite.width = width * Config.PixelsPerMeter;
             sprite.height = height * Config.PixelsPerMeter;
             sprite.tint = color;
-            levelContainers.torchesContainer.addChild(sprite);
+            
+            // TODO Not showing sprite for torches, might want to reconsider
+            //levelContainers.torchesContainer.addChild(sprite);
 
             this.torches.push({ sprite });
         }
@@ -213,7 +224,28 @@ export class Level {
             sprite.tint = color;
             levelContainers.fuelTilesContainer.addChild(sprite);
 
-            this.fuelTiles.push({ sprite });
+            // Create a static body for the finish tile
+            const fuelBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
+            fuelBody.createFixture(
+                new planck.Box(
+                    width / 2,
+                    height / 2,
+                    new planck.Vec2(width / 2, height / 2),
+                    0
+                ), {
+                isSensor: true,
+                restitution: 0,
+                friction: 0,
+                userData: {
+                    type: Config.Physics.Collision.typeFuel,
+                    sprite,
+                    index: i
+                },
+                filterCategoryBits: Config.Physics.Collision.categoryFuel,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer
+            });
+
+            this.fuelTiles.push({ body: fuelBody, sprite});
         }
     }
 

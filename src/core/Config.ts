@@ -14,9 +14,14 @@ export const Config = {
     },
     Physics: {
         Collision: {
+            typePlayer: "PLAYER",
+            typeWall: "WALL",
+            typeFinish: "FINISH",
+            typeFuel: "FUEL",
             categoryPlayer: 0x0001, // Bitmasks for Planck.js collision filtering
             categoryWall: 0x0002,
-            categoryFinish: 0x0004
+            categoryFinish: 0x0004,
+            categoryFuel: 0x0008
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
@@ -59,6 +64,7 @@ export const Config = {
         finish: '/assets/textures/finish.png',
         fuel: '/assets/textures/fuel.png'
     },
+    // TODO Consolidate light definitions?
     PlayerLight: {
         numRays: 360,
         baseRadius: 10,
@@ -79,7 +85,7 @@ export const Config = {
     },
     TorchLight: {
         numRays: 360,
-        baseRadius: 5,
+        baseRadius: 10,
         radiusVariance: 2.5,
         baseAlpha: 0.5,
         alphaVariance: 0.4,
@@ -88,7 +94,7 @@ export const Config = {
     },
     FuelLight: {
         numRays: 360,
-        baseRadius: 2,
+        baseRadius: 5,
         radiusVariance: 0,
         baseAlpha: 0.9,
         alphaVariance: 0.1,
@@ -97,5 +103,8 @@ export const Config = {
     },
     FinishTilesDensity: 0.0001,
     TorchesDensity: 0.0007,
-    FuelTileDensity: 0.00065
+    FuelTileDensity: 0.00065,
+    Debug: {
+        drawEdges: true
+    }
 };

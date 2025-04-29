@@ -40,9 +40,9 @@ export class Player implements Entity {
             restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
-            userData: "PLAYER",
+            userData: { type: Config.Physics.Collision.typePlayer },
             filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish
+            filterMaskBits: Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
         });
 
         // Generate sprite for the player

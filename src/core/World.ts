@@ -51,6 +51,10 @@ export class World {
     private torchLights: Light[] = [];
     private fuelLights: Light[] = [];
 
+    // Need for viewport calculations
+    private viewportWidth: number;
+    private viewportHeight: number;
+
     constructor(app: PIXI.Application) {
         this.app = app;
         
@@ -69,10 +73,14 @@ export class World {
         this.torchesContainer = new PIXI.Container();
         this.fuelTilesContainer = new PIXI.Container();
         
+        // Set up viewport dimensions (Will change on resize)
+        this.viewportWidth = window.innerWidth;
+        this.viewportHeight = window.innerHeight;
+
         // Set up basic lightmap-related things
         // This doesn't get added to the world, it is just used for rendering lights to a texture
-        const screenWidth = Config.ScreenDimensions.width;
-        const screenHeight = Config.ScreenDimensions.height;
+        const screenWidth = this.viewportWidth;
+        const screenHeight = this.viewportHeight;
         this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
         this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
@@ -321,32 +329,32 @@ export class World {
 
         const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
         const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
-        const screenWidth = Config.ScreenDimensions.width;
-        const screenHeight = Config.ScreenDimensions.height;
+        const screenWidth = this.viewportWidth;
+        const screenHeight = this.viewportHeight;
 
         // Center if level is smaller than screen
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
-            const screenCenterX = Config.ScreenDimensions.width / 2;
+            const screenCenterX = this.viewportWidth / 2;
             const targetX = -this.player.sprite.x + screenCenterX;
             this.worldContainer.x += (targetX - this.worldContainer.x);
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, Config.ScreenDimensions.width - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
          }
 
         if (levelHeightInPixels <= screenHeight) {
             this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
-            const screenCenterY = Config.ScreenDimensions.height / 2;
+            const screenCenterY = this.viewportHeight / 2;
             const targetY = -this.player.sprite.y + screenCenterY;
             this.worldContainer.y += (targetY - this.worldContainer.y);
 
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, Config.ScreenDimensions.height - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
     }
 
@@ -386,15 +394,15 @@ export class World {
 
         const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
         const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
-        const screenWidth = Config.ScreenDimensions.width;
-        const screenHeight = Config.ScreenDimensions.height;
+        const screenWidth = this.viewportWidth;
+        const screenHeight = this.viewportHeight;
 
         // Center if level is smaller than screen
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
-            const screenCenterX = Config.ScreenDimensions.width / 2;
+            const screenCenterX = this.viewportWidth / 2;
 
             // World coordinates of screen center
             const cameraX = -this.worldContainer.x;
@@ -415,14 +423,14 @@ export class World {
             this.worldContainer.x -= moveX * Config.Camera.lerpFactor * deltaTime;
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, Config.ScreenDimensions.width - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
         }
 
         if (levelHeightInPixels <= screenHeight) {
             this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
             // Camera target position: center the ball on the screen
-            const screenCenterY = Config.ScreenDimensions.height / 2;
+            const screenCenterY = this.viewportHeight / 2;
             
             // World coordinates of screen center
             const cameraY = -this.worldContainer.y;
@@ -443,7 +451,7 @@ export class World {
             this.worldContainer.y -= moveY * Config.Camera.lerpFactor * deltaTime;
             
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, Config.ScreenDimensions.height - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
     }
 
@@ -487,10 +495,14 @@ export class World {
         this.playerLight.update(playerPos);
         this.playerLight.render();
 
-        this.playerLight.sprite.x = ((playerPos.x * Config.PixelsPerMeter) - cameraOffset.x);
-        this.playerLight.sprite.y = ((playerPos.y * Config.PixelsPerMeter) - cameraOffset.y);
-        this.playerLight.mask.x = this.playerLight.sprite.x;
-        this.playerLight.mask.y = this.playerLight.sprite.y;
+        const screenX = (playerPos.x * Config.PixelsPerMeter) - cameraOffset.x;
+        const screenY = (playerPos.y * Config.PixelsPerMeter) - cameraOffset.y;
+
+        // Set the light sprite's position in screen space
+        this.playerLight.sprite.x = screenX;
+        this.playerLight.sprite.y = screenY;
+        this.playerLight.mask.x = screenX;
+        this.playerLight.mask.y = screenY;
 
         this.lightmapContainer.addChild(this.playerLight.sprite);
         this.lightmapContainer.addChild(this.playerLight.mask);
@@ -498,8 +510,8 @@ export class World {
         // See if lights are on screen and render them if they are
         const screenLeft = -this.worldContainer.x;
         const screenTop = -this.worldContainer.y;
-        const screenRight = screenLeft + Config.ScreenDimensions.width;
-        const screenBottom = screenTop + Config.ScreenDimensions.height;
+        const screenRight = screenLeft + this.viewportWidth;
+        const screenBottom = screenTop + this.viewportHeight;
 
         const allLights: Light[] = [...this.finishLights, ...this.torchLights, ...this.fuelLights];
 
@@ -510,10 +522,13 @@ export class World {
                 light.sprite.visible = true;
                 light.mask.visible = true;
 
-                light.sprite.x = ((light.pos.x * Config.PixelsPerMeter) - cameraOffset.x);
-                light.sprite.y = ((light.pos.y * Config.PixelsPerMeter) - cameraOffset.y);
-                light.mask.x = light.sprite.x;
-                light.mask.y = light.sprite.y;
+                const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
+                const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
+
+                light.sprite.x = screenX;
+                light.sprite.y = screenY;
+                light.mask.x = screenX;
+                light.mask.y = screenY;
                 
                 light.render();
 
@@ -556,6 +571,47 @@ export class World {
             x - r < screenRight &&
             y + r > screenTop &&
             y - r < screenBottom
+        );
+    }
+
+    /**
+     * Handles window resize events.
+     * 
+     * Updates the viewport dimensions, recalculates the visible world area, optionally updates the camera position, resizes backgrounds and overlays, updates lightmaps and render textures, and triggers any UI manager resize events.
+     * @param {number} width - New width of the window in pixels.
+     * @param {number} height - New height of the window in pixels.
+     */
+    onResize(width: number, height: number) {
+        // 1. Update viewport dimensions
+        this.viewportWidth = width;
+        this.viewportHeight = height;
+    
+        // 2. Recreate the lightmap texture to avoid artifacts
+        if (this.lightmapTexture) {
+            this.lightmapTexture.destroy(true);
+        }
+        this.lightmapTexture = PIXI.RenderTexture.create({ width, height });
+        this.lightmapSprite.texture = this.lightmapTexture;
+        this.lightmapSprite.width = width;
+        this.lightmapSprite.height = height;
+        this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
+    
+        // 3. Resize backgrounds or overlays
+        if (this.blackBgRect) {
+            this.blackBgRect.width = width;
+            this.blackBgRect.height = height;
+        }
+        if (this.whiteBgRect) {
+            this.whiteBgRect.width = width;
+            this.whiteBgRect.height = height;
+        }
+    
+        // 4. Optionally, recenter camera or update camera logic
+        this.instantlyCenterCamera();
+    
+        // 5. Debug log
+        console.log(
+            `World resized: ${width}x${height} (${(width / Config.PixelsPerMeter).toFixed(2)} x ${(height / Config.PixelsPerMeter).toFixed(2)} meters)`
         );
     }
 }

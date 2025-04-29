@@ -30,7 +30,11 @@ export class Game {
     async init() {
         // Set up PIXI application
         this.app = new PIXI.Application();
-        await this.app.init({ width: Config.ScreenDimensions.width, height: Config.ScreenDimensions.height, backgroundColor: 0xffffff });
+        await this.app.init({ 
+            width: window.innerWidth, 
+            height: window.innerHeight, 
+            backgroundColor: 0xffffff 
+        });
         document.body.appendChild(this.app.canvas);
 
         // Register the GSAP Pixi plugin
@@ -43,6 +47,9 @@ export class Game {
         // TODO Load any other assets possibly need by the game
         await this.loadAssets();
 
+        // Set up the resize handler
+        window.addEventListener('resize', () => this.handleResize());
+
         // Create the game world
         this.world = new World(this.app);
 
@@ -50,6 +57,16 @@ export class Game {
 
         // Lastly, start the main loop
         this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
+    }
+
+    handleResize() {
+        if (!this.app) return;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        this.app.renderer.resize(width, height);
+        if (this.world) {
+            this.world.onResize(width, height);
+        }
     }
 
     /**

@@ -1,19 +1,15 @@
 // Centralized game configuration
 export const Config = {
-    ScreenDimensions: {
-        width: 1280,     // Size of the visible game window (in pixels)
-        height: 720
-    },
     LevelDimensions: {
-        width: 32,       // Width of the generated level (in grid units)
-        height: 64
+        width: 128,       // Width of the generated level (in grid units)
+        height: 128
     },
     PixelsPerMeter: 16, // How many pixels represent one physics meter
     Camera: {
         lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
         DeadZone: {
-            width: 320,   // Camera doesn't move unless player leaves this zone
-            height: 180
+            width: 64,   // Camera doesn't move unless player leaves this zone
+            height: 64
         }
     },
     Physics: {

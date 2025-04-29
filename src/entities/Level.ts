@@ -12,6 +12,7 @@ import { Entity, PhysicalEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
+import { SpriteUtils } from '../utils/SpriteUtils';
 
 /**
  * Describes a wall or boundary to be created in the level.
@@ -92,18 +93,12 @@ export class Level {
         // Create sprites for each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
             wallScaffolding.forEach(wallScaffold => {
-                const { x, y, width, height, color } = wallScaffold;
-
-                // Create a sprite for the wall
-                const sprite = PIXI.Sprite.from(Config.Textures.wall);
-                sprite.x = x * Config.PixelsPerMeter;
-                sprite.y = y * Config.PixelsPerMeter;
-                sprite.width = width * Config.PixelsPerMeter;
-                sprite.height = height * Config.PixelsPerMeter;
-                sprite.tint = color;
-                
+                const sprite = SpriteUtils.createSprite({
+                    ...wallScaffold,
+                    texture: PIXI.Texture.from(Config.Textures.wall),
+                });
                 levelContainers.wallsContainer.addChild(sprite);
-
+                
                 // Store wall entity for future reference (could be useful for collision, etc.)
                 this.walls.push({ sprite });
             });
@@ -152,12 +147,14 @@ export class Level {
             const color = Config.Finish.color;
 
             // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Config.Textures.finish);
-            sprite.x = Number(x) * Config.PixelsPerMeter;
-            sprite.y = Number(y) * Config.PixelsPerMeter;
-            sprite.width = width * Config.PixelsPerMeter;
-            sprite.height = height * Config.PixelsPerMeter;
-            sprite.tint = color;
+            const sprite = SpriteUtils.createSprite({
+                texture: PIXI.Texture.from(Config.Textures.finish),
+                x: Number(x),
+                y: Number(y),
+                width,
+                height,
+                color
+            })
             levelContainers.finishTilesContainer.addChild(sprite);
 
             // Create a static body for the finish tile
@@ -192,16 +189,18 @@ export class Level {
             const height = Config.Torch.size;
             const color = Config.Torch.color;
 
-            // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Config.Textures.torch);
-            sprite.x = Number(x) * Config.PixelsPerMeter;
-            sprite.y = Number(y) * Config.PixelsPerMeter;
-            sprite.width = width * Config.PixelsPerMeter;
-            sprite.height = height * Config.PixelsPerMeter;
-            sprite.tint = color;
+            // Create a sprite for the torch
+            const sprite = SpriteUtils.createSprite({
+                texture: PIXI.Texture.from(Config.Textures.torch),
+                x: Number(x),
+                y: Number(y),
+                width,
+                height,
+                color
+            });
             
             // TODO Not showing sprite for torches, might want to reconsider
-            //levelContainers.torchesContainer.addChild(sprite);
+            levelContainers.torchesContainer.addChild(sprite);
 
             this.torches.push({ sprite });
         }
@@ -216,16 +215,18 @@ export class Level {
             const height = Config.Fuel.size;
             const color = Config.Fuel.color;
 
-            // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Config.Textures.fuel);
-            sprite.x = Number(x) * Config.PixelsPerMeter;
-            sprite.y = Number(y) * Config.PixelsPerMeter;
-            sprite.width = width * Config.PixelsPerMeter;
-            sprite.height = height * Config.PixelsPerMeter;
-            sprite.tint = color;
+            // Create a sprite for the fuel tile
+            const sprite = SpriteUtils.createSprite({
+                texture: PIXI.Texture.from(Config.Textures.fuel),
+                x: Number(x),
+                y: Number(y),
+                width,
+                height,
+                color
+            });
             levelContainers.fuelTilesContainer.addChild(sprite);
 
-            // Create a static body for the finish tile
+            // Create a static body for the fuel tile
             const fuelBody = PhysicsUtils.createBoxBody(world, {
                 position: new planck.Vec2(Number(x), Number(y)),
                 box: { width, height },

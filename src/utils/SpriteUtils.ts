@@ -2,6 +2,7 @@ import { Config } from "../core/Config";
 import * as PIXI from 'pixi.js';
 
 interface CreateSpriteOptions {
+    texture: PIXI.Texture;
     x: number;
     y: number;
     width: number;
@@ -12,8 +13,8 @@ interface CreateSpriteOptions {
 }
 
 export class SpriteUtils {
-    static createSprite(texture: PIXI.Texture, options: CreateSpriteOptions): PIXI.Sprite {
-        const sprite = new PIXI.Sprite(texture);
+    static createSprite(options: CreateSpriteOptions): PIXI.Sprite {
+        const sprite = new PIXI.Sprite(options.texture);
         sprite.x = options.x * Config.PixelsPerMeter;
         sprite.y = options.y * Config.PixelsPerMeter;
         sprite.width = options.width * Config.PixelsPerMeter;

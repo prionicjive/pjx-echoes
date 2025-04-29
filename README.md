@@ -11,6 +11,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Soft follow camera when world is larger than single screen, with dead zone
 - Dynamic lighting system with raycasted light occlusion and support for mutliple lights
 - Edge calculation for light raycasting and level rendering
+- Dynamic scaling to take full advantage of the viewport while maintaining pixels per meter (No stretching)
 
 ## Tech Stack
 

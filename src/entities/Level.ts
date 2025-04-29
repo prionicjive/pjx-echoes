@@ -6,7 +6,7 @@
  * @module Level
  */
 
-import { Game } from '../core/Game';
+import { Config } from '../core/Config';
 import { Entity, PhysicalEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
@@ -34,6 +34,7 @@ type LevelContainers = {
     wallsContainer: PIXI.Container;
     finishTilesContainer: PIXI.Container;
     torchesContainer: PIXI.Container;
+    fuelTilesContainer: PIXI.Container;
     edgesContainer: PIXI.Container;
 }
 
@@ -46,6 +47,7 @@ export class Level {
     private walls: Entity[];
     private finishTiles: PhysicalEntity[];
     private torches: Entity[];
+    private fuelTiles: Entity[];
 
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
@@ -61,6 +63,7 @@ export class Level {
         this.walls = [];
         this.finishTiles = [];
         this.torches = [];
+        this.fuelTiles = [];
 
         // Convert level map to a list of wall/boundary objects (scaffolding)
         // All calculations in world (meter) space, not pixels
@@ -77,9 +80,9 @@ export class Level {
                     wallScaffolding.push({
                         x: x,
                         y: y,
-                        width: Game.Config.Wall.size,
-                        height: Game.Config.Wall.size,
-                        color: Game.Config.Wall.color
+                        width: Config.Wall.size,
+                        height: Config.Wall.size,
+                        color: Config.Wall.color
                     });
                 }
             }
@@ -90,11 +93,11 @@ export class Level {
             const { x, y, width, height, color } = wallScaffold;
 
             // Create a sprite for the wall
-            const sprite = PIXI.Sprite.from(Game.Config.Textures.wall);
-            sprite.x = x * Game.Config.PixelsPerMeter;
-            sprite.y = y * Game.Config.PixelsPerMeter;
-            sprite.width = width * Game.Config.PixelsPerMeter;
-            sprite.height = height * Game.Config.PixelsPerMeter;
+            const sprite = PIXI.Sprite.from(Config.Textures.wall);
+            sprite.x = x * Config.PixelsPerMeter;
+            sprite.y = y * Config.PixelsPerMeter;
+            sprite.width = width * Config.PixelsPerMeter;
+            sprite.height = height * Config.PixelsPerMeter;
             sprite.tint = color;
             
             //levelContainers.wallsContainer.addChild(sprite);
@@ -111,9 +114,9 @@ export class Level {
 
         for (const edge of edgesList){
             // Draw the edge
-            edgeGraphics.moveTo(edge.a.x * Game.Config.PixelsPerMeter, edge.a.y * Game.Config.PixelsPerMeter);
-            edgeGraphics.lineTo(edge.b.x * Game.Config.PixelsPerMeter, edge.b.y * Game.Config.PixelsPerMeter);
-            edgeGraphics.stroke({width:Game.Config.Boundaries.thickness, color: Game.Config.Boundaries.color});
+            edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
+            edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
+            edgeGraphics.stroke({width:Config.Boundaries.thickness, color: Config.Boundaries.color});
 
             // Create a fixture for the edge
             const shape = new planck.Edge(edge.a, edge.b);
@@ -122,8 +125,8 @@ export class Level {
                     restitution: 0.95,
                     friction: 0,
                     userData: "WALL",
-                    filterCategoryBits: Game.Config.Physics.Collision.categoryWall,
-                    filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
+                    filterCategoryBits: Config.Physics.Collision.categoryWall,
+                    filterMaskBits: Config.Physics.Collision.categoryPlayer
                 }
             );
         }
@@ -132,13 +135,14 @@ export class Level {
         levelContainers.edgesContainer.addChild(edgeGraphics);
 
         // Randomly place finish tiles in open spaces for the player to reach
-        const numFinishTiles = Math.ceil(validSpaces.length * Game.Config.FinishTilesDensity);
+        // TODO Lots of code duplication here that could be addressed
+        const numFinishTiles = Math.ceil(validSpaces.length * Config.FinishTilesDensity);
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Game.Config.Finish.size;
-            const height = Game.Config.Finish.size;
-            const color = Game.Config.Finish.color;
+            const width = Config.Finish.size;
+            const height = Config.Finish.size;
+            const color = Config.Finish.color;
 
             // Create a static body for the finish tile
             const finishBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
@@ -152,16 +156,16 @@ export class Level {
                 restitution: 0,
                 friction: 0,
                 userData: "FINISH",
-                filterCategoryBits: Game.Config.Physics.Collision.categoryFinish,
-                filterMaskBits: Game.Config.Physics.Collision.categoryPlayer
+                filterCategoryBits: Config.Physics.Collision.categoryFinish,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer
             });
 
             // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Game.Config.Textures.finish);
-            sprite.x = Number(x) * Game.Config.PixelsPerMeter;
-            sprite.y = Number(y) * Game.Config.PixelsPerMeter;
-            sprite.width = width * Game.Config.PixelsPerMeter;
-            sprite.height = height * Game.Config.PixelsPerMeter;
+            const sprite = PIXI.Sprite.from(Config.Textures.finish);
+            sprite.x = Number(x) * Config.PixelsPerMeter;
+            sprite.y = Number(y) * Config.PixelsPerMeter;
+            sprite.width = width * Config.PixelsPerMeter;
+            sprite.height = height * Config.PixelsPerMeter;
             sprite.tint = color;
             levelContainers.finishTilesContainer.addChild(sprite);
 
@@ -169,24 +173,47 @@ export class Level {
         }
 
         // Randomly place torches in open spaces for the player to reach
-        const numTorches = Math.ceil(validSpaces.length * Game.Config.TorchesDensity);
+        // TODO Lots of code duplication here that could be addressed
+        const numTorches = Math.ceil(validSpaces.length * Config.TorchesDensity);
         for (let i = 0; i < numTorches; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Game.Config.Torch.size;
-            const height = Game.Config.Torch.size;
-            const color = Game.Config.Torch.color;
+            const width = Config.Torch.size;
+            const height = Config.Torch.size;
+            const color = Config.Torch.color;
 
             // Create a sprite for the finish tile
-            const sprite = PIXI.Sprite.from(Game.Config.Textures.torch);
-            sprite.x = Number(x) * Game.Config.PixelsPerMeter;
-            sprite.y = Number(y) * Game.Config.PixelsPerMeter;
-            sprite.width = width * Game.Config.PixelsPerMeter;
-            sprite.height = height * Game.Config.PixelsPerMeter;
+            const sprite = PIXI.Sprite.from(Config.Textures.torch);
+            sprite.x = Number(x) * Config.PixelsPerMeter;
+            sprite.y = Number(y) * Config.PixelsPerMeter;
+            sprite.width = width * Config.PixelsPerMeter;
+            sprite.height = height * Config.PixelsPerMeter;
             sprite.tint = color;
             levelContainers.torchesContainer.addChild(sprite);
 
             this.torches.push({ sprite });
+        }
+
+        // Randomly place fuel tiles in open spaces for the player to reach
+        // TODO Lots of code duplication here that could be addressed
+        const numFuelTiles = Math.ceil(validSpaces.length * Config.FuelTileDensity);
+        for (let i = 0; i < numFuelTiles; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+            const width = Config.Fuel.size;
+            const height = Config.Fuel.size;
+            const color = Config.Fuel.color;
+
+            // Create a sprite for the finish tile
+            const sprite = PIXI.Sprite.from(Config.Textures.fuel);
+            sprite.x = Number(x) * Config.PixelsPerMeter;
+            sprite.y = Number(y) * Config.PixelsPerMeter;
+            sprite.width = width * Config.PixelsPerMeter;
+            sprite.height = height * Config.PixelsPerMeter;
+            sprite.tint = color;
+            levelContainers.fuelTilesContainer.addChild(sprite);
+
+            this.fuelTiles.push({ sprite });
         }
     }
 
@@ -212,6 +239,14 @@ export class Level {
      */
     getTorches(): Entity[] {
         return this.torches;
+    }
+
+    /**
+     * Returns all fuel tile entities in the level.
+     * @returns {Entity[]} Array of fuel tile entities.
+     */
+    getFuelTiles(): Entity[] {
+        return this.fuelTiles;
     }
 
     /**

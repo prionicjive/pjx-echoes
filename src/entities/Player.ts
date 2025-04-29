@@ -6,7 +6,7 @@
  * @module Player
  */
 
-import { Game } from '../core/Game';
+import { Config } from '../core/Config';
 import { Entity } from './types';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
@@ -30,29 +30,29 @@ export class Player implements Entity {
      */
     constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
         // Place player in the center of the tile
-        const playerRadius = Game.Config.Player.radius;
-        const center = new planck.Vec2(spawnPoint.x + Game.Config.Wall.size / 2, spawnPoint.y + Game.Config.Wall.size / 2);
+        const playerRadius = Config.Player.radius;
+        const center = new planck.Vec2(spawnPoint.x + Config.Wall.size / 2, spawnPoint.y + Config.Wall.size / 2);
         this.body = world.createDynamicBody(center);
-        this.body.setLinearDamping(Game.Config.Physics.Player.linearDamping);
+        this.body.setLinearDamping(Config.Physics.Player.linearDamping);
 
         // Add a circular fixture for collisions
         this.body.createFixture(new planck.Circle(playerRadius), {
-            restitution: Game.Config.Physics.Player.restitution,
+            restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
             userData: "PLAYER",
-            filterCategoryBits: Game.Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Game.Config.Physics.Collision.categoryWall | Game.Config.Physics.Collision.categoryFinish
+            filterCategoryBits: Config.Physics.Collision.categoryPlayer,
+            filterMaskBits: Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish
         });
 
         // Generate sprite for the player
-        this.sprite = PIXI.Sprite.from(Game.Config.Textures.player);
+        this.sprite = PIXI.Sprite.from(Config.Textures.player);
         // Position the sprite to match the physics body
-        this.sprite.x = (this.body.getPosition().x - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
-        this.sprite.width = 2 * playerRadius * Game.Config.PixelsPerMeter;
-        this.sprite.height = 2 * playerRadius * Game.Config.PixelsPerMeter;
-        this.sprite.tint = Game.Config.Player.color;
+        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
+        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.tint = Config.Player.color;
         
         container.addChild(this.sprite);
     }
@@ -68,12 +68,12 @@ export class Player implements Entity {
         const playerPos = this.body.getPosition();
         
         // Calculate vector from player to target
-        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Game.Config.PixelsPerMeter);
-        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Game.Config.PixelsPerMeter);
+        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
+        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
         const length = Math.hypot(deltaX, deltaY);
 
         // Tune this value for desired impulse strength
-        const impulseScale = Game.Config.Physics.Player.impulseFactor;
+        const impulseScale = Config.Physics.Player.impulseFactor;
 
         // Calculate normalized impulse vector
         const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);
@@ -88,8 +88,8 @@ export class Player implements Entity {
      */
     update() {
         // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Game.Config.Wall.size / 2) * Game.Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
     }
 }

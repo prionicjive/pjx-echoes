@@ -105,6 +105,7 @@ export const Config = {
     TorchesDensity: 0.0007,
     FuelTileDensity: 0.00065,
     Debug: {
-        drawEdges: true
+        drawEdges: true,
+        drawWalls: false
     }
 };

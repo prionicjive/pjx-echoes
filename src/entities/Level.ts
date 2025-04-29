@@ -7,6 +7,7 @@
  */
 
 import { Config } from '../core/Config';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Entity, PhysicalEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
@@ -88,26 +89,25 @@ export class Level {
             }
         }
 
-        // Create sprites for each wall
-        wallScaffolding.forEach(wallScaffold => {
-            const { x, y, width, height, color } = wallScaffold;
+        // Create sprites for each wall (If we determine that to be the case)
+        if (Config.Debug.drawWalls) {
+            wallScaffolding.forEach(wallScaffold => {
+                const { x, y, width, height, color } = wallScaffold;
 
-            // Create a sprite for the wall
-            const sprite = PIXI.Sprite.from(Config.Textures.wall);
-            sprite.x = x * Config.PixelsPerMeter;
-            sprite.y = y * Config.PixelsPerMeter;
-            sprite.width = width * Config.PixelsPerMeter;
-            sprite.height = height * Config.PixelsPerMeter;
-            sprite.tint = color;
-            
-            //levelContainers.wallsContainer.addChild(sprite);
+                // Create a sprite for the wall
+                const sprite = PIXI.Sprite.from(Config.Textures.wall);
+                sprite.x = x * Config.PixelsPerMeter;
+                sprite.y = y * Config.PixelsPerMeter;
+                sprite.width = width * Config.PixelsPerMeter;
+                sprite.height = height * Config.PixelsPerMeter;
+                sprite.tint = color;
+                
+                levelContainers.wallsContainer.addChild(sprite);
 
-            // Store wall entity for future reference (could be useful for collision, etc.)
-            this.walls.push({ sprite });
-        });
-
-        // Create single body and multiple fixtures for all the edges of the level
-        const levelBody = world.createBody();
+                // Store wall entity for future reference (could be useful for collision, etc.)
+                this.walls.push({ sprite });
+            });
+        }
 
         // Also, while iterating, draw the edges of the walls
         const edgeGraphics = new PIXI.Graphics();
@@ -121,19 +121,20 @@ export class Level {
                 edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
                 edgeGraphics.stroke({width:Config.Boundaries.thickness, color: Config.Boundaries.color});
             }
-
-            // Create a fixture for the edge
-            const shape = new planck.Edge(edge.a, edge.b);
-            levelBody.createFixture(
-                shape, {
-                    restitution: 0.95,
-                    friction: 0,
-                    userData: { type: Config.Physics.Collision.typeWall },
-                    filterCategoryBits: Config.Physics.Collision.categoryWall,
-                    filterMaskBits: Config.Physics.Collision.categoryPlayer
-                }
-            );
         }
+
+        // Create single body and multiple fixtures for all the edges of the level
+        // No need to hold on to return value
+        PhysicsUtils.createLevelEdgesBody(world, { 
+            edges: edgesList, 
+            edgeFixture: {
+                restitution: 0.95,
+                friction: 0,
+                userData: { type: Config.Physics.Collision.typeWall },
+                filterCategoryBits: Config.Physics.Collision.categoryWall,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer
+            } 
+        });
 
         if (drawEdges) {
             // Add the renderer edges to the proper container
@@ -160,23 +161,23 @@ export class Level {
             levelContainers.finishTilesContainer.addChild(sprite);
 
             // Create a static body for the finish tile
-            const finishBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
-            finishBody.createFixture(
-                new planck.Box(
-                    width / 2,
-                    height / 2,
-                    new planck.Vec2(width / 2, height / 2),
-                    0
-                ), {
-                isSensor: true,
-                restitution: 0,
-                friction: 0,
-                userData: {
-                    type: Config.Physics.Collision.typeFinish,
-                },
-                filterCategoryBits: Config.Physics.Collision.categoryFinish,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer
-            });
+            const finishBody = PhysicsUtils.createBoxBody(
+                world, {
+                    type: 'static',
+                    position: new planck.Vec2(Number(x), Number(y)),
+                    box: { width, height },
+                    fixture: {
+                        isSensor: true,
+                        restitution: 0,
+                        friction: 0,
+                        userData: {
+                            type: Config.Physics.Collision.typeFinish,
+                        },
+                        filterCategoryBits: Config.Physics.Collision.categoryFinish,
+                        filterMaskBits: Config.Physics.Collision.categoryPlayer
+                    }
+                }
+            );
 
             this.finishTiles.push({ body: finishBody, sprite });
         }
@@ -225,27 +226,23 @@ export class Level {
             levelContainers.fuelTilesContainer.addChild(sprite);
 
             // Create a static body for the finish tile
-            const fuelBody = world.createBody(new planck.Vec2(Number(x), Number(y)));
-            fuelBody.createFixture(
-                new planck.Box(
-                    width / 2,
-                    height / 2,
-                    new planck.Vec2(width / 2, height / 2),
-                    0
-                ), {
-                isSensor: true,
-                restitution: 0,
-                friction: 0,
-                userData: {
-                    type: Config.Physics.Collision.typeFuel,
-                    sprite,
-                    index: i
-                },
-                filterCategoryBits: Config.Physics.Collision.categoryFuel,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer
+            const fuelBody = PhysicsUtils.createBoxBody(world, {
+                position: new planck.Vec2(Number(x), Number(y)),
+                box: { width, height },
+                fixture: {
+                    isSensor: true,
+                    restitution: 0,
+                    friction: 0,
+                    userData: {
+                        type: Config.Physics.Collision.typeFuel,
+                        sprite,
+                        index: i
+                    },
+                    filterCategoryBits: Config.Physics.Collision.categoryFuel,
+                    filterMaskBits: Config.Physics.Collision.categoryPlayer
+                }
             });
-
-            this.fuelTiles.push({ body: fuelBody, sprite});
+            this.fuelTiles.push({ body: fuelBody, sprite });
         }
     }
 

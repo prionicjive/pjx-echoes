@@ -34,6 +34,7 @@ type LevelContainers = {
     wallsContainer: PIXI.Container;
     finishTilesContainer: PIXI.Container;
     torchesContainer: PIXI.Container;
+    fuelTilesContainer: PIXI.Container;
     edgesContainer: PIXI.Container;
 }
 
@@ -46,6 +47,7 @@ export class Level {
     private walls: Entity[];
     private finishTiles: PhysicalEntity[];
     private torches: Entity[];
+    private fuelTiles: Entity[];
 
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
@@ -61,6 +63,7 @@ export class Level {
         this.walls = [];
         this.finishTiles = [];
         this.torches = [];
+        this.fuelTiles = [];
 
         // Convert level map to a list of wall/boundary objects (scaffolding)
         // All calculations in world (meter) space, not pixels
@@ -132,6 +135,7 @@ export class Level {
         levelContainers.edgesContainer.addChild(edgeGraphics);
 
         // Randomly place finish tiles in open spaces for the player to reach
+        // TODO Lots of code duplication here that could be addressed
         const numFinishTiles = Math.ceil(validSpaces.length * Game.Config.FinishTilesDensity);
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
@@ -169,6 +173,7 @@ export class Level {
         }
 
         // Randomly place torches in open spaces for the player to reach
+        // TODO Lots of code duplication here that could be addressed
         const numTorches = Math.ceil(validSpaces.length * Game.Config.TorchesDensity);
         for (let i = 0; i < numTorches; i++) {
             // Pick a random open space
@@ -187,6 +192,28 @@ export class Level {
             levelContainers.torchesContainer.addChild(sprite);
 
             this.torches.push({ sprite });
+        }
+
+        // Randomly place fuel tiles in open spaces for the player to reach
+        // TODO Lots of code duplication here that could be addressed
+        const numFuelTiles = Math.ceil(validSpaces.length * Game.Config.FuelTileDensity);
+        for (let i = 0; i < numFuelTiles; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+            const width = Game.Config.Fuel.size;
+            const height = Game.Config.Fuel.size;
+            const color = Game.Config.Fuel.color;
+
+            // Create a sprite for the finish tile
+            const sprite = PIXI.Sprite.from(Game.Config.Textures.fuel);
+            sprite.x = Number(x) * Game.Config.PixelsPerMeter;
+            sprite.y = Number(y) * Game.Config.PixelsPerMeter;
+            sprite.width = width * Game.Config.PixelsPerMeter;
+            sprite.height = height * Game.Config.PixelsPerMeter;
+            sprite.tint = color;
+            levelContainers.fuelTilesContainer.addChild(sprite);
+
+            this.fuelTiles.push({ sprite });
         }
     }
 
@@ -212,6 +239,14 @@ export class Level {
      */
     getTorches(): Entity[] {
         return this.torches;
+    }
+
+    /**
+     * Returns all fuel tile entities in the level.
+     * @returns {Entity[]} Array of fuel tile entities.
+     */
+    getFuelTiles(): Entity[] {
+        return this.fuelTiles;
     }
 
     /**

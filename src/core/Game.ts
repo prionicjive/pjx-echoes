@@ -13,7 +13,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { MapUtils } from '../utils/MapUtils.ts';
 import { Point, Segment } from '../utils/types';
-import { Light, StaticLight, DynamicLight, PlayerLight, FinishLight, TorchLight } from '../entities/Light.ts';
+import { Light, PlayerLight, FinishLight, TorchLight, FuelLight } from '../entities/Light.ts';
 
 export class Game {
     // Centralized game configuration
@@ -63,6 +63,10 @@ export class Game {
             color: 0xdfb503,  // Tint color for torches
             size: 1           // Torch size (in meters)
         },
+        Fuel: {
+            color: 0xff0888,  // Tint color for fuel
+            size: 1           // Fuel tile size (in meters)
+        },
         Finish: {
             color: 0x2ddf03,  // Tint color for finish tiles
             size: 1           // Finish tile size (in meters)
@@ -75,7 +79,8 @@ export class Game {
             player: '/assets/textures/player.png', // Paths to texture assets
             wall: '/assets/textures/wall.png',
             torch: '/assets/textures/torch.png',
-            finish: '/assets/textures/finish.png'
+            finish: '/assets/textures/finish.png',
+            fuel: '/assets/textures/fuel.png'
         },
         PlayerLight: {
             numRays: 360,
@@ -104,8 +109,18 @@ export class Game {
             startColor: 0xdfb503,
             endColor: 0xab3347
         },
+        FuelLight: {
+            numRays: 360,
+            baseRadius: 2,
+            radiusVariance: 0,
+            baseAlpha: 0.9,
+            alphaVariance: 0.1,
+            startColor: 0xff0022,
+            endColor: 0xff2244
+        },
         FinishTilesDensity: 0.0001,
-        TorchesDensity: 0.0007
+        TorchesDensity: 0.0007,
+        FuelTileDensity: 0.00065
     };
 
     // TODO It's annoying so many of these are null, is there any better way to restructure this and reset the game level / world?
@@ -127,6 +142,7 @@ export class Game {
     private playerContainer: PIXI.Container;
     private finishTilesContainer: PIXI.Container;
     private torchesContainer: PIXI.Container;
+    private fuelTilesContainer: PIXI.Container;
     private lightmapContainer: PIXI.Container;
 
     private blackBgRect: PIXI.Graphics;
@@ -146,6 +162,7 @@ export class Game {
     private playerLight: Light | null = null;
     private finishLights: Light[] = [];
     private torchLights: Light[] = [];
+    private fuelLights: Light[] = [];
 
     /**
      * Constructs the main Game instance.
@@ -162,6 +179,7 @@ export class Game {
         this.playerContainer = new PIXI.Container();
         this.finishTilesContainer = new PIXI.Container();
         this.torchesContainer = new PIXI.Container();
+        this.fuelTilesContainer = new PIXI.Container();
         
         // Set up basic lightmap-related things
         // This doesn't get added to the world, it is just used for rendering lights to a texture
@@ -237,10 +255,12 @@ export class Game {
      */
     async loadAssets() {
         // Load textures
+        // TODO Refactor how assets are fetched
         await PIXI.Assets.load(Game.Config.Textures.player);
         await PIXI.Assets.load(Game.Config.Textures.wall);
         await PIXI.Assets.load(Game.Config.Textures.finish);
-        await PIXI.Assets.load(Game.Config.Textures.torch);
+        await PIXI.Assets.load(Game.Config.Textures.torch); 
+        await PIXI.Assets.load(Game.Config.Textures.fuel);
     }
 
     /**
@@ -271,6 +291,7 @@ export class Game {
         this.playerContainer.removeChildren();
         this.finishTilesContainer.removeChildren();
         this.torchesContainer.removeChildren();
+        this.fuelTilesContainer.removeChildren();
         this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app?.stage.removeChildren();
@@ -285,7 +306,8 @@ export class Game {
         this.worldContainer.addChild(this.wallsContainer);
         this.worldContainer.addChild(this.edgesContainer);
         this.worldContainer.addChild(this.finishTilesContainer);
-        this.worldContainer.addChild(this.torchesContainer);
+        this.worldContainer.addChild(this.torchesContainer);    
+        this.worldContainer.addChild(this.fuelTilesContainer);
         this.worldContainer.addChild(this.playerContainer);
 
         // Add this mondo world container add the only direct child to the  stage
@@ -335,7 +357,8 @@ export class Game {
                 wallsContainer: this.wallsContainer, 
                 finishTilesContainer: this.finishTilesContainer,
                 edgesContainer: this.edgesContainer,
-                torchesContainer: this.torchesContainer
+                torchesContainer: this.torchesContainer,
+                fuelTilesContainer: this.fuelTilesContainer
             }, 
             this.rawLevelMap, 
             openSpaces,
@@ -387,6 +410,22 @@ export class Game {
                 }
                 const torchLight = new TorchLight(pos, this.mergedEdges, Game.Config.TorchLight);
                 this.torchLights.push(torchLight);
+            }
+        }
+
+        // Set up fuel lights
+        // TODO This is a bit of a hack, but it works for now
+        this.fuelLights = [];
+        const fuelTiles = this.level?.getFuelTiles();
+
+        if (fuelTiles) {
+            for (const light of fuelTiles) {
+                const pos: Point = {
+                    x: light.sprite.x / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2,
+                    y: light.sprite.y / Game.Config.PixelsPerMeter + Game.Config.Torch.size / 2
+                }
+                const fuelLight = new FuelLight(pos, this.mergedEdges, Game.Config.FuelLight);
+                this.fuelLights.push(fuelLight);
             }
         }
 
@@ -616,7 +655,7 @@ export class Game {
         const screenRight = screenLeft + Game.Config.ScreenDimensions.width;
         const screenBottom = screenTop + Game.Config.ScreenDimensions.height;
 
-        const allLights: Light[] = [...this.finishLights, ...this.torchLights];
+        const allLights: Light[] = [...this.finishLights, ...this.torchLights, ...this.fuelLights];
 
        for (const light of allLights) {
            light.update(null);

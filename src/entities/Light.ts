@@ -398,3 +398,69 @@ export class FinishLight extends StaticLight {
         this.colorTween.progress(Math.random());
     }
 }
+
+
+export class FuelLight extends StaticLight {
+    // Needed for tweens
+    private colorTween?: gsap.core.Tween;
+    private alphaTween?: gsap.core.Tween;
+    private tweenables: { tint: number, alpha: number };
+    
+    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
+        super(pos, collisionData, options);
+
+        // Set up tweenable properties
+        this.tweenables = {
+            alpha: this.alpha,
+            tint: this.tint
+        };
+        this.setupTweens();
+    }
+
+    protected setupTweens() {
+        this.flickerAlpha();
+        this.oscillateColor(this.options.startColor, this.options.endColor);      
+    }
+
+    public update(pos: Point | null = null) {
+        // Update with tweenable values
+        this.alpha = this.tweenables.alpha;
+        this.tint = this.tweenables.tint;
+
+        super.update(pos);
+    }
+
+    private flickerAlpha() {
+        // Kill any previous tweens
+        if (this.alphaTween) {
+            this.alphaTween.kill();
+        }
+
+        this.alphaTween = gsap.to(this.tweenables, {
+            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
+            duration: 0.5 + Math.random() * 2.5,
+            ease: 'power1.inOut',
+            onComplete: () => this.flickerAlpha()
+        });
+    }
+
+    private oscillateColor(startColor: number, endColor: number) {
+        // Kill any previous tweens
+        if (this.colorTween) {
+            this.colorTween.kill();
+        }
+
+        this.colorTween = gsap.fromTo(this.tweenables, {
+            tint: startColor,
+        }, {
+            duration: 0.5 + (Math.random() * 3),
+            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
+            yoyo: true,
+            delay: Math.random() * 1,
+            repeat: -1
+        });
+
+        // Randomize the starting point
+        this.colorTween.progress(Math.random());
+    }
+}

@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
-import { GraphicsUtils } from '../utils/GraphicsUtils';
+import { SpriteUtils } from '../utils/SpriteUtils';
 import { Config } from '../core/Config';
+import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { LightUtils } from '../utils/LightUtils';
 import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
@@ -46,15 +47,17 @@ export abstract class Light {
         this.tint = this.options.startColor;
 
         // Set up the light sprite
-        this.sprite = new PIXI.Sprite(GraphicsUtils.getRadialGradientTexture());
-        this.sprite.anchor.set(Config.Wall.size / 2);
-        this.sprite.width = this.radius * 2 * Config.PixelsPerMeter;
-        this.sprite.height = this.radius * 2 * Config.PixelsPerMeter; 
-        this.sprite.x = this.pos.x * Config.PixelsPerMeter;
-        this.sprite.y = this.pos.y * Config.PixelsPerMeter;
-        this.sprite.blendMode = 'normal';
-        this.sprite.tint = options.startColor;
-
+        this.sprite = SpriteUtils.createSprite({
+            texture: GraphicsUtils.getRadialGradientTexture(),
+            anchor: { x: 0.5, y: 0.5 },
+            width: this.radius * 2 * Config.PixelsPerMeter,
+            height: this.radius * 2 * Config.PixelsPerMeter,
+            x: this.pos.x * Config.PixelsPerMeter,
+            y: this.pos.y * Config.PixelsPerMeter,
+            blendMode: 'normal',
+            color: options.startColor,
+        });
+            
         // Set up the light mask
         this.mask = new PIXI.Graphics();
         this.sprite.mask = this.mask;

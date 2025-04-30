@@ -8,6 +8,11 @@
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 
+export interface GraphicalPhysicsEntity {
+    body: planck.Body;
+    graphics: PIXI.Graphics | null;
+}
+
 /**
  * Represents a game entity with a physics body and a PIXI sprite.
  * Used as a contract for objects managed by the game world (e.g., Player, FinishTile).
@@ -25,5 +30,5 @@ export interface PhysicalEntity {
  * @property {PIXI.Sprite} sprite - The PIXI.js sprite for rendering.
  */
 export interface Entity {
-    sprite: PIXI.Sprite;
+    sprite?: PIXI.Sprite;
 }

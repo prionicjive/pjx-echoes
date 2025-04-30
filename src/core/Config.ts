@@ -53,7 +53,7 @@ export const Config = {
         color: 0x2ddf03,  // Tint color for finish tiles
         size: 1           // Finish tile size (in meters)
     },
-    Boundaries: {
+    Edges: {
         color: 0x444444,
         thickness: 2
     },

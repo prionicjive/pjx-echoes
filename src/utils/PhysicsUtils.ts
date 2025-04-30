@@ -1,5 +1,5 @@
 import * as planck from 'planck';
-import { Segment } from '../types';
+import { Segment } from './types';
 ;
 interface CreateBoxBodyOptions {
     type?: planck.BodyType;

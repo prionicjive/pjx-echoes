@@ -12,25 +12,9 @@ import { Entity, PhysicalEntity, GraphicalPhysicsEntity } from './types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
-import { SpriteUtils } from '../utils/SpriteUtils';
+import { Light, StaticLight } from './Light';
+import { EntityFactory } from './EntityFactory';
 
-/**
- * Describes a wall or boundary to be created in the level.
- * Used as an intermediate step before creating physics bodies and sprites.
- * @typedef {Object} WallScaffold
- * @property {number} x - X position (in world units)
- * @property {number} y - Y position (in world units)
- * @property {number} width - Width (in world units)
- * @property {number} height - Height (in world units)
- * @property {number} color - Tint color for the wall
- */
-type WallScaffold = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: number;
-}
 
 type LevelContainers = {
     wallsContainer: PIXI.Container;
@@ -52,9 +36,14 @@ export class Level {
     private torches: Entity[];
     private fuelTiles: PhysicalEntity[];
 
+    // Lights associate with the level and entities within
+    private lights: Light[];
+
+    private edgesList: Segment[];
+
     /**
      * Creates a new Level instance, generating walls and finish tiles from the given map.
-     *
+    *
      * @param {planck.World} world - The Planck.js world to add walls and tiles to.
      * @param {LevelContainers} levelContainers - Where to add sprites for the various level entities for rendering go.
      * @param {number[][]} levelMap - 2D array representing the map layout (1 = wall, 0 = open).
@@ -67,9 +56,11 @@ export class Level {
         this.finishTiles = [];
         this.torches = [];
         this.fuelTiles = [];
+        this.lights = [];
 
+        this.edgesList = edgesList;
         // Create the edges collision data and (optionally) render it
-        this.edgesEntity = this.createEdgesEntity(world, levelContainers, edgesList);
+        this.edgesEntity = this.createEdgesEntity(world, levelContainers);
 
         // Create sprites for each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
@@ -86,14 +77,14 @@ export class Level {
         this.fuelTiles = this.createFuelTiles(validSpaces, levelContainers, world);
     }
 
-    createEdgesEntity(world: planck.World, levelContainers: LevelContainers, edgesList: Segment[]): GraphicalPhysicsEntity {
+    createEdgesEntity(world: planck.World, levelContainers: LevelContainers): GraphicalPhysicsEntity {
         let edgeGraphics: PIXI.Graphics | null = null;
         
         if (Config.Debug.drawEdges) {
             // Also, while iterating, draw the edges of the walls
             edgeGraphics = new PIXI.Graphics();
             
-            for (const edge of edgesList){
+            for (const edge of this.edgesList){
                 edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
                 edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
                 edgeGraphics.stroke({width:Config.Edges.thickness, color: Config.Edges.color});
@@ -105,7 +96,7 @@ export class Level {
 
         // Create single body and multiple fixtures for all the edges of the level
         const body = PhysicsUtils.createLevelEdgesBody(world, { 
-            edges: edgesList, 
+            edges: this.edgesList, 
             edgeFixture: {
                 restitution: 0.95,
                 friction: 0,
@@ -125,18 +116,17 @@ export class Level {
         for (let y = 0; y < levelMap.length; y++) {
             for (let x = 0; x < levelMap[y].length; x++) {
                 if (levelMap[y][x] === 1) {
-                    const sprite = SpriteUtils.createSprite({
-                        x: x,
-                        y: y,
+                    const wall = EntityFactory.create({
+                        type: 'wall',
+                        x,
+                        y,
                         width: Config.Wall.size,
                         height: Config.Wall.size,
-                        color: Config.Wall.color,
-                        texture: PIXI.Texture.from(Config.Textures.wall),
                     });
-                    levelContainers.wallsContainer.addChild(sprite);
+                    levelContainers.wallsContainer.addChild(wall.sprite);
 
                     // Store wall entity for future reference
-                    entitiesToReturn.push({ sprite });
+                    entitiesToReturn.push(wall);
                 }
             }
         }
@@ -152,43 +142,29 @@ export class Level {
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Finish.size;
-            const height = Config.Finish.size;
-            const color = Config.Finish.color;
 
-            // Create a sprite for the finish tile
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.finish),
+            const finishTile = EntityFactory.create({
+                type: 'finish',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
-            })
-            levelContainers.finishTilesContainer.addChild(sprite);
+                width: Config.Finish.size,
+                height: Config.Finish.size,
+            }, world) as PhysicalEntity;
 
-            // Create a static body for the finish tile
-            const finishBody = PhysicsUtils.createBoxBody(
-                world, {
-                    type: 'static',
-                    position: new planck.Vec2(Number(x), Number(y)),
-                    box: { width, height },
-                    fixture: {
-                        isSensor: true,
-                        restitution: 0,
-                        friction: 0,
-                        userData: {
-                            type: Config.Physics.Collision.typeFinish,
-                        },
-                        filterCategoryBits: Config.Physics.Collision.categoryFinish,
-                        filterMaskBits: Config.Physics.Collision.categoryPlayer
-                    }
-                }
-            );
+            levelContainers.finishTilesContainer.addChild(finishTile.sprite);
 
-            entitiesToReturn.push({ body: finishBody, sprite });
+            entitiesToReturn.push(finishTile);
+
+            // Set up lights for finish tiles
+            const finishLight = new StaticLight({
+                x: finishTile.body.getPosition().x + Config.Wall.size / 2,
+                y: finishTile.body.getPosition().y + Config.Wall.size / 2
+            },
+            this.edgesList,
+            Config.FinishLight);
+            this.lights.push(finishLight);
         }
-
+        
         return entitiesToReturn;
     }
 
@@ -200,24 +176,25 @@ export class Level {
         for (let i = 0; i < numTorches; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Torch.size;
-            const height = Config.Torch.size;
-            const color = Config.Torch.color;
 
-            // Create a sprite for the torch
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.torch),
+            const torch = EntityFactory.create({
+                type: 'torch',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
+                width: Config.Torch.size,
+                height: Config.Torch.size,
             });
+            levelContainers.torchesContainer.addChild(torch.sprite);
 
-            // TODO Not showing sprite for torches, might want to reconsider
-            levelContainers.torchesContainer.addChild(sprite);
+            entitiesToReturn.push(torch);
 
-            entitiesToReturn.push({ sprite });
+            // Set up torch lights
+            const torchLight = new StaticLight({
+                x: torch.sprite.x / Config.PixelsPerMeter + Config.Torch.size / 2,
+                y: torch.sprite.y / Config.PixelsPerMeter + Config.Torch.size / 2
+            }, this.edgesList, Config.TorchLight);
+            
+            this.lights.push(torchLight);
         }
 
         return entitiesToReturn;
@@ -231,41 +208,27 @@ export class Level {
         for (let i = 0; i < numFuelTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Fuel.size;
-            const height = Config.Fuel.size;
-            const color = Config.Fuel.color;
-
-            // Create a sprite for the fuel tile
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.fuel),
+            
+            const fuel = EntityFactory.create({
+                type: 'fuel',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
-            });
-            levelContainers.fuelTilesContainer.addChild(sprite);
+                width: Config.Fuel.size,
+                height: Config.Fuel.size,
+            }, world);
 
-            // Create a static body for the fuel tile
-            const fuelBody = PhysicsUtils.createBoxBody(world, {
-                position: new planck.Vec2(Number(x), Number(y)),
-                box: { width, height },
-                fixture: {
-                    isSensor: true,
-                    restitution: 0,
-                    friction: 0,
-                    userData: {
-                        type: Config.Physics.Collision.typeFuel,
-                        sprite,
-                        index: i
-                    },
-                    filterCategoryBits: Config.Physics.Collision.categoryFuel,
-                    filterMaskBits: Config.Physics.Collision.categoryPlayer
-                }
-            });
-            entitiesToReturn.push({ body: fuelBody, sprite });
+            levelContainers.fuelTilesContainer.addChild(fuel.sprite);
+
+            entitiesToReturn.push(fuel as PhysicalEntity);
+
+            // Set up fuel lights
+            const fuelLight = new StaticLight({
+                x: fuel.sprite.x / Config.PixelsPerMeter + Config.Fuel.size / 2,
+                y: fuel.sprite.y / Config.PixelsPerMeter + Config.Fuel.size / 2
+            }, this.edgesList, Config.FuelLight);
+            this.lights.push(fuelLight);
         }
-
+        
         return entitiesToReturn;
     }
 
@@ -299,6 +262,10 @@ export class Level {
      */
     getFuelTiles(): Entity[] {
         return this.fuelTiles;
+    }
+
+    getLights(): Light[] {
+        return this.lights;
     }
 
     /**

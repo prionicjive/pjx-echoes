@@ -15,6 +15,16 @@ export interface LightOptions {
     baseAlpha: number;
     alphaVariance: number;
     numRays: number;
+
+    // TODO Put properties for tween durations somewhere else?
+    flickerAlphaDuration: number;
+    flickerAlphaDurationVariance: number;
+    flickerRadiusDuration?: number;
+    flickerRadiusDurationVariance?: number;
+    oscillateColorDuration: number;
+    oscillateColorDurationVariance: number;
+    oscillateColorDelay: number;
+    oscillateColorDelayVariance: number;
 }
 
 export abstract class Light {
@@ -31,6 +41,12 @@ export abstract class Light {
     public radius: number;
     protected alpha: number;
     protected tint: number;
+
+    // Needed for tweens
+    protected colorTween?: gsap.core.Tween;
+    protected radiusTween?: gsap.core.Tween;
+    protected alphaTween?: gsap.core.Tween;
+    protected tweenables: { radius: number, tint: number, alpha: number };
 
     constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
         if (new.target === Light) {
@@ -61,13 +77,30 @@ export abstract class Light {
         // Set up the light mask
         this.mask = new PIXI.Graphics();
         this.sprite.mask = this.mask;
+    
+        // Set up tweenable properties
+        this.tweenables = {
+            radius: this.radius,
+            alpha: this.alpha,
+            tint: this.tint
+        };
+        this.setupTweens();
+
+        // TODO Any additional setup / initialization
     }
+
+    abstract setupTweens(): void;
     
     public update(pos: Point | null): void {
         // Use the sprite's current position if no updated position is given
         if (pos && (this.pos.x !== pos.x || this.pos.y != pos.y)) {
             this.pos = {...pos};
         }
+
+        // Update with tweenable values
+        this.radius = this.tweenables.radius;
+        this.alpha = this.tweenables.alpha;
+        this.tint = this.tweenables.tint;
 
         // Update light sprite to be under where the position is
         this.sprite.width = this.radius * 2 * Config.PixelsPerMeter;
@@ -103,11 +136,16 @@ export abstract class Light {
     }
 }
 
-export class DynamicLight extends Light {
+export class DynamicLight extends Light {    
     constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
         super(pos, collisionData, options);
-
         // TODO Any additional setup / initialization
+    }
+
+    public setupTweens() {
+        this.flickerAlpha();
+        this.flickerRadius();
+        this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
     public update(pos: Point | null = null) {
@@ -124,6 +162,56 @@ export class DynamicLight extends Light {
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
+    }
+
+    private flickerAlpha() {
+        // Kill any previous tweens
+        if (this.alphaTween) {
+            this.alphaTween.kill();
+        }
+
+        this.alphaTween = gsap.to(this.tweenables, {
+            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
+            duration: Config.PlayerLight.flickerAlphaDuration + Math.random() * Config.PlayerLight.flickerAlphaDurationVariance,
+            ease: 'power1.inOut',
+            onComplete: () => this.flickerAlpha()
+        });
+    }
+
+    // TODO Put in some other Light-related file / class
+    private flickerRadius() {
+        // Kill any previous tweens
+        if (this.radiusTween) {
+            this.radiusTween.kill();
+        }
+
+        this.radiusTween = gsap.to(this.tweenables, {
+            radius: this.options.baseRadius + Math.random() * this.options.radiusVariance, 
+            duration: 1.5 + Math.random() * 0.5,
+            ease: 'power1.inOut',
+            onComplete: () => this.flickerRadius()
+        });
+    }
+
+    // TODO Put in some other light-related file / class
+    private oscillateColor(startColor: number, endColor: number) {
+        // Kill any previous tweens
+        if (this.colorTween) {
+            this.colorTween.kill();
+        }
+
+        this.colorTween = gsap.fromTo(this.tweenables, {
+            tint: startColor,
+        }, {
+            duration: Config.PlayerLight.oscillateColorDuration + (Math.random() * Config.PlayerLight.oscillateColorDurationVariance),
+            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
+            yoyo: true,
+            delay: Config.PlayerLight.oscillateColorDelay + (Math.random() * Config.PlayerLight.oscillateColorDelayVariance),
+            repeat: -1
+        });
+
+        // Randomize the starting point
+        this.colorTween.progress(Math.random());
     }
 }
 
@@ -185,40 +273,10 @@ export class StaticLight extends Light {
         // Compute the light points once again
         this.computeLightPoints(this.lastPos);
     }
-}
 
-export class PlayerLight extends DynamicLight {
-    // Needed for tweens
-    private colorTween?: gsap.core.Tween;
-    private radiusTween?: gsap.core.Tween;
-    private alphaTween?: gsap.core.Tween;
-    private tweenables: { radius: number, tint: number, alpha: number };
-    
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
-        super(pos, collisionData, options);
-
-        // Set up tweenable properties
-        this.tweenables = {
-            radius: this.radius,
-            alpha: this.alpha,
-            tint: this.tint
-        };
-        this.setupTweens();
-    }
-
-    private setupTweens() {
+    public setupTweens() {
         this.flickerAlpha();
-        this.flickerRadius();
         this.oscillateColor(this.options.startColor, this.options.endColor);      
-    }
-
-    public update(pos: Point | null = null) {
-        // Update with tweenable values
-        this.radius = this.tweenables.radius;
-        this.alpha = this.tweenables.alpha;
-        this.tint = this.tweenables.tint;
-
-        super.update(pos);
     }
 
     private flickerAlpha() {
@@ -229,24 +287,9 @@ export class PlayerLight extends DynamicLight {
 
         this.alphaTween = gsap.to(this.tweenables, {
             alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: 0.5 + Math.random() * 2.5,
+            duration: Config.PlayerLight.flickerAlphaDuration + Math.random() * Config.PlayerLight.flickerAlphaDurationVariance,
             ease: 'power1.inOut',
             onComplete: () => this.flickerAlpha()
-        });
-    }
-
-    // TODO Put in some other Light-related file / class
-    private flickerRadius() {
-        // Kill any previous tweens
-        if (this.radiusTween) {
-            this.radiusTween.kill();
-        }
-
-        this.radiusTween = gsap.to(this.tweenables, {
-            radius: this.options.baseRadius + Math.random() * this.options.radiusVariance, 
-            duration: 1.5 + Math.random() * 0.5,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerRadius()
         });
     }
 
@@ -260,206 +303,10 @@ export class PlayerLight extends DynamicLight {
         this.colorTween = gsap.fromTo(this.tweenables, {
             tint: startColor,
         }, {
-            duration: 1.5 + (Math.random() * 2),
+            duration: Config.PlayerLight.oscillateColorDuration + (Math.random() * Config.PlayerLight.oscillateColorDurationVariance),
             pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
             yoyo: true,
-            delay: Math.random() * 2,
-            repeat: -1
-        });
-
-        // Randomize the starting point
-        this.colorTween.progress(Math.random());
-    }
-}
-
-export class TorchLight extends StaticLight {
-    // Needed for tweens
-    private colorTween?: gsap.core.Tween;
-    private alphaTween?: gsap.core.Tween;
-    private tweenables: { tint: number, alpha: number };
-    
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
-        super(pos, collisionData, options);
-
-        // Set up tweenable properties
-        this.tweenables = {
-            alpha: this.alpha,
-            tint: this.tint
-        };
-        this.setupTweens();
-    }
-
-    protected setupTweens() {
-        this.flickerAlpha();
-        this.oscillateColor(this.options.startColor, this.options.endColor);      
-    }
-
-    public update(pos: Point | null = null) {
-        // Update with tweenable values
-        this.alpha = this.tweenables.alpha;
-        this.tint = this.tweenables.tint;
-
-        super.update(pos);
-    }
-
-    private flickerAlpha() {
-        // Kill any previous tweens
-        if (this.alphaTween) {
-            this.alphaTween.kill();
-        }
-
-        this.alphaTween = gsap.to(this.tweenables, {
-            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: 0.5 + Math.random() * 2.5,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerAlpha()
-        });
-    }
-
-    private oscillateColor(startColor: number, endColor: number) {
-        // Kill any previous tweens
-        if (this.colorTween) {
-            this.colorTween.kill();
-        }
-
-        this.colorTween = gsap.fromTo(this.tweenables, {
-            tint: startColor,
-        }, {
-            duration: 1.5 + (Math.random() * 2),
-            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
-            yoyo: true,
-            delay: Math.random() * 2,
-            repeat: -1
-        });
-
-        // Randomize the starting point
-        this.colorTween.progress(Math.random());
-    }
-}
-
-export class FinishLight extends StaticLight {
-    // Needed for tweens
-    private colorTween?: gsap.core.Tween;
-    private alphaTween?: gsap.core.Tween;
-    private tweenables: { tint: number, alpha: number };
-    
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
-        super(pos, collisionData, options);
-
-        // Set up tweenable properties
-        this.tweenables = {
-            alpha: this.alpha,
-            tint: this.tint
-        };
-        this.setupTweens();
-    }
-
-    protected setupTweens() {
-        this.flickerAlpha();
-        this.oscillateColor(this.options.startColor, this.options.endColor);      
-    }
-
-    public update(pos: Point | null = null) {
-        // Update with tweenable values
-        this.alpha = this.tweenables.alpha;
-        this.tint = this.tweenables.tint;
-
-        super.update(pos);
-    }
-
-    private flickerAlpha() {
-        // Kill any previous tweens
-        if (this.alphaTween) {
-            this.alphaTween.kill();
-        }
-
-        this.alphaTween = gsap.to(this.tweenables, {
-            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: 0.5 + Math.random() * 2.5,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerAlpha()
-        });
-    }
-
-    private oscillateColor(startColor: number, endColor: number) {
-        // Kill any previous tweens
-        if (this.colorTween) {
-            this.colorTween.kill();
-        }
-
-        this.colorTween = gsap.fromTo(this.tweenables, {
-            tint: startColor,
-        }, {
-            duration: 1.5 + (Math.random() * 2),
-            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
-            yoyo: true,
-            delay: Math.random() * 2,
-            repeat: -1
-        });
-
-        // Randomize the starting point
-        this.colorTween.progress(Math.random());
-    }
-}
-
-
-export class FuelLight extends StaticLight {
-    // Needed for tweens
-    private colorTween?: gsap.core.Tween;
-    private alphaTween?: gsap.core.Tween;
-    private tweenables: { tint: number, alpha: number };
-    
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
-        super(pos, collisionData, options);
-
-        // Set up tweenable properties
-        this.tweenables = {
-            alpha: this.alpha,
-            tint: this.tint
-        };
-        this.setupTweens();
-    }
-
-    protected setupTweens() {
-        this.flickerAlpha();
-        this.oscillateColor(this.options.startColor, this.options.endColor);      
-    }
-
-    public update(pos: Point | null = null) {
-        // Update with tweenable values
-        this.alpha = this.tweenables.alpha;
-        this.tint = this.tweenables.tint;
-
-        super.update(pos);
-    }
-
-    private flickerAlpha() {
-        // Kill any previous tweens
-        if (this.alphaTween) {
-            this.alphaTween.kill();
-        }
-
-        this.alphaTween = gsap.to(this.tweenables, {
-            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: 0.5 + Math.random() * 2.5,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerAlpha()
-        });
-    }
-
-    private oscillateColor(startColor: number, endColor: number) {
-        // Kill any previous tweens
-        if (this.colorTween) {
-            this.colorTween.kill();
-        }
-
-        this.colorTween = gsap.fromTo(this.tweenables, {
-            tint: startColor,
-        }, {
-            duration: 0.5 + (Math.random() * 3),
-            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
-            yoyo: true,
-            delay: Math.random() * 1,
+            delay: Config.PlayerLight.oscillateColorDelay + (Math.random() * Config.PlayerLight.oscillateColorDelayVariance),
             repeat: -1
         });
 

@@ -14,14 +14,11 @@ export const Config = {
     },
     Physics: {
         Collision: {
-            typePlayer: "PLAYER",
-            typeWall: "WALL",
-            typeFinish: "FINISH",
-            typeFuel: "FUEL",
             categoryPlayer: 0x0001, // Bitmasks for Planck.js collision filtering
             categoryWall: 0x0002,
-            categoryFinish: 0x0004,
-            categoryFuel: 0x0008
+            categoryEdge: 0x0004,
+            categoryFinish: 0x0008,
+            categoryFuel: 0x0010
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
@@ -34,26 +31,32 @@ export const Config = {
         smoothingSteps: 4 // How many times to smooth the map
     },
     Player: {
+        type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
     },
     Wall: {
+        type: "WALL",
         color: 0x444444,  // Tint color for walls
         size: 1,          // Wall size (in meters)
     },
     Torch: {
+        type: "TORCH",
         color: 0xdfb503,  // Tint color for torches
         size: 1           // Torch size (in meters)
     },
     Fuel: {
+        type: "FUEL",
         color: 0xff0888,  // Tint color for fuel
         size: 1           // Fuel tile size (in meters)
     },
     Finish: {
+        type: "FINISH",
         color: 0x2ddf03,  // Tint color for finish tiles
         size: 1           // Finish tile size (in meters)
     },
     Edges: {
+        type: "EDGES",
         color: 0x444444,
         thickness: 2
     },

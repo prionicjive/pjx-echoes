@@ -8,6 +8,7 @@
 
 import { Config } from '../core/Config';
 import { Entity } from './types';
+import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
@@ -17,6 +18,7 @@ import * as PIXI from 'pixi.js';
  * Handles physics, rendering, and input-based movement.
  */
 export class Player implements Entity {
+    id: string;
     body: planck.Body;
     sprite: PIXI.Sprite;
 
@@ -29,6 +31,8 @@ export class Player implements Entity {
      * @param {Point} spawnPoint - Initial position (in world units).
      */
     constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
+        this.id = EntityUtils.generateRandomId(Config.Player.type);
+        
         // Place player in the center of the tile
         const playerRadius = Config.Player.radius;
         const center = new planck.Vec2(spawnPoint.x + Config.Wall.size / 2, spawnPoint.y + Config.Wall.size / 2);
@@ -40,9 +44,9 @@ export class Player implements Entity {
             restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
-            userData: { type: Config.Physics.Collision.typePlayer },
+            userData: { type: Config.Player.type },
             filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
+            filterMaskBits: Config.Physics.Collision.categoryEdge | Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
         });
 
         // Generate sprite for the player

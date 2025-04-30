@@ -31,6 +31,7 @@ export abstract class Light {
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
     public pos: Point;
+    public entityId: string = "";
     protected collisionData: Segment[];
     protected lightPoints: { point: Point; angle: number }[];
 

@@ -14,7 +14,8 @@ import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
 import { Light, StaticLight } from './Light';
 import { EntityFactory } from './EntityFactory';
-
+import { EntityUtils } from '../utils/EntityUtils';
+import { EntityType } from './types';
 
 type LevelContainers = {
     wallsContainer: PIXI.Container;
@@ -95,18 +96,24 @@ export class Level {
         }
 
         // Create single body and multiple fixtures for all the edges of the level
+        const id = EntityUtils.generateRandomId(Config.Edges.type);
+
         const body = PhysicsUtils.createLevelEdgesBody(world, { 
             edges: this.edgesList, 
             edgeFixture: {
                 restitution: 0.95,
                 friction: 0,
-                userData: { type: Config.Physics.Collision.typeWall },
-                filterCategoryBits: Config.Physics.Collision.categoryWall,
+                userData: { 
+                    type: Config.Edges.type,
+                    id,
+                    graphics: edgeGraphics,
+                },
+                filterCategoryBits: Config.Physics.Collision.categoryEdge,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer
             } 
         });
 
-        return { body, graphics: edgeGraphics }
+        return { id, body, graphics: edgeGraphics }
     }
 
     createWalls(levelMap: number[][], levelContainers: LevelContainers): Entity[] {
@@ -117,7 +124,8 @@ export class Level {
             for (let x = 0; x < levelMap[y].length; x++) {
                 if (levelMap[y][x] === 1) {
                     const wall = EntityFactory.create({
-                        type: 'wall',
+                        id: EntityUtils.generateRandomId(Config.Wall.type),
+                        type: Config.Wall.type as EntityType,
                         x,
                         y,
                         width: Config.Wall.size,
@@ -144,7 +152,8 @@ export class Level {
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
 
             const finishTile = EntityFactory.create({
-                type: 'finish',
+                id: EntityUtils.generateRandomId(Config.Finish.type),
+                type: Config.Finish.type as EntityType,
                 x: Number(x),
                 y: Number(y),
                 width: Config.Finish.size,
@@ -162,6 +171,9 @@ export class Level {
             },
             this.edgesList,
             Config.FinishLight);
+
+            finishLight.entityId = finishTile.id;
+
             this.lights.push(finishLight);
         }
         
@@ -178,7 +190,8 @@ export class Level {
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
 
             const torch = EntityFactory.create({
-                type: 'torch',
+                type: Config.Torch.type as EntityType,
+                id: EntityUtils.generateRandomId(Config.Torch.type),
                 x: Number(x),
                 y: Number(y),
                 width: Config.Torch.size,
@@ -193,6 +206,8 @@ export class Level {
                 x: torch.sprite.x / Config.PixelsPerMeter + Config.Torch.size / 2,
                 y: torch.sprite.y / Config.PixelsPerMeter + Config.Torch.size / 2
             }, this.edgesList, Config.TorchLight);
+            
+            torchLight.entityId = torch.id;
             
             this.lights.push(torchLight);
         }
@@ -210,7 +225,8 @@ export class Level {
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
             
             const fuel = EntityFactory.create({
-                type: 'fuel',
+                id: EntityUtils.generateRandomId(Config.Fuel.type),
+                type: Config.Fuel.type as EntityType,
                 x: Number(x),
                 y: Number(y),
                 width: Config.Fuel.size,
@@ -226,6 +242,9 @@ export class Level {
                 x: fuel.sprite.x / Config.PixelsPerMeter + Config.Fuel.size / 2,
                 y: fuel.sprite.y / Config.PixelsPerMeter + Config.Fuel.size / 2
             }, this.edgesList, Config.FuelLight);
+
+            fuelLight.entityId = fuel.id;
+
             this.lights.push(fuelLight);
         }
         

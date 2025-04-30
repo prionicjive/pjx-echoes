@@ -8,6 +8,7 @@ import { Segment } from '../utils/types';
 import { Light, DynamicLight } from '../entities/Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
+import { EntityUserData } from '../entities/types.ts'; 
 
 export class World {
     private world: planck.World | null = null;
@@ -230,6 +231,7 @@ export class World {
 
         // TODO Set up dynamic lights, including player light
         this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Config.PlayerLight);
+        this.playerLight.entityId = this.player?.id;
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
@@ -244,36 +246,48 @@ export class World {
         const fixtureA = contact.getFixtureA();
         const fixtureB = contact.getFixtureB();
 
-        const aData: any = fixtureA.getUserData();
-        const bData: any = fixtureB.getUserData();
+        const aData: EntityUserData = fixtureA.getUserData() as EntityUserData;
+        const bData: EntityUserData = fixtureB.getUserData() as EntityUserData;
 
         console.log("CONTACT!")
 
         if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFinish) ||
-            (aData.type === Config.Physics.Collision.typeFinish && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Finish.type) ||
+            (aData.type === Config.Finish.type && bData.type === Config.Player.type)
         ) {
             //console.log("Player reached finish tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
         } else if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeWall) ||
-            (aData.type === Config.Physics.Collision.typeWall && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
+            (aData.type === Config.Edges.type && bData.type === Config.Player.type)
         ) {
             // TODO Handle player hitting a wall
             // console.log("Player hit a wall!");
         } else if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFuel) ||
-            (aData.type === Config.Physics.Collision.typeFuel && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
+            (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
         ) {
             // Pick up and remove fuel
             //console.log("Player hit fuel!");
-            const fuelObj = aData.sprite ? aData : bData; // TODO Make this a little more foolproof
+            const fuelObj: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
             this.fuelTilesContainer.removeChild(fuelObj.sprite);
 
-            // Remove light - not by splicing / removing it but instead adding a null value at that index
-            //this.fuelLights[fuelObj.index] = null;
+            // Remove light (if it exists)
+            const index = this.staticLights.findIndex((light) => {
+                return light.entityId === fuelObj.id;
+            });
+
+            if (index !== -1) {
+                const [light] = this.staticLights.splice(index, 1);
+                light.mask.destroy();
+                light.sprite.destroy();
+            }
+
+            // Lastly, remove the body of the fuel entity
+            // TODO Figure out best way to do this
+            // this.world?.destroyBody(FUEL_BODY);
         }
     }
 

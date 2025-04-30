@@ -13,24 +13,8 @@ import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
 import { SpriteUtils } from '../utils/SpriteUtils';
+import { EntityFactory } from './EntityFactory';
 
-/**
- * Describes a wall or boundary to be created in the level.
- * Used as an intermediate step before creating physics bodies and sprites.
- * @typedef {Object} WallScaffold
- * @property {number} x - X position (in world units)
- * @property {number} y - Y position (in world units)
- * @property {number} width - Width (in world units)
- * @property {number} height - Height (in world units)
- * @property {number} color - Tint color for the wall
- */
-type WallScaffold = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: number;
-}
 
 type LevelContainers = {
     wallsContainer: PIXI.Container;
@@ -125,18 +109,17 @@ export class Level {
         for (let y = 0; y < levelMap.length; y++) {
             for (let x = 0; x < levelMap[y].length; x++) {
                 if (levelMap[y][x] === 1) {
-                    const sprite = SpriteUtils.createSprite({
-                        x: x,
-                        y: y,
+                    const wall = EntityFactory.create({
+                        type: 'wall',
+                        x,
+                        y,
                         width: Config.Wall.size,
                         height: Config.Wall.size,
-                        color: Config.Wall.color,
-                        texture: PIXI.Texture.from(Config.Textures.wall),
                     });
-                    levelContainers.wallsContainer.addChild(sprite);
+                    levelContainers.wallsContainer.addChild(wall.sprite);
 
                     // Store wall entity for future reference
-                    entitiesToReturn.push({ sprite });
+                    entitiesToReturn.push(wall);
                 }
             }
         }
@@ -152,41 +135,18 @@ export class Level {
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Finish.size;
-            const height = Config.Finish.size;
-            const color = Config.Finish.color;
 
-            // Create a sprite for the finish tile
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.finish),
+            const finishTile = EntityFactory.create({
+                type: 'finish',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
-            })
-            levelContainers.finishTilesContainer.addChild(sprite);
+                width: Config.Finish.size,
+                height: Config.Finish.size,
+            }, world);
 
-            // Create a static body for the finish tile
-            const finishBody = PhysicsUtils.createBoxBody(
-                world, {
-                    type: 'static',
-                    position: new planck.Vec2(Number(x), Number(y)),
-                    box: { width, height },
-                    fixture: {
-                        isSensor: true,
-                        restitution: 0,
-                        friction: 0,
-                        userData: {
-                            type: Config.Physics.Collision.typeFinish,
-                        },
-                        filterCategoryBits: Config.Physics.Collision.categoryFinish,
-                        filterMaskBits: Config.Physics.Collision.categoryPlayer
-                    }
-                }
-            );
+            levelContainers.finishTilesContainer.addChild(finishTile.sprite);
 
-            entitiesToReturn.push({ body: finishBody, sprite });
+            entitiesToReturn.push(finishTile as PhysicalEntity);
         }
 
         return entitiesToReturn;
@@ -200,24 +160,17 @@ export class Level {
         for (let i = 0; i < numTorches; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Torch.size;
-            const height = Config.Torch.size;
-            const color = Config.Torch.color;
 
-            // Create a sprite for the torch
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.torch),
+            const torch = EntityFactory.create({
+                type: 'torch',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
+                width: Config.Torch.size,
+                height: Config.Torch.size,
             });
+            levelContainers.torchesContainer.addChild(torch.sprite);
 
-            // TODO Not showing sprite for torches, might want to reconsider
-            levelContainers.torchesContainer.addChild(sprite);
-
-            entitiesToReturn.push({ sprite });
+            entitiesToReturn.push(torch);
         }
 
         return entitiesToReturn;
@@ -231,39 +184,18 @@ export class Level {
         for (let i = 0; i < numFuelTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            const width = Config.Fuel.size;
-            const height = Config.Fuel.size;
-            const color = Config.Fuel.color;
-
-            // Create a sprite for the fuel tile
-            const sprite = SpriteUtils.createSprite({
-                texture: PIXI.Texture.from(Config.Textures.fuel),
+            
+            const fuel = EntityFactory.create({
+                type: 'fuel',
                 x: Number(x),
                 y: Number(y),
-                width,
-                height,
-                color
-            });
-            levelContainers.fuelTilesContainer.addChild(sprite);
+                width: Config.Fuel.size,
+                height: Config.Fuel.size,
+            }, world);
 
-            // Create a static body for the fuel tile
-            const fuelBody = PhysicsUtils.createBoxBody(world, {
-                position: new planck.Vec2(Number(x), Number(y)),
-                box: { width, height },
-                fixture: {
-                    isSensor: true,
-                    restitution: 0,
-                    friction: 0,
-                    userData: {
-                        type: Config.Physics.Collision.typeFuel,
-                        sprite,
-                        index: i
-                    },
-                    filterCategoryBits: Config.Physics.Collision.categoryFuel,
-                    filterMaskBits: Config.Physics.Collision.categoryPlayer
-                }
-            });
-            entitiesToReturn.push({ body: fuelBody, sprite });
+            levelContainers.fuelTilesContainer.addChild(fuel.sprite);
+
+            entitiesToReturn.push(fuel as PhysicalEntity);
         }
 
         return entitiesToReturn;

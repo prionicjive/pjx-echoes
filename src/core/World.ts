@@ -301,7 +301,7 @@ export class World {
         const aData: any = fixtureA.getUserData();
         const bData: any = fixtureB.getUserData();
 
-        //console.log("CONTACT!")
+        console.log("CONTACT!")
 
         if (
             (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFinish) ||

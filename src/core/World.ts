@@ -5,10 +5,9 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../entities/Level.ts';
 import { InputManager } from './InputManager.ts';
 import { Segment } from '../utils/types';
-import { Light, PlayerLight, FinishLight, TorchLight, FuelLight } from '../entities/Light.ts'; 
+import { Light, DynamicLight } from '../entities/Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
-import { Point } from '../utils/types';
 
 export class World {
     private world: planck.World | null = null;
@@ -44,12 +43,8 @@ export class World {
     private crtFilter: CRTFilter
 
     // Lights
-    // TODO Better structured elsewhere?
-    // TODO Does this need to be in its own container so that it's rendered differently order wise?
     private playerLight: Light | null = null;
-    private finishLights: Light[] = [];
-    private torchLights: Light[] = [];
-    private fuelLights: (Light | null)[] = [];
+    private staticLights: Light[] = [];
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -206,8 +201,7 @@ export class World {
         // Use text renderer for debug purposes
         // MapGenerator.renderMap(this.rawLevelMap); 
 
-        // Construct the level and finish tiles (among other entities)
-        // TODO Add the walls and finish tiles to their own containers
+        // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
             this.world, { 
                 wallsContainer: this.wallsContainer, 
@@ -221,6 +215,8 @@ export class World {
             this.mergedEdges
         );
 
+        this.staticLights = this.level.getLights();
+
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
@@ -232,58 +228,8 @@ export class World {
             y: this.player?.body.getPosition().y
         };
 
-        // Set up light related stuff
-        // TODO Better way or place  to do this?
-        this.playerLight = new PlayerLight(playerPos, this.mergedEdges, Config.PlayerLight);
-
-        // Set up lights for finish tiles
-        // TODO This is a bit of a hack, but it works for now
-        this.finishLights = [];
-        const finishTiles = this.level?.getFinishTiles();
-
-        if (finishTiles) {
-            for (const tile of finishTiles) {
-                const finishLight = new FinishLight({
-                    x: tile.body.getPosition().x + Config.Wall.size / 2, 
-                    y: tile.body.getPosition().y + Config.Wall.size / 2
-                },
-                this.mergedEdges,
-                Config.FinishLight);
-                this.finishLights.push(finishLight);
-            }
-        }
-
-        // Set up torch lights
-        // TODO This is a bit of a hack, but it works for now
-        this.torchLights = [];
-        const torches = this.level?.getTorches();
-
-        if (torches) {
-            for (const torch of torches) {
-                const pos: Point = {
-                    x: torch.sprite.x / Config.PixelsPerMeter + Config.Torch.size / 2,
-                    y: torch.sprite.y / Config.PixelsPerMeter + Config.Torch.size / 2
-                }
-                const torchLight = new TorchLight(pos, this.mergedEdges, Config.TorchLight);
-                this.torchLights.push(torchLight);
-            }
-        }
-
-        // Set up fuel lights
-        // TODO This is a bit of a hack, but it works for now
-        this.fuelLights = [];
-        const fuelTiles = this.level?.getFuelTiles();
-
-        if (fuelTiles) {
-            for (const light of fuelTiles) {
-                const pos: Point = {
-                    x: light.sprite.x / Config.PixelsPerMeter + Config.Torch.size / 2,
-                    y: light.sprite.y / Config.PixelsPerMeter + Config.Torch.size / 2
-                }
-                const fuelLight = new FuelLight(pos, this.mergedEdges, Config.FuelLight);
-                this.fuelLights.push(fuelLight);
-            }
-        }
+        // TODO Set up dynamic lights, including player light
+        this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Config.PlayerLight);
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
@@ -327,7 +273,7 @@ export class World {
             this.fuelTilesContainer.removeChild(fuelObj.sprite);
 
             // Remove light - not by splicing / removing it but instead adding a null value at that index
-            this.fuelLights[fuelObj.index] = null;
+            //this.fuelLights[fuelObj.index] = null;
         }
     }
 
@@ -519,15 +465,18 @@ export class World {
         this.lightmapContainer.addChild(this.playerLight.sprite);
         this.lightmapContainer.addChild(this.playerLight.mask);
 
+        // 
+        // TODO Add any dynamic lights that need some more special update logic to their position, life span, etc...
+        // TODO Consider hiding them when they are offscreen but still alive
+
         // See if lights are on screen and render them if they are
         const screenLeft = -this.worldContainer.x;
         const screenTop = -this.worldContainer.y;
         const screenRight = screenLeft + this.viewportWidth;
         const screenBottom = screenTop + this.viewportHeight;
 
-        const allLights: (Light | null)[] = [...this.finishLights, ...this.torchLights, ...this.fuelLights];
-
-       for (const light of allLights) {
+        // Process and update all static lights
+        for (const light of this.staticLights) {
            if (!light) continue;
            
            light.update(null);
@@ -596,11 +545,11 @@ export class World {
      * @param {number} height - New height of the window in pixels.
      */
     onResize(width: number, height: number) {
-        // 1. Update viewport dimensions
+        // Update viewport dimensions
         this.viewportWidth = width;
         this.viewportHeight = height;
     
-        // 2. Recreate the lightmap texture to avoid artifacts
+        // Recreate the lightmap texture to avoid artifacts
         if (this.lightmapTexture) {
             this.lightmapTexture.destroy(true);
         }
@@ -610,7 +559,7 @@ export class World {
         this.lightmapSprite.height = height;
         this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
     
-        // 3. Resize backgrounds or overlays
+        // Resize backgrounds or overlays
         if (this.blackBgRect) {
             this.blackBgRect.width = width;
             this.blackBgRect.height = height;
@@ -620,12 +569,7 @@ export class World {
             this.whiteBgRect.height = height;
         }
     
-        // 4. Optionally, recenter camera or update camera logic
+        // Optionally, recenter camera or update camera logic
         this.instantlyCenterCamera();
-    
-        // 5. Debug log
-        console.log(
-            `World resized: ${width}x${height} (${(width / Config.PixelsPerMeter).toFixed(2)} x ${(height / Config.PixelsPerMeter).toFixed(2)} meters)`
-        );
     }
 }

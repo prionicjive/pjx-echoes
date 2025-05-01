@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 128,       // Width of the generated level (in grid units)
-        height: 128
+        width: 32,       // Width of the generated level (in grid units)
+        height: 32
     },
     PixelsPerMeter: 16, // How many pixels represent one physics meter
     Camera: {

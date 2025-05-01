@@ -173,8 +173,8 @@ export class World {
         this.rawLevelMap = levelMap;
 
         // TODO Is this the better way to do edge detection?
-        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap, Config.Wall.size);
-        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap, Config.Wall.size)
+        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap);
+        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap)
         this.mergedEdges = [...horizontalEdges, ...verticalEdges];
 
         // Use text renderer for debug purposes

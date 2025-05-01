@@ -38,22 +38,18 @@ export const Config = {
     Wall: {
         type: "WALL",
         color: 0x444444,  // Tint color for walls
-        size: 1,          // Wall size (in meters)
     },
     Torch: {
         type: "TORCH",
         color: 0xdfb503,  // Tint color for torches
-        size: 1           // Torch size (in meters)
     },
     Fuel: {
         type: "FUEL",
         color: 0xff0888,  // Tint color for fuel
-        size: 1           // Fuel tile size (in meters)
     },
     Finish: {
         type: "FINISH",
         color: 0x2ddf03,  // Tint color for finish tiles
-        size: 1           // Finish tile size (in meters)
     },
     Edges: {
         type: "EDGES",

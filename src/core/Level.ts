@@ -116,8 +116,8 @@ export class Level {
                         type: Config.Wall.type as EntityType,
                         x,
                         y,
-                        width: Config.Wall.size,
-                        height: Config.Wall.size,
+                        width: 1,
+                        height: 1,
                     });
                     container.addChild(wall.sprite);
 
@@ -144,8 +144,8 @@ export class Level {
                 type: Config.Finish.type as EntityType,
                 x: Number(x),
                 y: Number(y),
-                width: Config.Finish.size,
-                height: Config.Finish.size,
+                width: 1,
+                height: 1,
             }, world) as Entity;
 
             container.addChild(finishTile.sprite);
@@ -154,8 +154,8 @@ export class Level {
 
             // Set up lights for finish tiles
             const finishLight = new StaticLight({
-                x: finishTile.sprite.x / Config.PixelsPerMeter + Config.Wall.size / 2,
-                y: finishTile.sprite.y / Config.PixelsPerMeter + Config.Wall.size / 2
+                x: finishTile.sprite.x / Config.PixelsPerMeter + 0.5,
+                y: finishTile.sprite.y / Config.PixelsPerMeter + 0.5
             },
             this.edgesList,
             Config.FinishLight);
@@ -182,8 +182,8 @@ export class Level {
                 id: EntityUtils.generateRandomId(Config.Torch.type),
                 x: Number(x),
                 y: Number(y),
-                width: Config.Torch.size,
-                height: Config.Torch.size,
+                width: 1,
+                height: 1,
             });
             container.addChild(torch.sprite);
 
@@ -191,8 +191,8 @@ export class Level {
 
             // Set up torch lights
             const torchLight = new StaticLight({
-                x: torch.sprite.x / Config.PixelsPerMeter + Config.Torch.size / 2,
-                y: torch.sprite.y / Config.PixelsPerMeter + Config.Torch.size / 2
+                x: torch.sprite.x / Config.PixelsPerMeter + 0.5,
+                y: torch.sprite.y / Config.PixelsPerMeter + 0.5
             }, this.edgesList, Config.TorchLight);
             
             torchLight.entityId = torch.id;
@@ -217,8 +217,8 @@ export class Level {
                 type: Config.Fuel.type as EntityType,
                 x: Number(x),
                 y: Number(y),
-                width: Config.Fuel.size,
-                height: Config.Fuel.size,
+                width: 1,
+                height: 1,
             }, world);
 
             container.addChild(fuel.sprite);
@@ -227,8 +227,8 @@ export class Level {
 
             // Set up fuel lights
             const fuelLight = new StaticLight({
-                x: fuel.sprite.x / Config.PixelsPerMeter + Config.Fuel.size / 2,
-                y: fuel.sprite.y / Config.PixelsPerMeter + Config.Fuel.size / 2
+                x: fuel.sprite.x / Config.PixelsPerMeter + 0.5,
+                y: fuel.sprite.y / Config.PixelsPerMeter + 0.5
             }, this.edgesList, Config.FuelLight);
 
             fuelLight.entityId = fuel.id;

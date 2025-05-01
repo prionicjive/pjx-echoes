@@ -35,7 +35,7 @@ export class Player implements Entity {
         
         // Place player in the center of the tile
         const playerRadius = Config.Player.radius;
-        const center = new planck.Vec2(spawnPoint.x + Config.Wall.size / 2, spawnPoint.y + Config.Wall.size / 2);
+        const center = new planck.Vec2(spawnPoint.x + 0.5, spawnPoint.y + 0.5);
 
         // Generate sprite for the player
         this.sprite = PIXI.Sprite.from(Config.Textures.player);
@@ -100,8 +100,8 @@ export class Player implements Entity {
      */
     update() {
         // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - 0.5) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - 0.5) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
     }
 }

@@ -8,27 +8,30 @@
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 
-export interface GraphicalPhysicsEntity {
-    body: planck.Body;
-    graphics: PIXI.Graphics | null;
-}
+// TODO Could be refactored
+export type EntityType = 'PLAYER' | 'WALL' | 'FINISH' | 'TORCH' | 'FUEL';
 
-/**
- * Represents a game entity with a physics body and a PIXI sprite.
- * Used as a contract for objects managed by the game world (e.g., Player, FinishTile).
- * @property {planck.Body} body - The Planck.js physics body for simulation and collisions.
- * @property {PIXI.Sprite} sprite - The PIXI.js sprite for rendering.
- */
-export interface PhysicalEntity {
-    body: planck.Body;
-    sprite: PIXI.Sprite;
-}
-
-/**
- * Represents a game entity with a PIXI sprite.
- * Used as a contract for objects managed by the game world.
- * @property {PIXI.Sprite} sprite - The PIXI.js sprite for rendering.
- */
 export interface Entity {
+    id: string;
     sprite: PIXI.Sprite;
+    body: planck.Body | null;
+}
+
+export interface EntityOptions {
+    type: EntityType;
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color?: number;
+    // Optionally, add more fields for extensibility
+    [key: string]: any;
+}
+
+export type EntityUserData = {
+    type: EntityType;
+    id: string;
+    sprite: PIXI.Sprite;
+    body: planck.Body | null;
 }

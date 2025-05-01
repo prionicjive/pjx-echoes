@@ -1,16 +1,18 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { CRTFilter } from 'pixi-filters';
-import { Player } from '../entities/Player.ts';
-import { Level } from '../entities/Level.ts';
+import { Player } from './Player.ts';
+import { Level } from './Level.ts';
 import { InputManager } from './InputManager.ts';
 import { Segment } from '../utils/types';
-import { Light, DynamicLight } from '../entities/Light.ts'; 
+import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
+import { EntityUserData } from '../entities/types.ts'; 
 
 export class World {
     private world: planck.World | null = null;
+    private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
@@ -23,12 +25,6 @@ export class World {
     // TODO Better way to do this?
     private app: PIXI.Application | null = null;
     private worldContainer: PIXI.Container;
-    private wallsContainer: PIXI.Container;
-    private edgesContainer: PIXI.Container;
-    private playerContainer: PIXI.Container;
-    private finishTilesContainer: PIXI.Container;
-    private torchesContainer: PIXI.Container;
-    private fuelTilesContainer: PIXI.Container;
     private lightmapContainer: PIXI.Container;
 
     private blackBgRect: PIXI.Graphics;
@@ -61,13 +57,7 @@ export class World {
         // Instantiate PIXI containers
         // TODO  Better way to do this?
         this.worldContainer = new PIXI.Container({isRenderGroup: true});
-        this.wallsContainer = new PIXI.Container();
-        this.edgesContainer = new PIXI.Container();
-        this.playerContainer = new PIXI.Container();
-        this.finishTilesContainer = new PIXI.Container();
-        this.torchesContainer = new PIXI.Container();
-        this.fuelTilesContainer = new PIXI.Container();
-        
+
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
@@ -137,12 +127,6 @@ export class World {
 
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
-        this.wallsContainer.removeChildren();
-        this.edgesContainer.removeChildren();
-        this.playerContainer.removeChildren();
-        this.finishTilesContainer.removeChildren();
-        this.torchesContainer.removeChildren();
-        this.fuelTilesContainer.removeChildren();
         this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app.stage.removeChildren();
@@ -154,12 +138,6 @@ export class World {
         // ORDER IS IMPORTANT
         this.app.stage.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
-        this.worldContainer.addChild(this.wallsContainer);
-        this.worldContainer.addChild(this.edgesContainer);
-        this.worldContainer.addChild(this.finishTilesContainer);
-        this.worldContainer.addChild(this.torchesContainer);    
-        this.worldContainer.addChild(this.fuelTilesContainer);
-        this.worldContainer.addChild(this.playerContainer);
 
         // Add this mondo world container add the only direct child to the  stage
         this.app.stage.addChild(this.worldContainer);
@@ -173,6 +151,7 @@ export class World {
             counter++;
             body = nextBody;
         }
+        this.bodiesToDestroy = [];
 
         if (this.world) {
             this.world.off('begin-contact', this.onBeginContact.bind(this));
@@ -194,8 +173,8 @@ export class World {
         this.rawLevelMap = levelMap;
 
         // TODO Is this the better way to do edge detection?
-        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap, Config.Wall.size);
-        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap, Config.Wall.size)
+        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap);
+        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap)
         this.mergedEdges = [...horizontalEdges, ...verticalEdges];
 
         // Use text renderer for debug purposes
@@ -203,13 +182,8 @@ export class World {
 
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
-            this.world, { 
-                wallsContainer: this.wallsContainer, 
-                finishTilesContainer: this.finishTilesContainer,
-                edgesContainer: this.edgesContainer,
-                torchesContainer: this.torchesContainer,
-                fuelTilesContainer: this.fuelTilesContainer
-            }, 
+            this.world,
+            this.worldContainer, 
             this.rawLevelMap, 
             openSpaces,
             this.mergedEdges
@@ -221,7 +195,7 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.playerContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.worldContainer, {x: Number(startX), y: Number(startY)});
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -230,6 +204,7 @@ export class World {
 
         // TODO Set up dynamic lights, including player light
         this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Config.PlayerLight);
+        this.playerLight.entityId = this.player?.id;
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();  
@@ -241,39 +216,51 @@ export class World {
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
     onBeginContact(contact: planck.Contact) {
-        const fixtureA = contact.getFixtureA();
-        const fixtureB = contact.getFixtureB();
-
-        const aData: any = fixtureA.getUserData();
-        const bData: any = fixtureB.getUserData();
-
-        console.log("CONTACT!")
+        const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
+        const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFinish) ||
-            (aData.type === Config.Physics.Collision.typeFinish && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Finish.type) ||
+            (aData.type === Config.Finish.type && bData.type === Config.Player.type)
         ) {
-            //console.log("Player reached finish tile!");
+            console.log("Player reached finish tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
         } else if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeWall) ||
-            (aData.type === Config.Physics.Collision.typeWall && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
+            (aData.type === Config.Edges.type && bData.type === Config.Player.type)
         ) {
             // TODO Handle player hitting a wall
-            // console.log("Player hit a wall!");
+            console.log("Player hit a wall!");
         } else if (
-            (aData.type === Config.Physics.Collision.typePlayer && bData.type === Config.Physics.Collision.typeFuel) ||
-            (aData.type === Config.Physics.Collision.typeFuel && bData.type === Config.Physics.Collision.typePlayer)
+            (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
+            (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
         ) {
             // Pick up and remove fuel
-            //console.log("Player hit fuel!");
-            const fuelObj = aData.sprite ? aData : bData; // TODO Make this a little more foolproof
-            this.fuelTilesContainer.removeChild(fuelObj.sprite);
+            console.log("Player picked up fuel!");
 
-            // Remove light - not by splicing / removing it but instead adding a null value at that index
-            //this.fuelLights[fuelObj.index] = null;
+            const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
+            this.worldContainer.removeChild(fuelEntity.sprite);
+
+            // Remove body
+            if (fuelEntity.body) {
+                this.world?.destroyBody(fuelEntity.body);
+            }
+
+            // Remove light (if it exists)
+            const index = this.staticLights.findIndex((light) => {
+                return light.entityId === fuelEntity.id;
+            });
+
+            if (index !== -1) {
+                const [light] = this.staticLights.splice(index, 1);
+                light.mask.destroy();
+                light.sprite.destroy();
+            }
+
+            // Lastly, flag the body of the fuel entity for destruction
+            this.bodiesToDestroy.push(fuelEntity.body);
         }
     }
 
@@ -321,9 +308,16 @@ export class World {
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) {
+        // Destroy any flagged bodies
+        this.bodiesToDestroy.forEach(body => {
+            if (body) {
+                this.world?.destroyBody(body);
+            }
+        });
+        this.bodiesToDestroy = [];
+        
         // Step the physics
         this.world?.step(deltaTime);
-
         // Update player and level
         this.player?.update();
         this.level?.update();

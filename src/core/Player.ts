@@ -6,8 +6,9 @@
  * @module Player
  */
 
-import { Config } from '../core/Config';
-import { Entity } from './types';
+import { Config } from './Config';
+import { Entity, EntityType } from '../entities/types';
+import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
@@ -17,6 +18,7 @@ import * as PIXI from 'pixi.js';
  * Handles physics, rendering, and input-based movement.
  */
 export class Player implements Entity {
+    id: string;
     body: planck.Body;
     sprite: PIXI.Sprite;
 
@@ -29,9 +31,22 @@ export class Player implements Entity {
      * @param {Point} spawnPoint - Initial position (in world units).
      */
     constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
+        this.id = EntityUtils.generateRandomId(Config.Player.type);
+        
         // Place player in the center of the tile
         const playerRadius = Config.Player.radius;
-        const center = new planck.Vec2(spawnPoint.x + Config.Wall.size / 2, spawnPoint.y + Config.Wall.size / 2);
+        const center = new planck.Vec2(spawnPoint.x + 0.5, spawnPoint.y + 0.5);
+
+        // Generate sprite for the player
+        this.sprite = PIXI.Sprite.from(Config.Textures.player);
+        // Position the sprite to match the physics body
+        this.sprite.x = center.x * Config.PixelsPerMeter;
+        this.sprite.y = center.y * Config.PixelsPerMeter;
+        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.tint = Config.Player.color;
+
+        
         this.body = world.createDynamicBody(center);
         this.body.setLinearDamping(Config.Physics.Player.linearDamping);
 
@@ -40,19 +55,16 @@ export class Player implements Entity {
             restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
-            userData: { type: Config.Physics.Collision.typePlayer },
             filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
+            filterMaskBits: Config.Physics.Collision.categoryEdge | Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
         });
 
-        // Generate sprite for the player
-        this.sprite = PIXI.Sprite.from(Config.Textures.player);
-        // Position the sprite to match the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
-        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
-        this.sprite.tint = Config.Player.color;
+        this.body.setUserData({
+            type: Config.Player.type as EntityType,
+            id: this.id,
+            sprite: this.sprite,
+            body: this.body
+        });
         
         container.addChild(this.sprite);
     }
@@ -88,8 +100,8 @@ export class Player implements Entity {
      */
     update() {
         // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - 0.5) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - 0.5) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
     }
 }

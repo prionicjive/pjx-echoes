@@ -6,7 +6,7 @@
  * @module InputManager
  */
 
-import { Player } from '../entities/Player.ts';
+import { Player } from './Player.ts';
 
 /**
  * Simple structure for 2D positions (pixels).

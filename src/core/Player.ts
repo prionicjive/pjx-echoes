@@ -6,8 +6,8 @@
  * @module Player
  */
 
-import { Config } from '../core/Config';
-import { Entity } from './types';
+import { Config } from './Config';
+import { Entity, EntityType } from '../entities/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
@@ -36,6 +36,17 @@ export class Player implements Entity {
         // Place player in the center of the tile
         const playerRadius = Config.Player.radius;
         const center = new planck.Vec2(spawnPoint.x + Config.Wall.size / 2, spawnPoint.y + Config.Wall.size / 2);
+
+        // Generate sprite for the player
+        this.sprite = PIXI.Sprite.from(Config.Textures.player);
+        // Position the sprite to match the physics body
+        this.sprite.x = center.x * Config.PixelsPerMeter;
+        this.sprite.y = center.y * Config.PixelsPerMeter;
+        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.tint = Config.Player.color;
+
+        
         this.body = world.createDynamicBody(center);
         this.body.setLinearDamping(Config.Physics.Player.linearDamping);
 
@@ -44,19 +55,16 @@ export class Player implements Entity {
             restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
-            userData: { type: Config.Player.type },
             filterCategoryBits: Config.Physics.Collision.categoryPlayer,
             filterMaskBits: Config.Physics.Collision.categoryEdge | Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
         });
 
-        // Generate sprite for the player
-        this.sprite = PIXI.Sprite.from(Config.Textures.player);
-        // Position the sprite to match the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Wall.size / 2) * Config.PixelsPerMeter;
-        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
-        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
-        this.sprite.tint = Config.Player.color;
+        this.body.setUserData({
+            type: Config.Player.type as EntityType,
+            id: this.id,
+            sprite: this.sprite,
+            body: this.body
+        });
         
         container.addChild(this.sprite);
     }

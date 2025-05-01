@@ -3,10 +3,10 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Config } from '../core/Config';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { Entity, PhysicalEntity, BaseEntityDescriptor, EntityUserData, EntityType } from './types';
+import { Entity, EntityOptions, EntityUserData, EntityType } from './types';
 
 export class EntityFactory {
-    static create(desc: BaseEntityDescriptor, world?: planck.World): Entity | PhysicalEntity {
+    static create(desc: EntityOptions, world?: planck.World): Entity {
         switch (desc.type) {
             case 'WALL': {
                 const sprite = SpriteUtils.createSprite({
@@ -17,7 +17,7 @@ export class EntityFactory {
                     height: desc.height,
                     color: desc.color ?? Config.Wall.color,
                 });
-                return { id: desc.id, sprite };
+                return { id: desc.id, sprite, body: null };
             }
             case 'FINISH': {
                 const sprite = SpriteUtils.createSprite({
@@ -29,12 +29,6 @@ export class EntityFactory {
                     color: desc.color ?? Config.Finish.color,
                 });
                 if (!world) throw new Error('World is required for finish entity');
-                
-                const userData: EntityUserData = {
-                    type: Config.Finish.type as EntityType,
-                    id: desc.id,
-                    sprite: sprite,
-                };
 
                 const body = PhysicsUtils.createBoxBody(world, {
                     type: 'static',
@@ -44,11 +38,20 @@ export class EntityFactory {
                         isSensor: true,
                         restitution: 0,
                         friction: 0,
-                        userData,
                         filterCategoryBits: Config.Physics.Collision.categoryFinish,
                         filterMaskBits: Config.Physics.Collision.categoryPlayer,
                     }
                 });
+
+                // Set user data with a self-referencing body
+                const userData: EntityUserData = {
+                    type: Config.Finish.type as EntityType,
+                    id: desc.id,
+                    sprite: sprite,
+                    body
+                };
+                body.setUserData(userData);
+
                 return { id: desc.id, sprite, body };
             }
             case 'TORCH': {
@@ -60,7 +63,7 @@ export class EntityFactory {
                     height: desc.height,
                     color: desc.color ?? Config.Torch.color,
                 });
-                return { id: desc.id, sprite };
+                return { id: desc.id, sprite, body: null };
             }
             case 'FUEL': {
                 const sprite = SpriteUtils.createSprite({
@@ -73,12 +76,6 @@ export class EntityFactory {
                 });
                 if (!world) throw new Error('World is required for fuel entity');
                 
-                const userData: EntityUserData = {
-                    type: Config.Fuel.type as EntityType,
-                    id: desc.id,
-                    sprite: sprite,
-                };
-                
                 const body = PhysicsUtils.createBoxBody(world, {
                     type: 'static',
                     position: new planck.Vec2(desc.x, desc.y),
@@ -87,11 +84,20 @@ export class EntityFactory {
                         isSensor: true,
                         restitution: 0,
                         friction: 0,
-                        userData,
                         filterCategoryBits: Config.Physics.Collision.categoryFuel,
                         filterMaskBits: Config.Physics.Collision.categoryPlayer,
                     }
                 });
+
+                // Set user data with a self-referencing body
+                const userData: EntityUserData = {
+                    type: Config.Fuel.type as EntityType,
+                    id: desc.id,
+                    sprite: sprite,
+                    body
+                };
+                body.setUserData(userData);
+
                 return { id: desc.id, sprite, body };
             }
             default:

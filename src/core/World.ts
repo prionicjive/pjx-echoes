@@ -1,17 +1,18 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { CRTFilter } from 'pixi-filters';
-import { Player } from '../entities/Player.ts';
-import { Level } from '../entities/Level.ts';
+import { Player } from './Player.ts';
+import { Level } from './Level.ts';
 import { InputManager } from './InputManager.ts';
 import { Segment } from '../utils/types';
-import { Light, DynamicLight } from '../entities/Light.ts'; 
+import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 
 export class World {
     private world: planck.World | null = null;
+    private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
     private level: Level | null = null;
     private input: InputManager;
@@ -150,6 +151,7 @@ export class World {
             counter++;
             body = nextBody;
         }
+        this.bodiesToDestroy = [];
 
         if (this.world) {
             this.world.off('begin-contact', this.onBeginContact.bind(this));
@@ -214,19 +216,14 @@ export class World {
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
     onBeginContact(contact: planck.Contact) {
-        const fixtureA = contact.getFixtureA();
-        const fixtureB = contact.getFixtureB();
-
-        const aData: EntityUserData = fixtureA.getUserData() as EntityUserData;
-        const bData: EntityUserData = fixtureB.getUserData() as EntityUserData;
-
-        console.log("CONTACT!")
+        const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
+        const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
             (aData.type === Config.Player.type && bData.type === Config.Finish.type) ||
             (aData.type === Config.Finish.type && bData.type === Config.Player.type)
         ) {
-            //console.log("Player reached finish tile!");
+            console.log("Player reached finish tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
@@ -235,19 +232,25 @@ export class World {
             (aData.type === Config.Edges.type && bData.type === Config.Player.type)
         ) {
             // TODO Handle player hitting a wall
-            // console.log("Player hit a wall!");
+            console.log("Player hit a wall!");
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
             (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
         ) {
             // Pick up and remove fuel
-            //console.log("Player hit fuel!");
-            const fuelObj: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.worldContainer.removeChild(fuelObj.sprite);
+            console.log("Player picked up fuel!");
+
+            const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
+            this.worldContainer.removeChild(fuelEntity.sprite);
+
+            // Remove body
+            if (fuelEntity.body) {
+                this.world?.destroyBody(fuelEntity.body);
+            }
 
             // Remove light (if it exists)
             const index = this.staticLights.findIndex((light) => {
-                return light.entityId === fuelObj.id;
+                return light.entityId === fuelEntity.id;
             });
 
             if (index !== -1) {
@@ -256,9 +259,8 @@ export class World {
                 light.sprite.destroy();
             }
 
-            // Lastly, remove the body of the fuel entity
-            // TODO Figure out best way to do this
-            // this.world?.destroyBody(FUEL_BODY);
+            // Lastly, flag the body of the fuel entity for destruction
+            this.bodiesToDestroy.push(fuelEntity.body);
         }
     }
 
@@ -306,9 +308,16 @@ export class World {
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) {
+        // Destroy any flagged bodies
+        this.bodiesToDestroy.forEach(body => {
+            if (body) {
+                this.world?.destroyBody(body);
+            }
+        });
+        this.bodiesToDestroy = [];
+        
         // Step the physics
         this.world?.step(deltaTime);
-
         // Update player and level
         this.player?.update();
         this.level?.update();

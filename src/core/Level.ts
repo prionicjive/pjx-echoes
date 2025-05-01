@@ -6,24 +6,17 @@
  * @module Level
  */
 
-import { Config } from '../core/Config';
+import { Config } from './Config';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { Entity, PhysicalEntity, GraphicalPhysicsEntity } from './types';
+import { Entity } from '../entities/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
 import { Light, StaticLight } from './Light';
-import { EntityFactory } from './EntityFactory';
+import { EntityFactory } from '../entities/EntityFactory';
 import { EntityUtils } from '../utils/EntityUtils';
-import { EntityType } from './types';
-
-type LevelContainers = {
-    wallsContainer: PIXI.Container;
-    finishTilesContainer: PIXI.Container;
-    torchesContainer: PIXI.Container;
-    fuelTilesContainer: PIXI.Container;
-    edgesContainer: PIXI.Container;
-}
+import { EntityType } from '../entities/types';
+import { RenderableGeometry } from './types';
 
 /**
  * The Level class generates and manages all static entities for a level,
@@ -31,15 +24,12 @@ type LevelContainers = {
  * physics and rendering objects.
  */
 export class Level {
-    private edgesEntity: GraphicalPhysicsEntity;
+    private edgesGeometry: RenderableGeometry;
     private walls: Entity[];
-    private finishTiles: PhysicalEntity[];
-    private torches: Entity[];
-    private fuelTiles: PhysicalEntity[];
-
-    // Lights associate with the level and entities within
+    private finishTiles: Entity[];
+    private torchTiles: Entity[];
+    private fuelTiles: Entity[];
     private lights: Light[];
-
     private edgesList: Segment[];
 
     /**
@@ -55,30 +45,25 @@ export class Level {
         // Store references to the various level entities
         this.walls = [];
         this.finishTiles = [];
-        this.torches = [];
+        this.torchTiles = [];
         this.fuelTiles = [];
         this.lights = [];
 
         this.edgesList = edgesList;
         // Create the edges collision data and (optionally) render it
-        this.edgesEntity = this.createLevelEdges(world, container);
+        this.edgesGeometry = this.createLevelEdges(world, container);
 
         // Create sprites for each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
             this.createWalls(levelMap, container);
         }
         
-        // Create finish tiles
         this.finishTiles = this.createFinishTiles(validSpaces, container, world);
-        
-        // Create torches
-        this.torches = this.createTorches(validSpaces, container);
-        
-        // Create fuel tiles
+        this.torchTiles = this.createTorchTiles(validSpaces, container);
         this.fuelTiles = this.createFuelTiles(validSpaces, container, world);
     }
 
-    createLevelEdges(world: planck.World, container: PIXI.Container): GraphicalPhysicsEntity {
+    createLevelEdges(world: planck.World, container: PIXI.Container): RenderableGeometry {
         let edgeGraphics: PIXI.Graphics | null = null;
         
         if (Config.Debug.drawEdges) {
@@ -103,14 +88,17 @@ export class Level {
             edgeFixture: {
                 restitution: 0.95,
                 friction: 0,
-                userData: { 
-                    type: Config.Edges.type,
-                    id,
-                    graphics: edgeGraphics,
-                },
                 filterCategoryBits: Config.Physics.Collision.categoryEdge,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer
             } 
+        });
+
+        // Set user data for the body in a self-referential way
+        body.setUserData({ 
+            type: Config.Edges.type,
+            id,
+            graphics: edgeGraphics,
+            body
         });
 
         return { id, body, graphics: edgeGraphics }
@@ -143,7 +131,7 @@ export class Level {
     }
 
     createFinishTiles(validSpaces: string[], container: PIXI.Container, world: planck.World) {
-        const entitiesToReturn: PhysicalEntity[] = [];
+        const entitiesToReturn: Entity[] = [];
        
         // Randomly place finish tiles in open spaces for the player to reach
         const numFinishTiles = Math.ceil(validSpaces.length * Config.FinishTilesDensity);
@@ -158,7 +146,7 @@ export class Level {
                 y: Number(y),
                 width: Config.Finish.size,
                 height: Config.Finish.size,
-            }, world) as PhysicalEntity;
+            }, world) as Entity;
 
             container.addChild(finishTile.sprite);
 
@@ -166,8 +154,8 @@ export class Level {
 
             // Set up lights for finish tiles
             const finishLight = new StaticLight({
-                x: finishTile.body.getPosition().x + Config.Wall.size / 2,
-                y: finishTile.body.getPosition().y + Config.Wall.size / 2
+                x: finishTile.sprite.x / Config.PixelsPerMeter + Config.Wall.size / 2,
+                y: finishTile.sprite.y / Config.PixelsPerMeter + Config.Wall.size / 2
             },
             this.edgesList,
             Config.FinishLight);
@@ -180,7 +168,7 @@ export class Level {
         return entitiesToReturn;
     }
 
-    createTorches(validSpaces: string[], container: PIXI.Container): Entity[] {
+    createTorchTiles(validSpaces: string[], container: PIXI.Container): Entity[] {
         const entitiesToReturn: Entity[] = [];
 
         // Randomly place torches in open spaces for the player to reach
@@ -215,8 +203,8 @@ export class Level {
         return entitiesToReturn;
     }
 
-    createFuelTiles(validSpaces: string[], container: PIXI.Container, world: planck.World): PhysicalEntity[] {
-        const entitiesToReturn: PhysicalEntity[] = [];
+    createFuelTiles(validSpaces: string[], container: PIXI.Container, world: planck.World): Entity[] {
+        const entitiesToReturn: Entity[] = [];
 
         // Randomly place fuel tiles in open spaces for the player to reach
         const numFuelTiles = Math.ceil(validSpaces.length * Config.FuelTileDensity);
@@ -235,7 +223,7 @@ export class Level {
 
             container.addChild(fuel.sprite);
 
-            entitiesToReturn.push(fuel as PhysicalEntity);
+            entitiesToReturn.push(fuel as Entity);
 
             // Set up fuel lights
             const fuelLight = new StaticLight({
@@ -251,8 +239,8 @@ export class Level {
         return entitiesToReturn;
     }
 
-    getEdgesEntity(): GraphicalPhysicsEntity {
-        return this.edgesEntity;
+    getEdgesGeometry(): RenderableGeometry {
+        return this.edgesGeometry;
     }
 
     getWalls(): Entity[] {
@@ -261,9 +249,9 @@ export class Level {
 
     /**
      * Returns all finish tile entities in the level.
-     * @returns {PhysicalEntity[]} Array of finish tile entities.
+     * @returns {Entity[]} Array of finish tile entities.
      */
-    getFinishTiles(): PhysicalEntity[] {
+    getFinishTiles(): Entity[] {
         return this.finishTiles;
     }
 
@@ -271,8 +259,8 @@ export class Level {
      * Returns all torch entities in the level.
      * @returns {Entity[]} Array of torch entities.
      */
-    getTorches(): Entity[] {
-        return this.torches;
+    getTorchTiles(): Entity[] {
+        return this.torchTiles;
     }
 
     /**

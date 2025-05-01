@@ -24,12 +24,6 @@ export class World {
     // TODO Better way to do this?
     private app: PIXI.Application | null = null;
     private worldContainer: PIXI.Container;
-    private wallsContainer: PIXI.Container;
-    private edgesContainer: PIXI.Container;
-    private playerContainer: PIXI.Container;
-    private finishTilesContainer: PIXI.Container;
-    private torchesContainer: PIXI.Container;
-    private fuelTilesContainer: PIXI.Container;
     private lightmapContainer: PIXI.Container;
 
     private blackBgRect: PIXI.Graphics;
@@ -62,13 +56,7 @@ export class World {
         // Instantiate PIXI containers
         // TODO  Better way to do this?
         this.worldContainer = new PIXI.Container({isRenderGroup: true});
-        this.wallsContainer = new PIXI.Container();
-        this.edgesContainer = new PIXI.Container();
-        this.playerContainer = new PIXI.Container();
-        this.finishTilesContainer = new PIXI.Container();
-        this.torchesContainer = new PIXI.Container();
-        this.fuelTilesContainer = new PIXI.Container();
-        
+
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
@@ -138,12 +126,6 @@ export class World {
 
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
-        this.wallsContainer.removeChildren();
-        this.edgesContainer.removeChildren();
-        this.playerContainer.removeChildren();
-        this.finishTilesContainer.removeChildren();
-        this.torchesContainer.removeChildren();
-        this.fuelTilesContainer.removeChildren();
         this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app.stage.removeChildren();
@@ -155,12 +137,6 @@ export class World {
         // ORDER IS IMPORTANT
         this.app.stage.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
-        this.worldContainer.addChild(this.wallsContainer);
-        this.worldContainer.addChild(this.edgesContainer);
-        this.worldContainer.addChild(this.finishTilesContainer);
-        this.worldContainer.addChild(this.torchesContainer);    
-        this.worldContainer.addChild(this.fuelTilesContainer);
-        this.worldContainer.addChild(this.playerContainer);
 
         // Add this mondo world container add the only direct child to the  stage
         this.app.stage.addChild(this.worldContainer);
@@ -204,13 +180,8 @@ export class World {
 
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
-            this.world, { 
-                wallsContainer: this.wallsContainer, 
-                finishTilesContainer: this.finishTilesContainer,
-                edgesContainer: this.edgesContainer,
-                torchesContainer: this.torchesContainer,
-                fuelTilesContainer: this.fuelTilesContainer
-            }, 
+            this.world,
+            this.worldContainer, 
             this.rawLevelMap, 
             openSpaces,
             this.mergedEdges
@@ -222,7 +193,7 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.playerContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.worldContainer, {x: Number(startX), y: Number(startY)});
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -272,7 +243,7 @@ export class World {
             // Pick up and remove fuel
             //console.log("Player hit fuel!");
             const fuelObj: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.fuelTilesContainer.removeChild(fuelObj.sprite);
+            this.worldContainer.removeChild(fuelObj.sprite);
 
             // Remove light (if it exists)
             const index = this.staticLights.findIndex((light) => {

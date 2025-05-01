@@ -46,12 +46,12 @@ export class Level {
      * Creates a new Level instance, generating walls and finish tiles from the given map.
     *
      * @param {planck.World} world - The Planck.js world to add walls and tiles to.
-     * @param {LevelContainers} levelContainers - Where to add sprites for the various level entities for rendering go.
+     * @param {PIXI.Container} containers - Where to add sprites for the various level entities (And edge geometry) for rendering go.
      * @param {number[][]} levelMap - 2D array representing the map layout (1 = wall, 0 = open).
      * @param {string[]} validSpaces - Array of valid open tile positions as "x,y" strings.
      * @param {Segment[]} edgesList - List of valid edges.
      */
-    constructor(world: planck.World, levelContainers: LevelContainers, levelMap: number[][], validSpaces: string[], edgesList: Segment[]) {
+    constructor(world: planck.World, container: PIXI.Container, levelMap: number[][], validSpaces: string[], edgesList: Segment[]) {
         // Store references to the various level entities
         this.walls = [];
         this.finishTiles = [];
@@ -61,24 +61,24 @@ export class Level {
 
         this.edgesList = edgesList;
         // Create the edges collision data and (optionally) render it
-        this.edgesEntity = this.createEdgesEntity(world, levelContainers);
+        this.edgesEntity = this.createLevelEdges(world, container);
 
         // Create sprites for each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
-            this.createWalls(levelMap, levelContainers);
+            this.createWalls(levelMap, container);
         }
         
         // Create finish tiles
-        this.finishTiles = this.createFinishTiles(validSpaces, levelContainers, world);
+        this.finishTiles = this.createFinishTiles(validSpaces, container, world);
         
         // Create torches
-        this.torches = this.createTorches(validSpaces, levelContainers);
+        this.torches = this.createTorches(validSpaces, container);
         
         // Create fuel tiles
-        this.fuelTiles = this.createFuelTiles(validSpaces, levelContainers, world);
+        this.fuelTiles = this.createFuelTiles(validSpaces, container, world);
     }
 
-    createEdgesEntity(world: planck.World, levelContainers: LevelContainers): GraphicalPhysicsEntity {
+    createLevelEdges(world: planck.World, container: PIXI.Container): GraphicalPhysicsEntity {
         let edgeGraphics: PIXI.Graphics | null = null;
         
         if (Config.Debug.drawEdges) {
@@ -92,7 +92,7 @@ export class Level {
             }
             
             // Add the renderer edges to the proper container
-            levelContainers.edgesContainer.addChild(edgeGraphics);
+            container.addChild(edgeGraphics);
         }
 
         // Create single body and multiple fixtures for all the edges of the level
@@ -116,7 +116,7 @@ export class Level {
         return { id, body, graphics: edgeGraphics }
     }
 
-    createWalls(levelMap: number[][], levelContainers: LevelContainers): Entity[] {
+    createWalls(levelMap: number[][], container: PIXI.Container): Entity[] {
         const entitiesToReturn: Entity[] = [];
 
         // Add walls from the map (1 = wall)
@@ -131,7 +131,7 @@ export class Level {
                         width: Config.Wall.size,
                         height: Config.Wall.size,
                     });
-                    levelContainers.wallsContainer.addChild(wall.sprite);
+                    container.addChild(wall.sprite);
 
                     // Store wall entity for future reference
                     entitiesToReturn.push(wall);
@@ -142,7 +142,7 @@ export class Level {
         return entitiesToReturn;
     }
 
-    createFinishTiles(validSpaces: string[], levelContainers: LevelContainers, world: planck.World) {
+    createFinishTiles(validSpaces: string[], container: PIXI.Container, world: planck.World) {
         const entitiesToReturn: PhysicalEntity[] = [];
        
         // Randomly place finish tiles in open spaces for the player to reach
@@ -160,7 +160,7 @@ export class Level {
                 height: Config.Finish.size,
             }, world) as PhysicalEntity;
 
-            levelContainers.finishTilesContainer.addChild(finishTile.sprite);
+            container.addChild(finishTile.sprite);
 
             entitiesToReturn.push(finishTile);
 
@@ -180,7 +180,7 @@ export class Level {
         return entitiesToReturn;
     }
 
-    createTorches(validSpaces: string[], levelContainers: LevelContainers): Entity[] {
+    createTorches(validSpaces: string[], container: PIXI.Container): Entity[] {
         const entitiesToReturn: Entity[] = [];
 
         // Randomly place torches in open spaces for the player to reach
@@ -197,7 +197,7 @@ export class Level {
                 width: Config.Torch.size,
                 height: Config.Torch.size,
             });
-            levelContainers.torchesContainer.addChild(torch.sprite);
+            container.addChild(torch.sprite);
 
             entitiesToReturn.push(torch);
 
@@ -215,7 +215,7 @@ export class Level {
         return entitiesToReturn;
     }
 
-    createFuelTiles(validSpaces: string[], levelContainers: LevelContainers, world: planck.World): PhysicalEntity[] {
+    createFuelTiles(validSpaces: string[], container: PIXI.Container, world: planck.World): PhysicalEntity[] {
         const entitiesToReturn: PhysicalEntity[] = [];
 
         // Randomly place fuel tiles in open spaces for the player to reach
@@ -233,7 +233,7 @@ export class Level {
                 height: Config.Fuel.size,
             }, world);
 
-            levelContainers.fuelTilesContainer.addChild(fuel.sprite);
+            container.addChild(fuel.sprite);
 
             entitiesToReturn.push(fuel as PhysicalEntity);
 

@@ -61,7 +61,13 @@ export const Config = {
         wall: '/assets/textures/wall.png',
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',
-        fuel: '/assets/textures/fuel.png'
+        fuel: '/assets/textures/fuel.png',
+        Particles: {
+            ring: '/assets/textures/particles/ring.png',
+            ringSoft: '/assets/textures/particles/ring_soft.png',
+            circle: '/assets/textures/particles/circle.png',
+            circleSoft: '/assets/textures/particles/circle_soft.png'
+        }
     },
     // TODO Consolidate light definitions?
     PlayerLight: {

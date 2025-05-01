@@ -158,8 +158,8 @@ export class World {
         this.worldContainer.addChild(this.particlesContainer);
         this.testEmitter = new PixiParticles.Emitter(this.particlesContainer, {
             lifetime: {
-                min: 2.5,
-                max: 4.5
+                min: 0.5,
+                max: 1.5
             },
             frequency: 0.33,
             spawnChance: 1,
@@ -194,7 +194,7 @@ export class World {
                         scale: {
                             list: [
                                 {
-                                    value: 32,
+                                    value: 0.5, // TODO Any way to define this in pixels?
                                     time: 0
                                 },
                                 {
@@ -211,11 +211,11 @@ export class World {
                         color: {
                             list: [
                                 {
-                                    value: "fb1010",
+                                    value: "32ddff",
                                     time: 0
                                 },
                                 {
-                                    value: "f5b830",
+                                    value: "32ddfa",
                                     time: 1
                                 }
                             ],
@@ -261,7 +261,7 @@ export class World {
                 {
                     type: 'textureSingle',
                     config: {
-                        texture: PIXI.Texture.WHITE
+                        texture: PIXI.Assets.get(Config.Textures.Particles.ringSoft)
                     }
                 }
             ],

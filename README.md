@@ -12,6 +12,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Dynamic lighting system with raycasted light occlusion and support for mutliple lights
 - Edge calculation for light raycasting and level rendering
 - Dynamic scaling to take full advantage of the viewport while maintaining pixels per meter (No stretching)
+- Homegrown particle effect for things such as trails (among other things)
 
 ## Tech Stack
 

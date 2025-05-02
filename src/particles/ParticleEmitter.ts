@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Texture, Color } from 'pixi.js';
+import { Container, Sprite, Texture, Color } from 'pixi.js';
 import { Config } from '../core/Config.ts';
 
 interface ParticleOptions {
@@ -18,12 +18,12 @@ interface ParticleOptions {
 }
 
 export class ParticleEmitter {
-  public container: Container;
-  private particles: ParticleOptions[] = [];
-  private maxParticles: number;
+  
   private emitPerSecond: number;
   private accum: number = 0;
-
+public container: Container;
+  private particles: ParticleOptions[] = [];
+  private maxParticles: number;
   private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
 
   constructor(texture: Texture, maxParticles = 100, emitPerSecond = 30) {
@@ -31,7 +31,7 @@ export class ParticleEmitter {
     this.maxParticles = maxParticles;
     this.emitPerSecond = emitPerSecond;
 
-    for (let i = 0; i < maxParticles; i++) {
+    for (let i = 0; i < this.maxParticles; i++) {
       
       const sprite = Sprite.from(texture);
       sprite.visible = false;

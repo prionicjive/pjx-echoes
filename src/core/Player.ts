@@ -42,8 +42,8 @@ export class Player implements Entity {
         // Position the sprite to match the physics body
         this.sprite.x = center.x * Config.PixelsPerMeter;
         this.sprite.y = center.y * Config.PixelsPerMeter;
-        this.sprite.width = 2 * playerRadius * Config.PixelsPerMeter;
-        this.sprite.height = 2 * playerRadius * Config.PixelsPerMeter;
+        this.sprite.width = 2 * 0.5 * Config.PixelsPerMeter; // TODO This assme the player's radius is roughly 0.5 meters
+        this.sprite.height = 2 * 0.5 * Config.PixelsPerMeter;
         this.sprite.tint = Config.Player.color;
 
         

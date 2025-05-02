@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 32,       // Width of the generated level (in grid units)
-        height: 32
+        width: 128,       // Width of the generated level (in grid units)
+        height: 128
     },
     PixelsPerMeter: 16, // How many pixels represent one physics meter
     Camera: {
@@ -29,6 +29,10 @@ export const Config = {
     MapGeneration: {
         wallChance: 0.45, // Chance that any given space is a wall
         smoothingSteps: 4 // How many times to smooth the map
+    },
+    Particle: {
+        width: 1, // Meters
+        height: 1 // Meters
     },
     Player: {
         type: "PLAYER",

@@ -9,7 +9,7 @@ import { Light, DynamicLight } from './Light.ts';
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
-import * as PixiParticles from '@barvynkoa/particle-emitter';
+import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
 
 export class World {
     private world: planck.World | null = null;
@@ -28,9 +28,8 @@ export class World {
     private worldContainer: PIXI.Container;
     private lightmapContainer: PIXI.Container;
 
-    // Partcile thangz
-    private particlesContainer: PIXI.Container;
-    private testEmitter: PixiParticles.Emitter | null = null;
+    // Our home grown particle emitter
+    private particleEmitter: ParticleEmitter | null = null;
 
     private blackBgRect: PIXI.Graphics;
     private whiteBgRect: PIXI.Graphics;
@@ -87,7 +86,7 @@ export class World {
         this.whiteBgRect.fill(0xffffff);
 
         // Set up particle related things
-        this.particlesContainer = new PIXI.Container();
+//        this.particlesContainer = new PIXI.Container();
 
         // Instantiate filters
         this.crtFilter = new CRTFilter({
@@ -135,8 +134,8 @@ export class World {
 
         // Empty PIXI containers
         // TODO Is there a more elegant way of doing this?
-        this.particlesContainer.removeChildren();
-        this.testEmitter?.destroy();
+  //      this.particlesContainer.removeChildren();
+    //    this.testEmitter?.destroy();
         this.lightmapContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app.stage.removeChildren();
@@ -152,121 +151,10 @@ export class World {
         // Add this mondo world container add the only direct child to the  stage
         this.app.stage.addChild(this.worldContainer);
 
-        // Set up particles
-        // TODO Better break out how particle emitters are defined and used
-        // TODO Figure out best way to add container and do LAYERING in the world
-        this.worldContainer.addChild(this.particlesContainer);
-        this.testEmitter = new PixiParticles.Emitter(this.particlesContainer, {
-            lifetime: {
-                min: 0.5,
-                max: 1.5
-            },
-            frequency: 0.33,
-            spawnChance: 1,
-            particlesPerWave: 1,
-            maxParticles: 1000,
-            pos: {
-                x: 300,
-                y: 300
-            },
-            addAtBack: false,
-            behaviors: [
-                {
-                    type: 'alpha',
-                    config: {
-                        alpha: {
-                            list: [
-                                {
-                                    value: 0.8,
-                                    time: 0
-                                },
-                                {
-                                    value: 0.0,
-                                    time: 1
-                                }
-                            ],
-                        },
-                    }
-                },
-                {
-                    type: 'scale',
-                    config: {
-                        scale: {
-                            list: [
-                                {
-                                    value: 0.5, // TODO Any way to define this in pixels?
-                                    time: 0
-                                },
-                                {
-                                    value: 0,
-                                    time: 1
-                                }
-                            ],
-                        },
-                    }
-                },
-                {
-                    type: 'color',
-                    config: {
-                        color: {
-                            list: [
-                                {
-                                    value: "32ddff",
-                                    time: 0
-                                },
-                                {
-                                    value: "32ddfa",
-                                    time: 1
-                                }
-                            ],
-                        },
-                    }
-                },
-                {
-                    type: 'moveSpeed',
-                    config: {
-                        speed: {
-                            list: [
-                                {
-                                    value: 200,
-                                    time: 0
-                                },
-                                {
-                                    value: 100,
-                                    time: 1
-                                }
-                            ],
-                            isStepped: false
-                        },
-                    }
-                },
-                {
-                    type: 'rotationStatic',
-                    config: {
-                        min: 0,
-                        max: 360
-                    }
-                },
-                {
-                    type: 'spawnShape',
-                    config: {
-                        type: 'torus',
-                        data: {
-                            x: 0,
-                            y: 0,
-                            radius: 10
-                        }
-                    }
-                },
-                {
-                    type: 'textureSingle',
-                    config: {
-                        texture: PIXI.Assets.get(Config.Textures.Particles.ringSoft)
-                    }
-                }
-            ],
-        });
-
+        // Try out homegrown particle emitter
+        this.particleEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
+        this.worldContainer.addChild(this.particleEmitter.container);
+        
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
         let counter = 0;
@@ -448,8 +336,18 @@ export class World {
         this.level?.update();
 
         // Update particles
-        this.testEmitter?.update(deltaTime);
+        //this.testEmitter?.update(deltaTime);
 
+        // TODO Prefer out homegrown particle emitter
+        if (this.player) {
+            this.particleEmitter?.setEmitPosition(
+                this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
+                this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
+            );
+        }
+        this.particleEmitter?.update(deltaTime);
+
+        // TODO Any other entities to update?
         // Update camera
         this.updateCamera(deltaTime);
 

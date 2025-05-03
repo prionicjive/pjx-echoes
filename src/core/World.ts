@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
-import { CRTFilter } from 'pixi-filters';
+import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
 import { InputManager } from './InputManager.ts';
@@ -40,7 +40,8 @@ export class World {
 
     // Filters
     // TODO Do we need to have these here?
-    private crtFilter: CRTFilter
+    private crtFilter: CRTFilter;
+    private bloomFilter: BloomFilter;
 
     // Lights
     private playerLight: Light | null = null;
@@ -100,6 +101,13 @@ export class World {
             time: performance.now() * 0.001
         });
 
+        this.bloomFilter = new BloomFilter({
+            kernelSize: 5,
+            quality: 4,
+            resolution: 1,
+            strength: 16
+        });
+
         // Set up post-processing
         // TODO Find out how to dynamically alter these
         this.setupPostProcessingFilters();
@@ -120,8 +128,8 @@ export class World {
 
         // TODO Set up other filters
 
-        // Apply to the lighting container
-        this.app.stage.filters = [this.crtFilter];
+        // TODO Maybe apply some to certain containers only?
+        this.app.stage.filters = [this.crtFilter, this.bloomFilter];
     }
 
     /**

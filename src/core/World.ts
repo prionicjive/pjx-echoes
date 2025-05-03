@@ -12,6 +12,7 @@ import { EntityUserData } from '../entities/types.ts';
 import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
 
 export class World {
+    private app: PIXI.Application | null = null;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
@@ -22,30 +23,28 @@ export class World {
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
 
-    // PIXI Containers for different groups of entities
-    // TODO Better way to do this?
-    private app: PIXI.Application | null = null;
+    // PIXI Containers different rendering objects / layers
     private worldContainer: PIXI.Container;
-    private lightmapContainer: PIXI.Container;
+    private lightsContainer: PIXI.Container;
+    
+    // Lights
+    private playerLight: Light | null = null;
+    private staticLights: Light[] = [];
 
-    // Our home grown particle emitter
-    private particleEmitter: ParticleEmitter | null = null;
-
+    // Needed for lightmap rendering
+    private tempLightmapContainer: PIXI.Container;
+    private lightmapTexture: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
+    private lightmapSprite: PIXI.Sprite;
     private blackBgRect: PIXI.Graphics;
     private whiteBgRect: PIXI.Graphics;
 
-    // Lightmap used for our render-to-texture'ing and post processing of lights
-    private lightmapTexture: PIXI.RenderTexture;
-    private lightmapSprite: PIXI.Sprite;
+    // Our home grown particle emitter used for a player trail effect
+    private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
     private crtFilter: CRTFilter;
     private bloomFilter: BloomFilter;
-
-    // Lights
-    private playerLight: Light | null = null;
-    private staticLights: Light[] = [];
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -59,24 +58,24 @@ export class World {
         // Set up input event handlers
         window.addEventListener('mousedown', this.handlePointerDown.bind(this));
 
-        // Instantiate PIXI containers
-        // TODO  Better way to do this?
-        this.worldContainer = new PIXI.Container({isRenderGroup: true});
+        // Instantiate the various PIXI containers
+        this.lightsContainer = new PIXI.Container();
+        this.worldContainer = new PIXI.Container();
 
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
+        const screenWidth = this.viewportWidth;
+        const screenHeight = this.viewportHeight;
 
         // Set up basic lightmap-related things
         // This doesn't get added to the world, it is just used for rendering lights to a texture
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
         this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
         this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
         this.lightmapSprite.width = screenWidth; // Make sure the lightmap sprite is as big as the screen
         this.lightmapSprite.height = screenHeight;
-        this.lightmapContainer = new PIXI.Container();
+        this.tempLightmapContainer = new PIXI.Container();
 
         // Set up white and black background rects
         this.blackBgRect = new PIXI.Graphics();
@@ -85,9 +84,6 @@ export class World {
         this.whiteBgRect = new PIXI.Graphics();
         this.whiteBgRect.rect(0, 0, screenWidth, screenHeight);
         this.whiteBgRect.fill(0xffffff);
-
-        // Set up particle related things
-//        this.particlesContainer = new PIXI.Container();
 
         // Instantiate filters
         this.crtFilter = new CRTFilter({
@@ -104,7 +100,7 @@ export class World {
         this.bloomFilter = new BloomFilter({
             kernelSize: 5,
             quality: 4,
-            resolution: 1,
+            resolution: 1.5,
             strength: 16
         });
 
@@ -126,10 +122,11 @@ export class World {
             return;
         }
 
-        // TODO Set up other filters
+        // Only bloom the world (Not the lights)
+        this.worldContainer.filters = [this.bloomFilter];
 
-        // TODO Maybe apply some to certain containers only?
-        this.app.stage.filters = [this.crtFilter, this.bloomFilter];
+        // Apply the CRT filter to EVERYTHING
+        this.app.stage.filters = [this.crtFilter];
     }
 
     /**
@@ -140,28 +137,37 @@ export class World {
         // TODO Consider how / what to reset or destroy and rebuild
         if (!this.app) return;
 
-        // Empty PIXI containers
-        // TODO Is there a more elegant way of doing this?
-  //      this.particlesContainer.removeChildren();
-    //    this.testEmitter?.destroy();
-        this.lightmapContainer.removeChildren();
+        // Destroy any particle related things
+        this.playerTrailEmitter?.destroy();
+        
+        // Empty the various PIXI containers
+        this.tempLightmapContainer.removeChildren();
+        this.lightsContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app.stage.removeChildren();
 
-        // Draw a full screen white texture for proper blending effects with post-processing
-        this.app.stage.addChild(this.whiteBgRect);
+        // ------------------------
+        // NOW, it's time to add things / reinitialize the world
+        // ------------------------
+
+        // Draw a full screen white texture for proper blending effects with post-processing with lights
+        this.lightsContainer.addChild(this.whiteBgRect);
 
         // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
         // ORDER IS IMPORTANT
-        this.app.stage.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
+        this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
 
-        // Add this mondo world container add the only direct child to the  stage
+        // TODO For the next two lines, figure out best / better way to do layering with containers
+        // FIRST, add the lights container to the stage
+        this.app.stage.addChild(this.lightsContainer);
+
+        // THEN, add this mondo world container add the only direct child to the  stage
         this.app.stage.addChild(this.worldContainer);
 
         // Try out homegrown particle emitter
-        this.particleEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
-        this.worldContainer.addChild(this.particleEmitter.container);
+        this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
+        this.worldContainer.addChild(this.playerTrailEmitter.container);
         
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -343,17 +349,16 @@ export class World {
         this.player?.update();
         this.level?.update();
 
-        // Update particles
-        //this.testEmitter?.update(deltaTime);
+        // Update particle related things
 
-        // TODO Prefer out homegrown particle emitter
+        // Update the player trail emitter
         if (this.player) {
-            this.particleEmitter?.setEmitPosition(
+            this.playerTrailEmitter?.setEmitPosition(
                 this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
                 this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
             );
         }
-        this.particleEmitter?.update(deltaTime);
+        this.playerTrailEmitter?.update(deltaTime);
 
         // TODO Any other entities to update?
         // Update camera
@@ -364,7 +369,7 @@ export class World {
 
         // TODO Any other entities to update?
     
-        // TODO Update any changing values for filters
+        // Update any changing values for filters
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
     }
 
@@ -475,7 +480,7 @@ export class World {
         };
 
         // Before rendering to texture, make sure we clear out any old lights from the lightmap container
-        this.lightmapContainer.removeChildren();
+        this.tempLightmapContainer.removeChildren();
 
         // Player light is always on screen
         this.playerLight.update(playerPos);
@@ -490,8 +495,8 @@ export class World {
         this.playerLight.mask.x = screenX;
         this.playerLight.mask.y = screenY;
 
-        this.lightmapContainer.addChild(this.playerLight.sprite);
-        this.lightmapContainer.addChild(this.playerLight.mask);
+        this.tempLightmapContainer.addChild(this.playerLight.sprite);
+        this.tempLightmapContainer.addChild(this.playerLight.mask);
 
         // 
         // TODO Add any dynamic lights that need some more special update logic to their position, life span, etc...
@@ -524,8 +529,8 @@ export class World {
                 light.render();
 
                 // Add sprite and mask to the lightmap container
-                this.lightmapContainer.addChild(light.sprite);
-                this.lightmapContainer.addChild(light.mask);
+                this.tempLightmapContainer.addChild(light.sprite);
+                this.tempLightmapContainer.addChild(light.mask);
             } else {
                 light.sprite.visible = false;
                 light.mask.visible = false;
@@ -541,15 +546,10 @@ export class World {
         });
 
         this.app?.renderer.render({
-            container: this.lightmapContainer, 
+            container: this.tempLightmapContainer, 
             target: this.lightmapTexture, 
             clear: false
         });
-        
-        // Set the lightmap container back
-        // Shift the lightmap container to take world "camera" into account
-        this.lightmapContainer.x = 0;
-        this.lightmapContainer.y = 0;
     }
 
     isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
@@ -587,7 +587,7 @@ export class World {
         this.lightmapSprite.height = height;
         this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
     
-        // Resize backgrounds or overlays
+        // Resize backgrounds or overlays used for various post processing effects (and other things)
         if (this.blackBgRect) {
             this.blackBgRect.width = width;
             this.blackBgRect.height = height;

@@ -18,10 +18,9 @@ interface ParticleOptions {
 }
 
 export class ParticleEmitter {
-  
   private emitPerSecond: number;
   private accum: number = 0;
-public container: Container;
+  public container: Container;
   private particles: ParticleOptions[] = [];
   private maxParticles: number;
   private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
@@ -99,6 +98,13 @@ public container: Container;
 
         s.tint = this.lerpColor(meta.startTint, meta.endTint, t);
     }
+  }
+
+  destroy() {
+    this.container.removeChildren();
+    this.particles = [];
+
+    // Do any other cleanup needed
   }
 
   private _emitOne(): void {

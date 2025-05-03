@@ -70,6 +70,56 @@ export class Player implements Entity {
     }
 
     /**
+     * Applies an force (not impulse) to the player body toward the given pixel position.
+     * Used to move the player in response to input.
+     *
+     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
+     */
+    applyForceTowards(levelRelativePositionInPixels: Point) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate vector from player to target
+        const deltaX = (levelRelativePositionInPixels.x / Config.PixelsPerMeter) - playerPos.x;
+        const deltaY = (levelRelativePositionInPixels.y / Config.PixelsPerMeter) - playerPos.y;
+        const length = Math.hypot(deltaX, deltaY);
+
+        // Fetch force factor
+        const forceFactor = Config.Movement.forceFactor;
+
+        // Calculate normalized force vector
+        const force = new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+
+        // Apply force at the center of mass
+        this.body.applyForceToCenter(force);
+    }
+
+    /**
+     * Applies an force (not impluse) to the player body away from the given pixel position.
+     * Used to move the player in response to input.
+     *
+     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
+     */
+    applyForceAwayFrom(levelRelativePositionInPixels: Point) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate vector from the target to the player
+        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
+        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
+        const length = Math.hypot(deltaX, deltaY);
+
+        // Fetch force strength
+        const forceFactor = Config.Movement.forceFactor;
+
+        // Calculate normalized force vector
+        const force = new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+
+        // Apply force at the center of mass
+        this.body.applyForceToCenter(force);
+    }
+
+    /**
      * Applies an impulse to the player body toward the given pixel position.
      * Used to move the player in response to input.
      *
@@ -84,7 +134,7 @@ export class Player implements Entity {
         const deltaY = (levelRelativePositionInPixels.y / Config.PixelsPerMeter) - playerPos.y;
         const length = Math.hypot(deltaX, deltaY);
 
-        // Tune this value for desired impulse strength
+        // Fetch impulse strength
         const impulseScale = Config.Movement.impulseFactor;
 
         // Calculate normalized impulse vector
@@ -109,7 +159,7 @@ export class Player implements Entity {
         const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
         const length = Math.hypot(deltaX, deltaY);
 
-        // Tune this value for desired impulse strength
+        // Fetch impulse strength
         const impulseScale = Config.Movement.impulseFactor;
 
         // Calculate normalized impulse vector

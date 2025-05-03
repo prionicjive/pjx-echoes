@@ -140,7 +140,8 @@ export const Config = {
     FuelTileDensity: 0.00065,
     Movement: {
         towardsPoint: true,
-        impulseFactor: 1.00,       // How strong the impulse is on click
+        impulseFactor: 1.00,  // Only used when in impulse mode
+        forceFactor: 5.00
     },
     Debug: {
         drawEdges: true,

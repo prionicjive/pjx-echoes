@@ -3,7 +3,6 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
-import { InputManager } from './InputManager.ts';
 import { Segment } from '../utils/types';
 import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
@@ -17,9 +16,12 @@ export class World {
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
     private level: Level | null = null;
-    private input: InputManager;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
+    // Input related
+    private isPointerDown: boolean = false;
+    private pointerLevelPosition: { x: number, y: number } | null = null;
+    
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
 
@@ -53,10 +55,10 @@ export class World {
     constructor(app: PIXI.Application) {
         this.app = app;
         
-        this.input = new InputManager();
-
         // Set up input event handlers
-        window.addEventListener('mousedown', this.handlePointerDown.bind(this));
+        window.addEventListener('pointerdown', this.handlePointerDown.bind(this));
+        window.addEventListener('pointerup', this.handlePointerUp.bind(this));
+        window.addEventListener('pointermove', this.handlePointerMove.bind(this));
 
         // Instantiate the various PIXI containers
         this.lightsContainer = new PIXI.Container();
@@ -343,6 +345,9 @@ export class World {
         });
         this.bodiesToDestroy = [];
         
+        // Handle input, as this might affect the physics
+        this.updateBasedOnInput();
+
         // Step the physics
         this.world?.step(deltaTime);
         // Update player and level
@@ -371,6 +376,19 @@ export class World {
     
         // Update any changing values for filters
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
+    }
+
+    /**
+     * Updates the world based on input, such as applying impulses to the player.
+     */
+    updateBasedOnInput() {
+        // Only update if there the pointer is down
+        if(this.isPointerDown) {
+            if (!this.player || !this.pointerLevelPosition) return;
+
+            // Apply an impulse toward the point
+            this.player.applyForceTowards(this.pointerLevelPosition);
+        }
     }
 
      /**
@@ -444,30 +462,6 @@ export class World {
             // Keep camera inside the world edges
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
-    }
-
-    /**
-     * Handles mouse click events: translates screen coordinates to world coordinates
-     * and applies an impulse to the player.
-     * @param {MouseEvent} e - The mouse event triggered by user input.
-     */
-    handlePointerDown(e: MouseEvent) {
-        if (!this.player || !this.worldContainer || !this.app) return;
-    
-        const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
-        const screenPosition = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        }
-        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
-
-        // Convert screen click to level-relative position
-        const levelRelativePointInPixels = {
-            x: screenPosition.x - levelPosition.x,
-            y: screenPosition.y - levelPosition.y
-        };
-
-        this.input.handleClickOrTouch(this.player, levelRelativePointInPixels);
     }
 
     updateAndRenderLights() {
@@ -605,5 +599,57 @@ export class World {
     
         // Optionally, recenter camera or update camera logic
         this.instantlyCenterCamera();
+    }
+
+    /**
+     * Handles pointer events: translates screen coordinates to world coordinates
+     * and applies impulses affecting the player.
+     * @param {PointerEvent} e - The mouse event triggered by user input.
+     */
+    handlePointerDown(e: PointerEvent) {
+        if (!this.player || !this.worldContainer || !this.app) return;
+
+        // Set the flag for the pointer being down
+        this.isPointerDown = true;
+    
+        // Capture the initial pointer location
+        const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
+        const screenPosition = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        }
+        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
+
+        // Convert screen click to level-relative position
+        this.pointerLevelPosition ={
+            x: screenPosition.x - levelPosition.x,
+            y: screenPosition.y - levelPosition.y
+        };
+    }
+
+    handlePointerUp() {
+        // Flag the pointer as no longer being down
+        this.isPointerDown = false;
+
+        // Null out the stored pointer position info
+        this.pointerLevelPosition = null;
+    }
+
+    handlePointerMove(e: PointerEvent) {
+        // Only process if the pointer is down
+        if (this.isPointerDown && this.app && this.pointerLevelPosition) {
+            const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
+            const screenPosition = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            }
+            const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
+
+            // Convert screen click to level-relative position
+            this.pointerLevelPosition.x = screenPosition.x - levelPosition.x;
+            this.pointerLevelPosition.y = screenPosition.y - levelPosition.y;
+            
+            console.log("HELD DOWN AND MOVING!", this.pointerLevelPosition);
+        }
     }
 }

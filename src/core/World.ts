@@ -104,7 +104,7 @@ export class World {
         this.bloomFilter = new BloomFilter({
             kernelSize: 5,
             quality: 4,
-            resolution: 1,
+            resolution: 1.5,
             strength: 16
         });
 
@@ -126,10 +126,9 @@ export class World {
             return;
         }
 
-        // TODO Set up other filters
-
-        // TODO Maybe apply some to certain containers only?
-        this.app.stage.filters = [this.crtFilter, this.bloomFilter];
+        // Only bloom the world (Not the lights)
+        this.worldContainer.filters = [this.bloomFilter];
+        this.app.stage.filters = [this.crtFilter];
     }
 
     /**

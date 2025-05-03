@@ -12,6 +12,7 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
 
 /**
  * The Player class implements the controllable player character.
@@ -79,16 +80,15 @@ export class Player implements Entity {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
-        // Calculate vector from player to target
-        const deltaX = (levelRelativePositionInPixels.x / Config.PixelsPerMeter) - playerPos.x;
-        const deltaY = (levelRelativePositionInPixels.y / Config.PixelsPerMeter) - playerPos.y;
-        const length = Math.hypot(deltaX, deltaY);
-
-        // Fetch force factor
-        const forceFactor = Config.Movement.forceFactor;
-
         // Calculate normalized force vector
-        const force = new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+        const force = PhysicsUtils.calculateForceVector(
+            playerPos, 
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ), 
+            Config.Movement.forceFactor
+        );
 
         // Apply force at the center of mass
         this.body.applyForceToCenter(force);
@@ -104,16 +104,15 @@ export class Player implements Entity {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
-        // Calculate vector from the target to the player
-        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
-        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
-        const length = Math.hypot(deltaX, deltaY);
-
-        // Fetch force strength
-        const forceFactor = Config.Movement.forceFactor;
-
         // Calculate normalized force vector
-        const force = new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+        const force = PhysicsUtils.calculateForceVector(
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ),
+            playerPos, 
+            Config.Movement.forceFactor
+        );
 
         // Apply force at the center of mass
         this.body.applyForceToCenter(force);
@@ -129,19 +128,17 @@ export class Player implements Entity {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
-        // Calculate vector from player to target
-        const deltaX = (levelRelativePositionInPixels.x / Config.PixelsPerMeter) - playerPos.x;
-        const deltaY = (levelRelativePositionInPixels.y / Config.PixelsPerMeter) - playerPos.y;
-        const length = Math.hypot(deltaX, deltaY);
-
-        // Fetch impulse strength
-        const impulseScale = Config.Movement.impulseFactor;
-
-        // Calculate normalized impulse vector
-        const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);
-
+        // Calculate normalized force vector
+        const force = PhysicsUtils.calculateForceVector(
+            playerPos, 
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ), 
+            Config.Movement.impulseFactor
+        );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+        this.body.applyLinearImpulse(force, this.body.getWorldCenter(), true);
     }
 
     /**
@@ -154,19 +151,17 @@ export class Player implements Entity {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
-        // Calculate vector from the target to the player
-        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
-        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
-        const length = Math.hypot(deltaX, deltaY);
-
-        // Fetch impulse strength
-        const impulseScale = Config.Movement.impulseFactor;
-
-        // Calculate normalized impulse vector
-        const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);
-
+        // Calculate normalized force vector
+        const force = PhysicsUtils.calculateForceVector(
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ),
+            playerPos, 
+            Config.Movement.impulseFactor
+        );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+        this.body.applyLinearImpulse(force, this.body.getWorldCenter(), true);
     }
 
     /**

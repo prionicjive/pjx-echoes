@@ -44,4 +44,11 @@ export class PhysicsUtils {
         });
         return body;
     }
+
+    static calculateForceVector(startPos: planck.Vec2, endPos: planck.Vec2, forceFactor: number = 1): planck.Vec2 {
+        const deltaX = endPos.x - startPos.x;
+        const deltaY = endPos.y - startPos.y;
+        const length = Math.hypot(deltaX, deltaY);
+        return new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+    }
 }

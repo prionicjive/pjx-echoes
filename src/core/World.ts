@@ -20,7 +20,7 @@ export class World {
 
     // Input related
     private isPointerDown: boolean = false;
-    private pointerLevelPosition: { x: number, y: number } | null = null;
+    private pointerLevelRelativePositionInPixels: { x: number, y: number } | null = null;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -384,10 +384,14 @@ export class World {
     updateBasedOnInput() {
         // Only update if there the pointer is down
         if(this.isPointerDown) {
-            if (!this.player || !this.pointerLevelPosition) return;
+            if (!this.player || !this.pointerLevelRelativePositionInPixels) return;
 
-            // Apply an impulse toward the point
-            this.player.applyForceTowards(this.pointerLevelPosition);
+            // Apply force to the player
+            if (Config.Movement.towardsPoint) {
+                this.player.applyForceTowards(this.pointerLevelRelativePositionInPixels);
+            } else {
+                this.player.applyForceAwayFrom(this.pointerLevelRelativePositionInPixels);
+            }
         }
     }
 
@@ -621,7 +625,7 @@ export class World {
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
         // Convert screen click to level-relative position
-        this.pointerLevelPosition ={
+        this.pointerLevelRelativePositionInPixels ={
             x: screenPosition.x - levelPosition.x,
             y: screenPosition.y - levelPosition.y
         };
@@ -632,12 +636,12 @@ export class World {
         this.isPointerDown = false;
 
         // Null out the stored pointer position info
-        this.pointerLevelPosition = null;
+        this.pointerLevelRelativePositionInPixels = null;
     }
 
     handlePointerMove(e: PointerEvent) {
         // Only process if the pointer is down
-        if (this.isPointerDown && this.app && this.pointerLevelPosition) {
+        if (this.isPointerDown && this.app && this.pointerLevelRelativePositionInPixels) {
             const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
             const screenPosition = {
                 x: e.clientX - rect.left,
@@ -646,10 +650,10 @@ export class World {
             const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
             // Convert screen click to level-relative position
-            this.pointerLevelPosition.x = screenPosition.x - levelPosition.x;
-            this.pointerLevelPosition.y = screenPosition.y - levelPosition.y;
+            this.pointerLevelRelativePositionInPixels.x = screenPosition.x - levelPosition.x;
+            this.pointerLevelRelativePositionInPixels.y = screenPosition.y - levelPosition.y;
             
-            console.log("HELD DOWN AND MOVING!", this.pointerLevelPosition);
+            console.log("HELD DOWN AND MOVING!", this.pointerLevelRelativePositionInPixels);
         }
     }
 }

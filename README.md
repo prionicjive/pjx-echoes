@@ -13,6 +13,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Edge calculation for light raycasting and level rendering
 - Dynamic scaling to take full advantage of the viewport while maintaining pixels per meter (No stretching)
 - Homegrown particle effect for things such as trails (among other things)
+- Post processing effects (Such as CRT and Bloom)
 
 ## Tech Stack
 

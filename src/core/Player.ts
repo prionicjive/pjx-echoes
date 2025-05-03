@@ -80,12 +80,37 @@ export class Player implements Entity {
         const playerPos = this.body.getPosition();
         
         // Calculate vector from player to target
+        const deltaX = (levelRelativePositionInPixels.x / Config.PixelsPerMeter) - playerPos.x;
+        const deltaY = (levelRelativePositionInPixels.y / Config.PixelsPerMeter) - playerPos.y;
+        const length = Math.hypot(deltaX, deltaY);
+
+        // Tune this value for desired impulse strength
+        const impulseScale = Config.Movement.impulseFactor;
+
+        // Calculate normalized impulse vector
+        const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);
+
+        // Apply impulse at the center of mass
+        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+    }
+
+    /**
+     * Applies an impulse to the player body away from the given pixel position.
+     * Used to move the player in response to input.
+     *
+     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
+     */
+    applyImpulseAwayFrom(levelRelativePositionInPixels: Point) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate vector from the target to the player
         const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
         const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
         const length = Math.hypot(deltaX, deltaY);
 
         // Tune this value for desired impulse strength
-        const impulseScale = Config.Physics.Player.impulseFactor;
+        const impulseScale = Config.Movement.impulseFactor;
 
         // Calculate normalized impulse vector
         const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);

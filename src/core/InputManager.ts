@@ -7,20 +7,8 @@
  */
 
 import { Player } from './Player.ts';
-
-/**
- * Simple structure for 2D positions (pixels).
- * Used for both screen and level-relative coordinates.
- * 
- * @typedef {Object} Position
- * @property {number} x - The x-coordinate.
- * @property {number} y - The y-coordinate.
- */
-interface Position {
-    x: number;
-    y: number;
-}
-
+import { Config } from './Config.ts';
+import { Point } from '../utils/types.ts';
 /**
  * Manages all input logic for the game.
  * Responsible for translating user actions (like mouse clicks)
@@ -31,22 +19,16 @@ interface Position {
  */
 export class InputManager {
     /**
-     * Handles mouse clicks by converting screen coordinates to level-relative coordinates,
-     * then applies an impulse to the player in that direction.
-     * 
-     * @method handleMouseClick
-     * @param {Player} player - The player entity to apply the impulse to.
-     * @param {Position} screenPosition - The mouse position on the screen (in pixels).
-     * @param {Position} levelPosition - The current offset of the level container (in pixels).
+     * Handles mouse clicks or touch events by converting screen coordinates to level-relative coordinates,
+     * then applies an impulse to the player in that direction)
      */
-    handleMouseClick(player: Player, screenPosition: Position, levelPosition: Position) {
-        // Convert screen click to level-relative position
-        const levelRelativePositionInPixels = {
-            x: screenPosition.x - levelPosition.x,
-            y: screenPosition.y - levelPosition.y
-        };
-
-        // Apply the calculated impulse to the player
-        player.applyImpulseTowards(levelRelativePositionInPixels);
+    handleClickOrTouch(player: Player, levelRelativePointInPixels: Point) {
+        if (Config.Movement.towardsPoint) {
+            // Apply an impulse toward the point
+            player.applyImpulseTowards(levelRelativePointInPixels);
+        } else {
+            // Apply an impulse away from the point
+            player.applyImpulseAwayFrom(levelRelativePointInPixels);
+        }
     }
 }

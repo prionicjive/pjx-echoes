@@ -461,7 +461,13 @@ export class World {
         }
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
-        this.input.handleMouseClick(this.player, screenPosition, levelPosition);
+        // Convert screen click to level-relative position
+        const levelRelativePointInPixels = {
+            x: screenPosition.x - levelPosition.x,
+            y: screenPosition.y - levelPosition.y
+        };
+
+        this.input.handleClickOrTouch(this.player, levelRelativePointInPixels);
     }
 
     updateAndRenderLights() {

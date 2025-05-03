@@ -22,7 +22,6 @@ export const Config = {
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
-            impulseFactor: 1,       // How strong the impulse is on click
             restitution: 0.95,      // Bounciness
         }
     },
@@ -139,6 +138,10 @@ export const Config = {
     FinishTilesDensity: 0.0001,
     TorchesDensity: 0.0007,
     FuelTileDensity: 0.00065,
+    Movement: {
+        towardsPoint: true,
+        impulseFactor: 1.00,       // How strong the impulse is on click
+    },
     Debug: {
         drawEdges: true,
         drawWalls: false

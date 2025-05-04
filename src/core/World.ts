@@ -3,7 +3,7 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
-import { Segment } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
@@ -20,7 +20,9 @@ export class World {
 
     // Input related
     private isPointerDown: boolean = false;
-    private pointerLevelRelativePositionInPixels: { x: number, y: number } | null = null;
+    private pointerScreenPosition: Point = { x: 0, y: 0 };
+    private pointerDownAtLeastOnce: boolean = false;
+    private pointerJustReleased: boolean = false;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -382,16 +384,61 @@ export class World {
      * Updates the world based on input, such as applying impulses to the player.
      */
     updateBasedOnInput(deltaTime: number) {
-        // Only update if there the pointer is down
-        if(this.isPointerDown) {
-            if (!this.player || !this.pointerLevelRelativePositionInPixels) return;
+        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
-            // Apply force to the player
-            if (Config.Movement.towardsPoint) {
-                this.player.applyForceTowards(this.pointerLevelRelativePositionInPixels, deltaTime);
+        // Convert screen click to level-relative position
+        const pointerLevelRelativePositionInPixels ={
+            x: this.pointerScreenPosition.x - levelPosition.x,
+            y: this.pointerScreenPosition.y - levelPosition.y
+        };
+
+        if (!this.player || !this.player.sprite) return;
+
+        const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
+        const cameraOffset = { x: this.worldContainer.x, y: this.worldContainer.y };
+        const playerScreenPos = {
+            x: playerWorldPos.x + cameraOffset.x,
+            y: playerWorldPos.y + cameraOffset.y
+        };
+
+        const dx = playerScreenPos.x - this.pointerScreenPosition.x;
+        const dy = playerScreenPos.y - this.pointerScreenPosition.y;
+        const screenDistance = Math.sqrt(dx * dx + dy * dy);
+
+        const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
+
+        // Only update if the pointer is down and player is not "at" the pointer in screen space
+        if (this.isPointerDown) {
+            if (screenDistance > screenThreshold) {
+                // Apply force to the player
+                if (Config.Movement.towardsPoint) {
+                    this.player.applyForceTowards(pointerLevelRelativePositionInPixels, deltaTime);
+                } else {
+                    this.player.applyForceAwayFrom(pointerLevelRelativePositionInPixels, deltaTime);
+                }
             } else {
-                this.player.applyForceAwayFrom(this.pointerLevelRelativePositionInPixels, deltaTime);
+                // Otherwise, we are too close and need to "stop" the player
+                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
             }
+        } else if(this.pointerDownAtLeastOnce && this.pointerJustReleased) {
+            // The pointer is no longer "just" released going forward
+            this.pointerJustReleased = false;
+
+            if (!this.player) return;
+
+            const playerPos = this.player.body.getPosition();
+            const targetPos = new planck.Vec2(
+                pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+            );
+            const delta = targetPos.clone().sub(playerPos);
+            const distance = delta.length();
+
+            // If the last good pointer position's distance is insignificant from the player, zero out linear velocity
+            if (distance <= 0.15) {
+                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
+            }
+
         }
     }
 
@@ -615,45 +662,32 @@ export class World {
 
         // Set the flag for the pointer being down
         this.isPointerDown = true;
+        this.pointerDownAtLeastOnce = true;
     
         // Capture the initial pointer location
-        const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
-        const screenPosition = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        }
-        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
-
-        // Convert screen click to level-relative position
-        this.pointerLevelRelativePositionInPixels ={
-            x: screenPosition.x - levelPosition.x,
-            y: screenPosition.y - levelPosition.y
-        };
+        this.updatePointerScreenPosition(e);
     }
 
     handlePointerUp() {
         // Flag the pointer as no longer being down
         this.isPointerDown = false;
-
-        // Null out the stored pointer position info
-        this.pointerLevelRelativePositionInPixels = null;
+        this.pointerJustReleased = true;
     }
 
     handlePointerMove(e: PointerEvent) {
         // Only process if the pointer is down
-        if (this.isPointerDown && this.app && this.pointerLevelRelativePositionInPixels) {
-            const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
-            const screenPosition = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            }
-            const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
-
-            // Convert screen click to level-relative position
-            this.pointerLevelRelativePositionInPixels.x = screenPosition.x - levelPosition.x;
-            this.pointerLevelRelativePositionInPixels.y = screenPosition.y - levelPosition.y;
-            
-            console.log("HELD DOWN AND MOVING!", this.pointerLevelRelativePositionInPixels);
+        if (this.isPointerDown && this.app) {
+           this.updatePointerScreenPosition(e);
         }
+    }
+
+    private updatePointerScreenPosition(e: PointerEvent) {
+        if (!this.app) return;
+
+        const rect = this.app.canvas.getBoundingClientRect();
+        this.pointerScreenPosition = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
     }
 }

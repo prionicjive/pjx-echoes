@@ -33,7 +33,7 @@ export class Game {
         await this.app.init({ 
             width: window.innerWidth, 
             height: window.innerHeight, 
-            backgroundColor: 0xffffff 
+            backgroundColor: 0x000000 
         });
         document.body.appendChild(this.app.canvas);
 

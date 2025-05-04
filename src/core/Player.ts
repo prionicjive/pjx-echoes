@@ -12,6 +12,7 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
 
 /**
  * The Player class implements the controllable player character.
@@ -69,6 +70,42 @@ export class Player implements Entity {
         container.addChild(this.sprite);
     }
 
+    applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate normalized force vector
+        const force = PhysicsUtils.calculateForceVector(
+            playerPos, 
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ), 
+            Config.Movement.forceFactorPerSecond * deltaTime
+        );
+
+        // Apply force at the center of mass
+        this.body.applyForceToCenter(force);
+    }
+
+    applyForceAwayFrom(levelRelativePositionInPixels: Point, deltaTime: number) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate normalized force vector
+        const force = PhysicsUtils.calculateForceVector(
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ),
+            playerPos, 
+            Config.Movement.forceFactorPerSecond * deltaTime
+        );
+
+        // Apply force at the center of mass
+        this.body.applyForceToCenter(force);
+    }
+
     /**
      * Applies an impulse to the player body toward the given pixel position.
      * Used to move the player in response to input.
@@ -79,17 +116,38 @@ export class Player implements Entity {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
-        // Calculate vector from player to target
-        const deltaX = playerPos.x - (levelRelativePositionInPixels.x / Config.PixelsPerMeter);
-        const deltaY = playerPos.y - (levelRelativePositionInPixels.y / Config.PixelsPerMeter);
-        const length = Math.hypot(deltaX, deltaY);
+        // Calculate normalized force vector
+        const impulse = PhysicsUtils.calculateForceVector(
+            playerPos, 
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ), 
+            Config.Movement.impulseFactor
+        );
+        // Apply impulse at the center of mass
+        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+    }
 
-        // Tune this value for desired impulse strength
-        const impulseScale = Config.Physics.Player.impulseFactor;
-
-        // Calculate normalized impulse vector
-        const impulse = new planck.Vec2((deltaX / length) * impulseScale, (deltaY / length) * impulseScale);
-
+    /**
+     * Applies an impulse to the player body away from the given pixel position.
+     * Used to move the player in response to input.
+     *
+     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
+     */
+    applyImpulseAwayFrom(levelRelativePositionInPixels: Point) {
+        // Convert pixel coordinates to world (meter) coordinates
+        const playerPos = this.body.getPosition();
+        
+        // Calculate normalized force vector
+        const impulse = PhysicsUtils.calculateForceVector(
+            new planck.Vec2(
+                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                levelRelativePositionInPixels.y / Config.PixelsPerMeter
+            ),
+            playerPos, 
+            Config.Movement.impulseFactor
+        );
         // Apply impulse at the center of mass
         this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
     }

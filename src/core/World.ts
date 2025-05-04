@@ -416,9 +416,9 @@ export class World {
 
         const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
 
-        // Only update if the pointer is down and player is not "at" the pointer in screen space
+        // Only update if the pointer is down and (player is not "at" the pointer in screen space OR we don't want to change instantly)
         if (this.isPointerDown) {
-            if (screenDistance > screenThreshold) {
+            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
                 // Apply force to the player
                 if (Config.Movement.towardsPoint) {
                     this.player.applyForceTowards(pointerLevelRelativePositionInPixels, deltaTime);

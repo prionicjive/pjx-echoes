@@ -24,7 +24,7 @@ export const Config = {
             linearDamping: 0.35,    // How quickly the player slows down
         },
         Wall: {
-            restitution: 0.2,
+            restitution: 0.15,
         }
     },
     MapGeneration: {
@@ -142,8 +142,11 @@ export const Config = {
     FuelTileDensity: 0.00065,
     Movement: {
         towardsPoint: true,
+        towardsPointMode: "FORCE", // "IMPULSE" or "FORCE"
+        maxSpeed: 10.00,
         impulseFactor: 1.00,  // Only used when in impulse mode
-        forceFactorPerSecond: 700.00 // Default as factor of constant force over time
+        forceFactorPerSecond: 300.00, // Default as factor of constant force over time
+        instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
     Debug: {
         drawEdges: true,

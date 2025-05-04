@@ -3,7 +3,7 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
-import { Segment } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
@@ -20,7 +20,9 @@ export class World {
 
     // Input related
     private isPointerDown: boolean = false;
-    private pointerLevelRelativePositionInPixels: { x: number, y: number } | null = null;
+    private pointerLevelRelativePositionInPixels: Point;
+    private pointerDownAtLeastOnce: boolean = false;
+    private pointerJustReleased: boolean = false;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -105,6 +107,9 @@ export class World {
             resolution: 1.5,
             strength: 16
         });
+
+        // Set up some scratch values
+        this.pointerLevelRelativePositionInPixels = { x: 0, y: 0 };
 
         // Set up post-processing
         // TODO Find out how to dynamically alter these
@@ -384,7 +389,7 @@ export class World {
     updateBasedOnInput(deltaTime: number) {
         // Only update if there the pointer is down
         if(this.isPointerDown) {
-            if (!this.player || !this.pointerLevelRelativePositionInPixels) return;
+            if (!this.player) return;
 
             // Apply force to the player
             if (Config.Movement.towardsPoint) {
@@ -392,6 +397,25 @@ export class World {
             } else {
                 this.player.applyForceAwayFrom(this.pointerLevelRelativePositionInPixels, deltaTime);
             }
+        } else if(this.pointerDownAtLeastOnce && this.pointerJustReleased) {
+            // The pointer is no longer "just" released going forward
+            this.pointerJustReleased = false;
+
+            if (!this.player) return;
+
+            const playerPos = this.player.body.getPosition();
+            const targetPos = new planck.Vec2(
+                this.pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                this.pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+            );
+            const delta = targetPos.clone().sub(playerPos);
+            const distance = delta.length();
+
+            // If the last good pointer position's distance is insignificant from the player, zero out linear velocity
+            if (distance <= 0.15) {
+                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
+            }
+
         }
     }
 
@@ -615,6 +639,7 @@ export class World {
 
         // Set the flag for the pointer being down
         this.isPointerDown = true;
+        this.pointerDownAtLeastOnce = true;
     
         // Capture the initial pointer location
         const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
@@ -634,14 +659,12 @@ export class World {
     handlePointerUp() {
         // Flag the pointer as no longer being down
         this.isPointerDown = false;
-
-        // Null out the stored pointer position info
-        this.pointerLevelRelativePositionInPixels = null;
+        this.pointerJustReleased = true;
     }
 
     handlePointerMove(e: PointerEvent) {
         // Only process if the pointer is down
-        if (this.isPointerDown && this.app && this.pointerLevelRelativePositionInPixels) {
+        if (this.isPointerDown && this.app) {
             const rect = this.app.canvas.getBoundingClientRect();  // absolute position of canvas
             const screenPosition = {
                 x: e.clientX - rect.left,
@@ -651,9 +674,7 @@ export class World {
 
             // Convert screen click to level-relative position
             this.pointerLevelRelativePositionInPixels.x = screenPosition.x - levelPosition.x;
-            this.pointerLevelRelativePositionInPixels.y = screenPosition.y - levelPosition.y;
-            
-            console.log("HELD DOWN AND MOVING!", this.pointerLevelRelativePositionInPixels);
+            this.pointerLevelRelativePositionInPixels.y = screenPosition.y - levelPosition.y;   
         }
     }
 }

@@ -141,10 +141,10 @@ export const Config = {
     Movement: {
         towardsPoint: true,
         impulseFactor: 1.00,  // Only used when in impulse mode
-        forceFactor: 5.00
+        forceFactorPerSecond: 350.00 // Default as factor of constant force over time
     },
     Debug: {
-        drawEdges: true,
+        drawEdges: false,
         drawWalls: false
     }
 };

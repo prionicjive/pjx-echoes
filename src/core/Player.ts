@@ -70,13 +70,7 @@ export class Player implements Entity {
         container.addChild(this.sprite);
     }
 
-    /**
-     * Applies an force (not impulse) to the player body toward the given pixel position.
-     * Used to move the player in response to input.
-     *
-     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
-     */
-    applyForceTowards(levelRelativePositionInPixels: Point) {
+    applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
@@ -87,20 +81,14 @@ export class Player implements Entity {
                 levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
                 levelRelativePositionInPixels.y / Config.PixelsPerMeter
             ), 
-            Config.Movement.forceFactor
+            Config.Movement.forceFactorPerSecond * deltaTime
         );
 
         // Apply force at the center of mass
         this.body.applyForceToCenter(force);
     }
 
-    /**
-     * Applies an force (not impluse) to the player body away from the given pixel position.
-     * Used to move the player in response to input.
-     *
-     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
-     */
-    applyForceAwayFrom(levelRelativePositionInPixels: Point) {
+    applyForceAwayFrom(levelRelativePositionInPixels: Point, deltaTime: number) {
         // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body.getPosition();
         
@@ -111,7 +99,7 @@ export class Player implements Entity {
                 levelRelativePositionInPixels.y / Config.PixelsPerMeter
             ),
             playerPos, 
-            Config.Movement.forceFactor
+            Config.Movement.forceFactorPerSecond * deltaTime
         );
 
         // Apply force at the center of mass
@@ -129,7 +117,7 @@ export class Player implements Entity {
         const playerPos = this.body.getPosition();
         
         // Calculate normalized force vector
-        const force = PhysicsUtils.calculateForceVector(
+        const impulse = PhysicsUtils.calculateForceVector(
             playerPos, 
             new planck.Vec2(
                 levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
@@ -138,7 +126,7 @@ export class Player implements Entity {
             Config.Movement.impulseFactor
         );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(force, this.body.getWorldCenter(), true);
+        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
     }
 
     /**
@@ -152,7 +140,7 @@ export class Player implements Entity {
         const playerPos = this.body.getPosition();
         
         // Calculate normalized force vector
-        const force = PhysicsUtils.calculateForceVector(
+        const impulse = PhysicsUtils.calculateForceVector(
             new planck.Vec2(
                 levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
                 levelRelativePositionInPixels.y / Config.PixelsPerMeter
@@ -161,7 +149,7 @@ export class Player implements Entity {
             Config.Movement.impulseFactor
         );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(force, this.body.getWorldCenter(), true);
+        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
     }
 
     /**

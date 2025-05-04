@@ -46,9 +46,21 @@ export class PhysicsUtils {
     }
 
     static calculateForceVector(startPos: planck.Vec2, endPos: planck.Vec2, forceFactor: number = 1): planck.Vec2 {
-        const deltaX = endPos.x - startPos.x;
-        const deltaY = endPos.y - startPos.y;
-        const length = Math.hypot(deltaX, deltaY);
-        return new planck.Vec2((deltaX / length) * forceFactor, (deltaY / length) * forceFactor);
+        const normalizedVec = this.normalizeVector(new planck.Vec2(
+            endPos.x - startPos.x, 
+            endPos.y - startPos.y
+        ));
+
+        return new planck.Vec2(normalizedVec.x * forceFactor, normalizedVec.y * forceFactor);
+    }
+
+    static normalizeVector(vec: planck.Vec2): planck.Vec2 {
+        const length = Math.hypot(vec.x, vec.y);
+        return new planck.Vec2(vec.x / length, vec.y / length);
+    }
+
+    static randomUnitVector(): planck.Vec2 {
+        const angle = Math.random() * 2 * Math.PI;
+        return new planck.Vec2(Math.cos(angle), Math.sin(angle));
     }
 }

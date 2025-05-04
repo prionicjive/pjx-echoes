@@ -346,7 +346,7 @@ export class World {
         this.bodiesToDestroy = [];
         
         // Handle input, as this might affect the physics
-        this.updateBasedOnInput();
+        this.updateBasedOnInput(deltaTime);
 
         // Step the physics
         this.world?.step(deltaTime);
@@ -381,16 +381,16 @@ export class World {
     /**
      * Updates the world based on input, such as applying impulses to the player.
      */
-    updateBasedOnInput() {
+    updateBasedOnInput(deltaTime: number) {
         // Only update if there the pointer is down
         if(this.isPointerDown) {
             if (!this.player || !this.pointerLevelRelativePositionInPixels) return;
 
             // Apply force to the player
             if (Config.Movement.towardsPoint) {
-                this.player.applyForceTowards(this.pointerLevelRelativePositionInPixels);
+                this.player.applyForceTowards(this.pointerLevelRelativePositionInPixels, deltaTime);
             } else {
-                this.player.applyForceAwayFrom(this.pointerLevelRelativePositionInPixels);
+                this.player.applyForceAwayFrom(this.pointerLevelRelativePositionInPixels, deltaTime);
             }
         }
     }

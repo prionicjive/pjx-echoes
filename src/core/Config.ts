@@ -22,7 +22,9 @@ export const Config = {
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
-            restitution: 0.95,      // Bounciness
+        },
+        Wall: {
+            restitution: 0.2,
         }
     },
     MapGeneration: {
@@ -141,10 +143,10 @@ export const Config = {
     Movement: {
         towardsPoint: true,
         impulseFactor: 1.00,  // Only used when in impulse mode
-        forceFactorPerSecond: 350.00 // Default as factor of constant force over time
+        forceFactorPerSecond: 700.00 // Default as factor of constant force over time
     },
     Debug: {
-        drawEdges: false,
+        drawEdges: true,
         drawWalls: false
     }
 };

@@ -86,7 +86,7 @@ export class Level {
         const body = PhysicsUtils.createLevelEdgesBody(world, { 
             edges: this.edgesList, 
             edgeFixture: {
-                restitution: 0.95,
+                restitution: Config.Physics.Wall.restitution,
                 friction: 0,
                 filterCategoryBits: Config.Physics.Collision.categoryEdge,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer

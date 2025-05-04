@@ -53,7 +53,6 @@ export class Player implements Entity {
 
         // Add a circular fixture for collisions
         this.body.createFixture(new planck.Circle(playerRadius), {
-            restitution: Config.Physics.Player.restitution,
             friction: 0,
             density: 1,
             filterCategoryBits: Config.Physics.Collision.categoryPlayer,

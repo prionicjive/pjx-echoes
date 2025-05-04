@@ -193,11 +193,20 @@ export class World {
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
         // Regenerate level and place player and finish tiles
-        const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
-            Config.LevelDimensions.width, 
+        // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
+        //     Config.LevelDimensions.width, 
+        //     Config.LevelDimensions.height,
+        //     Config.MapGeneration.CellularAutomata.wallChance,
+        //     Config.MapGeneration.CellularAutomata.smoothingSteps
+        // );
+
+        const { map: levelMap, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
+            Config.LevelDimensions.width,
             Config.LevelDimensions.height,
-            Config.MapGeneration.wallChance,
-            Config.MapGeneration.smoothingSteps
+            Config.MapGeneration.DrunkardsWalkWithSmoothing.percentOpen,
+            Config.MapGeneration.DrunkardsWalkWithSmoothing.maxWalkers,
+            Config.MapGeneration.DrunkardsWalkWithSmoothing.walkerLifetime,
+            Config.MapGeneration.DrunkardsWalkWithSmoothing.smoothingSteps
         );
 
         // Useful for look up information

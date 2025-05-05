@@ -83,17 +83,20 @@ export class Player implements Entity {
             Config.Movement.forceFactorPerSecond * deltaTime
         );
 
-        // If we want to instantly change the direction, linear velocity magnitude needs to be 
-        // preserved and then used to scale the new direction unit vector
+        // Fetch the current linear velocity in its various components
+        const currLinearVelocity = this.body.getLinearVelocity()
+        const speed: number = Math.min(currLinearVelocity.length(), Config.Movement.maxSpeed);
+        const direction: planck.Vec2 = PhysicsUtils.normalizeVector(currLinearVelocity);
+
+        // If we want to instantly change the direction, the capped speed needs to scale the new direction unit vector
         if(Config.Movement.instantlyChangeDirection) {
-            let speed = this.body.getLinearVelocity().length();
-
-            // Cap to max speed
-            if(speed > Config.Movement.maxSpeed) {
-                speed = Config.Movement.maxSpeed;
-            }
-
             this.body.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
+        } else {
+            // Otherwise check to see we have a speed at all (Meaning we have non-zero / non-NaN linerar velocity)
+            // If we DO, then (And ONLY then) do we adjust the linear velocity
+            if(speed !== 0 && !isNaN(speed)) {
+                this.body.setLinearVelocity(direction.mul(speed));
+            }
         }
 
         // Apply force at the center of mass

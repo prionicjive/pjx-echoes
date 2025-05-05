@@ -26,27 +26,32 @@ export class World {
     private mergedEdges: Segment[] = [];
 
     // PIXI Containers different rendering objects / layers
-    private worldContainer: PIXI.Container;
-    private lightsContainer: PIXI.Container;
+    private tempLightmapContainer!: PIXI.Container; // Not directly added to world
+    private lightsContainer!: PIXI.Container; // Not directly added to world
+    private worldContainer!: PIXI.Container; // Added to stage directly
+    private levelBoundsContainer!: PIXI.Container; // Below are added to the world container
+    private bgContainer!: PIXI.Container;
+    private entitiesContainer!: PIXI.Container;
+    private fgContainer!: PIXI.Container;
+    private uiContainer!: PIXI.Container; // Added lastly to the stage directly
     
     // Lights
     private playerLight: Light | null = null;
     private staticLights: Light[] = [];
 
     // Needed for lightmap rendering
-    private tempLightmapContainer: PIXI.Container;
-    private lightmapTexture: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
-    private lightmapSprite: PIXI.Sprite;
-    private blackBgRect: PIXI.Graphics;
-    private whiteBgRect: PIXI.Graphics;
+    private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
+    private lightmapSprite!: PIXI.Sprite;
+    private blackBgRect!: PIXI.Graphics;
+    private whiteBgRect!: PIXI.Graphics;
 
     // Our home grown particle emitter used for a player trail effect
     private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
-    private crtFilter: CRTFilter;
-    private bloomFilter: BloomFilter;
+    private crtFilter!: CRTFilter;
+    private bloomFilter!: BloomFilter;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -59,31 +64,62 @@ export class World {
         this.inputManager = new InputManager(app.canvas);
 
         // Instantiate the various PIXI containers
-        this.lightsContainer = new PIXI.Container();
-        this.worldContainer = new PIXI.Container();
-
+        this.initializeContainers();
+        
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
 
+        this.initializeTexturesAndGraphicalElements(this.viewportWidth, this.viewportHeight);
+
+        // Create post-processing
+        // TODO Find out how to dynamically alter these
+        this.initializePostProcessingFilters();
+
+        // TODO Handle additional setup if needed
+
+        // Lastly, reset / reinitialize the world
+        this.reset();
+    }
+
+    private initializeContainers() {
+        this.tempLightmapContainer = new PIXI.Container(); // Not directly added to anything, only used for render to texture / post processing
+        this.lightsContainer = new PIXI.Container(); // Added directly to the stage
+        
+        this.worldContainer = new PIXI.Container(); // Added directly to the stage
+
+        this.levelBoundsContainer = new PIXI.Container(); // Below are added to the world container
+        this.bgContainer = new PIXI.Container();
+        this.entitiesContainer = new PIXI.Container();
+        this.fgContainer = new PIXI.Container();
+        
+        this.uiContainer = new PIXI.Container(); // Added lastly to the stage directly
+    }
+
+    private initializeTexturesAndGraphicalElements(width: number, height: number) {
         // Set up basic lightmap-related things
         // This doesn't get added to the world, it is just used for rendering lights to a texture
-        this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
+        this.lightmapTexture = PIXI.RenderTexture.create({ width: width, height: height });
+        
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
         this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
-        this.lightmapSprite.width = screenWidth; // Make sure the lightmap sprite is as big as the screen
-        this.lightmapSprite.height = screenHeight;
-        this.tempLightmapContainer = new PIXI.Container();
+        this.lightmapSprite.width = width; // Make sure the lightmap sprite is as big as the screen
+        this.lightmapSprite.height = height;
 
         // Set up white and black background rects
         this.blackBgRect = new PIXI.Graphics();
-        this.blackBgRect.rect(0, 0, screenWidth, screenHeight);
+        this.blackBgRect.rect(0, 0, width, height);
         this.blackBgRect.fill(0x000000);
+
         this.whiteBgRect = new PIXI.Graphics();
-        this.whiteBgRect.rect(0, 0, screenWidth, screenHeight);
+        this.whiteBgRect.rect(0, 0, width, height);
         this.whiteBgRect.fill(0xffffff);
+    }
+
+    private initializePostProcessingFilters() {
+        if(!this.app) {
+            return;
+        }
 
         // Instantiate filters
         this.crtFilter = new CRTFilter({
@@ -104,24 +140,6 @@ export class World {
             strength: 16
         });
 
-        // Set up post-processing
-        // TODO Find out how to dynamically alter these
-        this.setupPostProcessingFilters();
-
-        // TODO Handle additional setup if needed
-
-        // Lastly, reset / reinitialize the world
-        this.reset();
-    }
-
-    /**
-     * Sets up post-processing filters for the game.
-     */
-    setupPostProcessingFilters() {
-        if(!this.app) {
-            return;
-        }
-
         // Only bloom the world (Not the lights)
         this.worldContainer.filters = [this.bloomFilter];
 
@@ -133,7 +151,7 @@ export class World {
      * Resets the game state: clears containers, destroys physics bodies,
  * and generates a fresh level and player.
      */
-    reset() {
+    private reset() {
         // TODO Consider how / what to reset or destroy and rebuild
         if (!this.app) return;
 
@@ -146,15 +164,13 @@ export class World {
         this.setUpWorld();
     }
 
-    tearDownWorld() {
+    private tearDownWorld() {
         // Destroy any particle related things
         this.playerTrailEmitter?.destroy();
+        this.playerTrailEmitter = null;
         
-        // Empty the various PIXI containers
-        this.tempLightmapContainer.removeChildren();
-        this.lightsContainer.removeChildren();
-        this.worldContainer.removeChildren();
-        this.app.stage.removeChildren();
+        // Empty the various PIXI containers in order
+        this.tearDownContainersInOrder();
         
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -173,23 +189,18 @@ export class World {
         }
     }
 
-    setUpWorld() {
+    private setUpWorld() {
+        // Add empty containers in the proper order / heiarchy, then we can add directly to the containers as needed
+        this.setUpContainersInOrder();
+
         // Draw a full screen white texture for proper blending effects with post-processing with lights
         this.lightsContainer.addChild(this.whiteBgRect);
-
-        // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
-        // ORDER IS IMPORTANT
+        // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
 
-        // TODO For the next two lines, figure out best / better way to do layering with containers
-        // FIRST, add the lights container to the stage
-        this.app.stage.addChild(this.lightsContainer);
-
-        // THEN, add this mondo world container add the only direct child to the  stage
-        this.app.stage.addChild(this.worldContainer);
-
-        // Try out homegrown particle emitter
+        // Any immediate particle effects (like particle trail player)
+        // TODO Set up particle effects and add them to the appropriate layer
         this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
         this.worldContainer.addChild(this.playerTrailEmitter.container);
 
@@ -254,13 +265,42 @@ export class World {
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }
+
+    private tearDownContainersInOrder() {
+        this.tempLightmapContainer.removeChildren();
+        this.lightsContainer.removeChildren();
+
+        this.levelBoundsContainer.removeChildren();
+        this.bgContainer.removeChildren();
+        this.entitiesContainer.removeChildren();
+        this.fgContainer.removeChildren();        
+        this.worldContainer.removeChildren();
+        
+        this.uiContainer.removeChildren();
+        this.app.stage.removeChildren();
+    }
+
+    private setUpContainersInOrder() {
+        this.app.stage.addChild(this.lightsContainer); // Added directly to the stage
+
+        // Add the world container as a big container that will hold the entire world with all its entities and layer
+        // that can mimic having a camera, serving as a big carpet that can slide around above the stage.
+        this.app.stage.addChild(this.worldContainer); // Added directly to the stage
+
+        this.worldContainer.addChild(this.levelBoundsContainer); // Below are added to the world container
+        this.worldContainer.addChild(this.bgContainer);
+        this.worldContainer.addChild(this.entitiesContainer);
+        this.worldContainer.addChild(this.fgContainer);
+        
+        this.app.stage.addChild(this.uiContainer); // Added lastly to the stage directly
+    }
     
     /**
      * Handles collision events from Planck.js, such as the player reaching a finish tile
      * or interacting with walls.
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
-    onBeginContact(contact: planck.Contact) {
+    private onBeginContact(contact: planck.Contact) {
         const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 

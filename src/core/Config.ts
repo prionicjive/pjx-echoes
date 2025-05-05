@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 128,       // Width of the generated level (in grid units)
-        height: 128
+        width: 64,       // Width of the generated level (in grid units)
+        height: 64
     },
     MapGeneration: {
         CellularAutomata: {
@@ -162,7 +162,8 @@ export const Config = {
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
     Debug: {
-        drawEdges: false,
-        drawWalls: true
+        drawEdges: true,
+        drawWalls: true,
+        drawLights: false,
     }
 };

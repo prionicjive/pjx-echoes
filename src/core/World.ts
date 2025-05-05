@@ -26,14 +26,18 @@ export class World {
     private mergedEdges: Segment[] = [];
 
     // PIXI Containers different rendering objects / layers
-    private tempLightmapContainer!: PIXI.Container; // Not directly added to world
-    private lightsContainer!: PIXI.Container; // Not directly added to world
     private worldContainer!: PIXI.Container; // Added to stage directly
-    private levelBoundsContainer!: PIXI.Container; // Below are added to the world container
-    private bgContainer!: PIXI.Container;
+    private bgContainer!: PIXI.Container; // Here and below are added to the world container
+    private lightsContainer!: PIXI.Container;
+    private levelGeometryContainer!: PIXI.Container; 
+    private preEntitiesContainer!: PIXI.Container;
     private entitiesContainer!: PIXI.Container;
-    private fgContainer!: PIXI.Container;
+    private postEntitiesContainer!: PIXI.Container;
+    private fgContainer!: PIXI.Container; // Final world container / layer
     private uiContainer!: PIXI.Container; // Added lastly to the stage directly
+
+    // Scratch containers never added anywhere, used for temporary rendering
+    private tempLightmapContainer!: PIXI.Container; // Not directly added to world
     
     // Lights
     private playerLight: Light | null = null;
@@ -51,7 +55,8 @@ export class World {
     // Filters
     // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
-    private bloomFilter!: BloomFilter;
+    private entitiesBloomFilter!: BloomFilter;
+    private levelGeometryBloomFilter!: BloomFilter;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -84,14 +89,15 @@ export class World {
 
     private initializeContainers() {
         this.tempLightmapContainer = new PIXI.Container(); // Not directly added to anything, only used for render to texture / post processing
-        this.lightsContainer = new PIXI.Container(); // Added directly to the stage
         
         this.worldContainer = new PIXI.Container(); // Added directly to the stage
-
-        this.levelBoundsContainer = new PIXI.Container(); // Below are added to the world container
-        this.bgContainer = new PIXI.Container();
+        this.bgContainer = new PIXI.Container(); // Here and below are added to the world container
+        this.lightsContainer = new PIXI.Container();
+        this.levelGeometryContainer = new PIXI.Container();
+        this.preEntitiesContainer = new PIXI.Container();
         this.entitiesContainer = new PIXI.Container();
-        this.fgContainer = new PIXI.Container();
+        this.postEntitiesContainer = new PIXI.Container();
+        this.fgContainer = new PIXI.Container(); // Final world container / layer
         
         this.uiContainer = new PIXI.Container(); // Added lastly to the stage directly
     }
@@ -133,15 +139,24 @@ export class World {
             time: performance.now() * 0.001
         });
 
-        this.bloomFilter = new BloomFilter({
+        this.entitiesBloomFilter = new BloomFilter({
             kernelSize: 5,
             quality: 4,
             resolution: 1.5,
             strength: 16
         });
 
-        // Only bloom the world (Not the lights)
-        this.worldContainer.filters = [this.bloomFilter];
+        
+        this.levelGeometryBloomFilter = new BloomFilter({
+            kernelSize: 11,
+            quality: 4,
+            resolution: 1.5,
+            strength: 32
+        });
+
+        // Only bloom the entities and level bounds (Not the lights)
+        this.entitiesContainer.filters = [this.entitiesBloomFilter];
+        this.levelGeometryContainer.filters = [this.levelGeometryBloomFilter];
 
         // Apply the CRT filter to EVERYTHING
         this.app.stage.filters = [this.crtFilter];
@@ -202,7 +217,7 @@ export class World {
         // Any immediate particle effects (like particle trail player)
         // TODO Set up particle effects and add them to the appropriate layer
         this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
-        this.worldContainer.addChild(this.playerTrailEmitter.container);
+        this.preEntitiesContainer.addChild(this.playerTrailEmitter.container);
 
         // TODO This may be too drastic, but regenerate entire Planck world
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
@@ -239,7 +254,7 @@ export class World {
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
             this.world,
-            this.worldContainer, 
+            this.entitiesContainer, 
             this.rawLevelMap, 
             openSpaces,
             this.mergedEdges
@@ -251,7 +266,7 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.worldContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)});
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -268,12 +283,14 @@ export class World {
 
     private tearDownContainersInOrder() {
         this.tempLightmapContainer.removeChildren();
-        this.lightsContainer.removeChildren();
-
-        this.levelBoundsContainer.removeChildren();
-        this.bgContainer.removeChildren();
+        
+        this.fgContainer.removeChildren();
+        this.postEntitiesContainer.removeChildren();        
         this.entitiesContainer.removeChildren();
-        this.fgContainer.removeChildren();        
+        this.preEntitiesContainer.removeChildren();
+        this.levelGeometryContainer.removeChildren();
+        this.lightsContainer.removeChildren();
+        this.bgContainer.removeChildren();
         this.worldContainer.removeChildren();
         
         this.uiContainer.removeChildren();
@@ -281,16 +298,22 @@ export class World {
     }
 
     private setUpContainersInOrder() {
-        this.app.stage.addChild(this.lightsContainer); // Added directly to the stage
-
         // Add the world container as a big container that will hold the entire world with all its entities and layer
         // that can mimic having a camera, serving as a big carpet that can slide around above the stage.
         this.app.stage.addChild(this.worldContainer); // Added directly to the stage
 
-        this.worldContainer.addChild(this.levelBoundsContainer); // Below are added to the world container
-        this.worldContainer.addChild(this.bgContainer);
+        this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
+        this.worldContainer.addChild(this.levelGeometryContainer);
+        
+        // We MAY want to render without lights
+        if (Config.Debug.drawLights) {
+            this.worldContainer.addChild(this.lightsContainer); 
+        
+        }
+        this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
-        this.worldContainer.addChild(this.fgContainer);
+        this.worldContainer.addChild(this.postEntitiesContainer);
+        this.worldContainer.addChild(this.fgContainer); // End of world containers / layers
         
         this.app.stage.addChild(this.uiContainer); // Added lastly to the stage directly
     }
@@ -413,7 +436,6 @@ export class World {
         // Update particle related things
         this.updateParticleEffects(deltaTime);;
 
-        // TODO Any other entities to update?
         // Update camera
         this.updateCamera(deltaTime);
 
@@ -483,7 +505,7 @@ export class World {
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
-        // Center if level is smaller than screen
+        // Center on x-axis if level is narrower than screen
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
@@ -512,6 +534,7 @@ export class World {
             this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
         }
 
+        // Center on y-axis if level is shorter than screen
         if (levelHeightInPixels <= screenHeight) {
             this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
@@ -539,6 +562,13 @@ export class World {
             // Keep camera inside the world edges
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
+
+        // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
+        this.counteractWorldTransform();
+    }
+
+    private counteractWorldTransform() {
+        this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
     }
 
     updateAndRenderLights() {

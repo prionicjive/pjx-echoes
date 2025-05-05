@@ -14,6 +14,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Dynamic scaling to take full advantage of the viewport while maintaining pixels per meter (No stretching)
 - Homegrown particle effect for things such as trails (among other things)
 - Post processing effects (Such as CRT and Bloom)
+- Swipe gesture movement on touch devices
 
 ## Tech Stack
 

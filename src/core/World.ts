@@ -3,16 +3,16 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
-import { Point, Segment } from '../utils/types';
+import { Segment } from '../utils/types';
 import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
-import { SwipeGesture } from '../input/SwipeGesture.ts';
+import { InputManager } from '../input/InputManager.ts';
 
 export class World {
-    private app: PIXI.Application | null = null;
+    private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
@@ -20,11 +20,7 @@ export class World {
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
     // Input related
-    private isMouseDown: boolean = false;
-    private mouseScreenPosition: Point = { x: 0, y: 0 };
-    private mouseDownAtLeastOnce: boolean = false;
-    private mouseJustReleased: boolean = false;
-    private swipeGesture: SwipeGesture;
+    private inputManager: InputManager;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -58,14 +54,9 @@ export class World {
 
     constructor(app: PIXI.Application) {
         this.app = app;
-        
-        // Set up input event handlers
-        this.app.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.app.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.app.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
 
-        this.app.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
-        this.app.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        // Initialize input manager
+        this.inputManager = new InputManager(app.canvas);
 
         // Instantiate the various PIXI containers
         this.lightsContainer = new PIXI.Container();
@@ -117,9 +108,6 @@ export class World {
         // TODO Find out how to dynamically alter these
         this.setupPostProcessingFilters();
 
-        // Set up swipe gesture
-        this.swipeGesture = new SwipeGesture();
-
         // TODO Handle additional setup if needed
 
         // Lastly, reset / reinitialize the world
@@ -149,6 +137,16 @@ export class World {
         // TODO Consider how / what to reset or destroy and rebuild
         if (!this.app) return;
 
+        // Tear down the old world
+        this.tearDownWorld();
+
+        // ------------------------
+        // NOW, it's time to add things / reinitialize the world
+        // ------------------------
+        this.setUpWorld();
+    }
+
+    tearDownWorld() {
         // Destroy any particle related things
         this.playerTrailEmitter?.destroy();
         
@@ -157,11 +155,25 @@ export class World {
         this.lightsContainer.removeChildren();
         this.worldContainer.removeChildren();
         this.app.stage.removeChildren();
+        
+        // Remove all bodies / fixtures from Planck world
+        let body = this.world?.getBodyList();
+        let counter = 0;
+        while (body) {
+            const nextBody = body.getNext();
+            this.world?.destroyBody(body);
+            counter++;
+            body = nextBody;
+        }
+        this.bodiesToDestroy = [];
 
-        // ------------------------
-        // NOW, it's time to add things / reinitialize the world
-        // ------------------------
+        // Remove any listeners
+        if (this.world) {
+            this.world.off('begin-contact', this.onBeginContact.bind(this));
+        }
+    }
 
+    setUpWorld() {
         // Draw a full screen white texture for proper blending effects with post-processing with lights
         this.lightsContainer.addChild(this.whiteBgRect);
 
@@ -180,21 +192,6 @@ export class World {
         // Try out homegrown particle emitter
         this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
         this.worldContainer.addChild(this.playerTrailEmitter.container);
-        
-        // Remove all bodies / fixtures from Planck world
-        let body = this.world?.getBodyList();
-        let counter = 0;
-        while (body) {
-            const nextBody = body.getNext();
-            this.world?.destroyBody(body);
-            counter++;
-            body = nextBody;
-        }
-        this.bodiesToDestroy = [];
-
-        if (this.world) {
-            this.world.off('begin-contact', this.onBeginContact.bind(this));
-        }
 
         // TODO This may be too drastic, but regenerate entire Planck world
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
@@ -255,7 +252,7 @@ export class World {
         this.playerLight.entityId = this.player?.id;
 
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();  
+        this.instantlyCenterCamera();      
     }
     
     /**
@@ -356,33 +353,25 @@ export class World {
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) {
-        // Destroy any flagged bodies
-        this.bodiesToDestroy.forEach(body => {
-            if (body) {
-                this.world?.destroyBody(body);
-            }
-        });
-        this.bodiesToDestroy = [];
+        // Destroy any bodies that need to be destroyed
+        this.processBodiesToDestroy();
         
         // Handle input, as this might affect the physics
-        this.updateFromNonTouchInput(deltaTime);
+        this.updateFromInput(deltaTime);
 
         // Step the physics
         this.world?.step(deltaTime);
-        // Update player and level
+    
+        // Update player
         this.player?.update();
+    
+        // TODO Any other entities to update?    
+
+        // Update level (For dynamic entities or geometry)
         this.level?.update();
 
         // Update particle related things
-
-        // Update the player trail emitter
-        if (this.player) {
-            this.playerTrailEmitter?.setEmitPosition(
-                this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
-                this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
-            );
-        }
-        this.playerTrailEmitter?.update(deltaTime);
+        this.updateParticleEffects(deltaTime);;
 
         // TODO Any other entities to update?
         // Update camera
@@ -391,72 +380,52 @@ export class World {
         // Update and render the lights
         this.updateAndRenderLights();
 
-        // TODO Any other entities to update?
-    
-        // Update any changing values for filters
-        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
+        // Update anything needed for post processing
+        this.updatePostProcessing(deltaTime);
     }
 
-    /**
-     * Updates the world based on non-touchinput, such as applying impulses to the player.
-     */
-    updateFromNonTouchInput(deltaTime: number) {
-        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
+    processBodiesToDestroy() {
+        this.bodiesToDestroy.forEach(body => {
+            if (body) {
+                this.world?.destroyBody(body);
+            }
+        });
+        this.bodiesToDestroy = [];
+    }
 
-        // Convert screen click to level-relative position
-        const mouseLevelRelativePositionInPixels ={
-            x: this.mouseScreenPosition.x - levelPosition.x,
-            y: this.mouseScreenPosition.y - levelPosition.y
-        };
-
+    updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 
+        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
         const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
         const cameraOffset = { x: this.worldContainer.x, y: this.worldContainer.y };
         const playerScreenPos = {
             x: playerWorldPos.x + cameraOffset.x,
             y: playerWorldPos.y + cameraOffset.y
         };
+    
+        const pointer = this.inputManager.getPointerState();
+        const swipe = this.inputManager.getSwipeState();
+        const isTouchActive = this.inputManager.getIsTouchActive();
+    
+        this.player.handleInput(
+            { pointer, swipe, isTouchActive },
+            { levelPosition, cameraOffset, playerScreenPos },
+            deltaTime
+        );
 
-        const dx = playerScreenPos.x - this.mouseScreenPosition.x;
-        const dy = playerScreenPos.y - this.mouseScreenPosition.y;
-        const screenDistance = Math.sqrt(dx * dx + dy * dy);
+        // Reset flags
+        this.inputManager.update();
+    }
 
-        const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
-
-        // Only update if the mouse is down and (player is not "at" the mouse in screen space OR we don't want to change instantly)
-        if (this.isMouseDown) {
-            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
-                // Apply force to the player
-                if (Config.Movement.towardsPoint) {
-                    this.player.applyForceTowards(mouseLevelRelativePositionInPixels, deltaTime);
-                } else {
-                    this.player.applyForceAwayFrom(mouseLevelRelativePositionInPixels, deltaTime);
-                }
-            } else {
-                // Otherwise, we are too close and need to "stop" the player
-                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-        } else if(this.mouseDownAtLeastOnce && this.mouseJustReleased) {
-            // The mouse is no longer "just" released going forward
-            this.mouseJustReleased = false;
-
-            if (!this.player) return;
-
-            const playerPos = this.player.body.getPosition();
-            const targetPos = new planck.Vec2(
-                mouseLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                mouseLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+    updateParticleEffects(deltaTime: number) {
+        if (this.player) {
+            this.playerTrailEmitter?.setEmitPosition(
+                this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
+                this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
             );
-            const delta = targetPos.clone().sub(playerPos);
-            const distance = delta.length();
-
-            // If the last good mouse position's distance is insignificant from the player, zero out linear velocity
-            if (distance <= 0.15) {
-                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-
         }
+        this.playerTrailEmitter?.update(deltaTime);
     }
 
      /**
@@ -536,6 +505,8 @@ export class World {
         // TODO What about handling multiple lights?
         if (!this.playerLight ||  !this.player) return;
 
+        // TODO Genericize this to support any dynamic lights on dynamic entities we might have
+        // TODO Maybe body/entity + light object
         const playerPos = {
             x: this.player?.body.getPosition().x,
             y: this.player?.body.getPosition().y
@@ -607,13 +578,13 @@ export class World {
 
        // Render all lights to the render texture (lightmap)
        // Clear the RTT to white by rendering the white rectangle first
-       this.app?.renderer.render({
+       this.app.renderer.render({
             container: this.blackBgRect,
             target: this.lightmapTexture,
             clear: true // This clears to transparent, but then you immediately draw white over it
         });
 
-        this.app?.renderer.render({
+        this.app.renderer.render({
             container: this.tempLightmapContainer, 
             target: this.lightmapTexture, 
             clear: false
@@ -633,6 +604,15 @@ export class World {
         );
     }
 
+    updatePostProcessing(deltaTime: number) 
+    {
+        // Update CRT filter
+        this.crtFilter.time += deltaTime; // For animating the CRT effect
+        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
+    
+        // TODO Update any other filters
+    }
+
     /**
      * Handles window resize events.
      * 
@@ -644,7 +624,15 @@ export class World {
         // Update viewport dimensions
         this.viewportWidth = width;
         this.viewportHeight = height;
+
+        // Resize textures, render textures and graphical helper elements
+        this.resizeTexturesAndGraphicalElements(width, height);
     
+        // Optionally, recenter camera or update camera logic
+        this.instantlyCenterCamera();
+    }
+
+    resizeTexturesAndGraphicalElements(width: number, height: number) {
         // Recreate the lightmap texture to avoid artifacts
         if (this.lightmapTexture) {
             this.lightmapTexture.destroy(true);
@@ -654,7 +642,7 @@ export class World {
         this.lightmapSprite.width = width;
         this.lightmapSprite.height = height;
         this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
-    
+
         // Resize backgrounds or overlays used for various post processing effects (and other things)
         if (this.blackBgRect) {
             this.blackBgRect.width = width;
@@ -663,79 +651,6 @@ export class World {
         if (this.whiteBgRect) {
             this.whiteBgRect.width = width;
             this.whiteBgRect.height = height;
-        }
-    
-        // Optionally, recenter camera or update camera logic
-        this.instantlyCenterCamera();
-    }
-
-    handleMouseDown(e: MouseEvent) {
-        if (!this.player || !this.worldContainer || !this.app) return;
-
-        // Set the flag for the mouse being down
-        this.isMouseDown = true;
-        this.mouseDownAtLeastOnce = true;
-    
-        // Capture the initial mouse location
-        this.updateMouseScreenPosition(e);
-    }
-
-    handleMouseUp() {
-        // Flag the mouse as no longer being down
-        this.isMouseDown = false;
-        this.mouseJustReleased = true;
-    }
-
-    handleMouseMove(e: MouseEvent) {
-        // Only process if the mouse is down
-        if (this.isMouseDown && this.app) {
-           this.updateMouseScreenPosition(e);
-        }
-    }
-
-    handleTouchStart(e: TouchEvent) {
-        if (!this.app) return;
-
-        const touch = e.touches[0];
-        const rect = this.app.canvas.getBoundingClientRect();
-        this.swipeGesture.onTouchStart(
-            touch.clientX - rect.left,
-            touch.clientY - rect.top
-        );
-    }
-    
-    handleTouchEnd(e: TouchEvent) {
-        if (!this.app) return;
-        
-        const touch = e.changedTouches[0];
-        const rect = this.app.canvas.getBoundingClientRect();
-        const swipe = this.swipeGesture.onTouchEnd(
-            touch.clientX - rect.left,
-            touch.clientY - rect.top
-        );
-        if (swipe) {
-            // Convert to world units
-            let vx = swipe.velocityX / Config.PixelsPerMeter;
-            let vy = swipe.velocityY / Config.PixelsPerMeter;
-    
-            // This exaggerates fast flicks, and damps slow ones
-            const speed = Math.sqrt(vx * vx + vy * vy);
-            const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
-            vx = (vx / speed) * nonlinearScale;
-            vy = (vy / speed) * nonlinearScale;
-    
-            // Apply to player body
-            this.player?.body.setLinearVelocity(new planck.Vec2(vx, vy));
-        }
-    }
-
-    private updateMouseScreenPosition(e: MouseEvent) {
-        if (!this.app) return;
-
-        const rect = this.app.canvas.getBoundingClientRect();
-        this.mouseScreenPosition = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
+        }   
     }
 }

@@ -149,6 +149,11 @@ export const Config = {
     TorchesDensity: 0.0007,
     FuelTileDensity: 0.00065,
     Movement: {
+        Gesture: {
+            swipeSpeedScaleExponent: 0.95,
+            maxSpeedScaleExponent: 1.1,
+            maxSpeed: 10.00,
+        },
         towardsPoint: true,
         towardsPointMode: "FORCE", // "IMPULSE" or "FORCE"
         maxSpeed: 7.00,

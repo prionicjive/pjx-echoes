@@ -9,6 +9,7 @@ import { Config } from './Config.ts';
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
+import { SwipeGesture } from '../input/SwipeGesture.ts';
 
 export class World {
     private app: PIXI.Application | null = null;
@@ -23,6 +24,7 @@ export class World {
     private mouseScreenPosition: Point = { x: 0, y: 0 };
     private mouseDownAtLeastOnce: boolean = false;
     private mouseJustReleased: boolean = false;
+    private swipeGesture: SwipeGesture;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -114,6 +116,9 @@ export class World {
         // Set up post-processing
         // TODO Find out how to dynamically alter these
         this.setupPostProcessingFilters();
+
+        // Set up swipe gesture
+        this.swipeGesture = new SwipeGesture();
 
         // TODO Handle additional setup if needed
 
@@ -665,7 +670,6 @@ export class World {
     }
 
     handleMouseDown(e: MouseEvent) {
-        console.log("MOUSE DOWN");
         if (!this.player || !this.worldContainer || !this.app) return;
 
         // Set the flag for the mouse being down
@@ -677,14 +681,12 @@ export class World {
     }
 
     handleMouseUp() {
-        console.log("MOUSE UP");
         // Flag the mouse as no longer being down
         this.isMouseDown = false;
         this.mouseJustReleased = true;
     }
 
     handleMouseMove(e: MouseEvent) {
-        console.log("MOUSE MOVE");
         // Only process if the mouse is down
         if (this.isMouseDown && this.app) {
            this.updateMouseScreenPosition(e);
@@ -692,11 +694,39 @@ export class World {
     }
 
     handleTouchStart(e: TouchEvent) {
-        console.log("TOUCH START");
-    }
+        if (!this.app) return;
 
+        const touch = e.touches[0];
+        const rect = this.app.canvas.getBoundingClientRect();
+        this.swipeGesture.onTouchStart(
+            touch.clientX - rect.left,
+            touch.clientY - rect.top
+        );
+    }
+    
     handleTouchEnd(e: TouchEvent) {
-        console.log("TOUCH END");
+        if (!this.app) return;
+        
+        const touch = e.changedTouches[0];
+        const rect = this.app.canvas.getBoundingClientRect();
+        const swipe = this.swipeGesture.onTouchEnd(
+            touch.clientX - rect.left,
+            touch.clientY - rect.top
+        );
+        if (swipe) {
+            // Convert to world units
+            let vx = swipe.velocityX / Config.PixelsPerMeter;
+            let vy = swipe.velocityY / Config.PixelsPerMeter;
+    
+            // This exaggerates fast flicks, and damps slow ones
+            const speed = Math.sqrt(vx * vx + vy * vy);
+            const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
+            vx = (vx / speed) * nonlinearScale;
+            vy = (vy / speed) * nonlinearScale;
+    
+            // Apply to player body
+            this.player?.body.setLinearVelocity(new planck.Vec2(vx, vy));
+        }
     }
 
     private updateMouseScreenPosition(e: MouseEvent) {

@@ -19,10 +19,10 @@ export class World {
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
     // Input related
-    private isPointerDown: boolean = false;
-    private pointerScreenPosition: Point = { x: 0, y: 0 };
-    private pointerDownAtLeastOnce: boolean = false;
-    private pointerJustReleased: boolean = false;
+    private isMouseDown: boolean = false;
+    private mouseScreenPosition: Point = { x: 0, y: 0 };
+    private mouseDownAtLeastOnce: boolean = false;
+    private mouseJustReleased: boolean = false;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
@@ -58,9 +58,12 @@ export class World {
         this.app = app;
         
         // Set up input event handlers
-        window.addEventListener('pointerdown', this.handlePointerDown.bind(this));
-        window.addEventListener('pointerup', this.handlePointerUp.bind(this));
-        window.addEventListener('pointermove', this.handlePointerMove.bind(this));
+        this.app.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.app.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.app.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+
+        this.app.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
+        this.app.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
 
         // Instantiate the various PIXI containers
         this.lightsContainer = new PIXI.Container();
@@ -357,7 +360,7 @@ export class World {
         this.bodiesToDestroy = [];
         
         // Handle input, as this might affect the physics
-        this.updateBasedOnInput(deltaTime);
+        this.updateFromNonTouchInput(deltaTime);
 
         // Step the physics
         this.world?.step(deltaTime);
@@ -390,15 +393,15 @@ export class World {
     }
 
     /**
-     * Updates the world based on input, such as applying impulses to the player.
+     * Updates the world based on non-touchinput, such as applying impulses to the player.
      */
-    updateBasedOnInput(deltaTime: number) {
+    updateFromNonTouchInput(deltaTime: number) {
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
 
         // Convert screen click to level-relative position
-        const pointerLevelRelativePositionInPixels ={
-            x: this.pointerScreenPosition.x - levelPosition.x,
-            y: this.pointerScreenPosition.y - levelPosition.y
+        const mouseLevelRelativePositionInPixels ={
+            x: this.mouseScreenPosition.x - levelPosition.x,
+            y: this.mouseScreenPosition.y - levelPosition.y
         };
 
         if (!this.player || !this.player.sprite) return;
@@ -410,40 +413,40 @@ export class World {
             y: playerWorldPos.y + cameraOffset.y
         };
 
-        const dx = playerScreenPos.x - this.pointerScreenPosition.x;
-        const dy = playerScreenPos.y - this.pointerScreenPosition.y;
+        const dx = playerScreenPos.x - this.mouseScreenPosition.x;
+        const dy = playerScreenPos.y - this.mouseScreenPosition.y;
         const screenDistance = Math.sqrt(dx * dx + dy * dy);
 
         const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
 
-        // Only update if the pointer is down and (player is not "at" the pointer in screen space OR we don't want to change instantly)
-        if (this.isPointerDown) {
+        // Only update if the mouse is down and (player is not "at" the mouse in screen space OR we don't want to change instantly)
+        if (this.isMouseDown) {
             if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
                 // Apply force to the player
                 if (Config.Movement.towardsPoint) {
-                    this.player.applyForceTowards(pointerLevelRelativePositionInPixels, deltaTime);
+                    this.player.applyForceTowards(mouseLevelRelativePositionInPixels, deltaTime);
                 } else {
-                    this.player.applyForceAwayFrom(pointerLevelRelativePositionInPixels, deltaTime);
+                    this.player.applyForceAwayFrom(mouseLevelRelativePositionInPixels, deltaTime);
                 }
             } else {
                 // Otherwise, we are too close and need to "stop" the player
                 this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
             }
-        } else if(this.pointerDownAtLeastOnce && this.pointerJustReleased) {
-            // The pointer is no longer "just" released going forward
-            this.pointerJustReleased = false;
+        } else if(this.mouseDownAtLeastOnce && this.mouseJustReleased) {
+            // The mouse is no longer "just" released going forward
+            this.mouseJustReleased = false;
 
             if (!this.player) return;
 
             const playerPos = this.player.body.getPosition();
             const targetPos = new planck.Vec2(
-                pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+                mouseLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
+                mouseLevelRelativePositionInPixels.y / Config.PixelsPerMeter
             );
             const delta = targetPos.clone().sub(playerPos);
             const distance = delta.length();
 
-            // If the last good pointer position's distance is insignificant from the player, zero out linear velocity
+            // If the last good mouse position's distance is insignificant from the player, zero out linear velocity
             if (distance <= 0.15) {
                 this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
             }
@@ -661,40 +664,46 @@ export class World {
         this.instantlyCenterCamera();
     }
 
-    /**
-     * Handles pointer events: translates screen coordinates to world coordinates
-     * and applies impulses affecting the player.
-     * @param {PointerEvent} e - The mouse event triggered by user input.
-     */
-    handlePointerDown(e: PointerEvent) {
+    handleMouseDown(e: MouseEvent) {
+        console.log("MOUSE DOWN");
         if (!this.player || !this.worldContainer || !this.app) return;
 
-        // Set the flag for the pointer being down
-        this.isPointerDown = true;
-        this.pointerDownAtLeastOnce = true;
+        // Set the flag for the mouse being down
+        this.isMouseDown = true;
+        this.mouseDownAtLeastOnce = true;
     
-        // Capture the initial pointer location
-        this.updatePointerScreenPosition(e);
+        // Capture the initial mouse location
+        this.updateMouseScreenPosition(e);
     }
 
-    handlePointerUp() {
-        // Flag the pointer as no longer being down
-        this.isPointerDown = false;
-        this.pointerJustReleased = true;
+    handleMouseUp() {
+        console.log("MOUSE UP");
+        // Flag the mouse as no longer being down
+        this.isMouseDown = false;
+        this.mouseJustReleased = true;
     }
 
-    handlePointerMove(e: PointerEvent) {
-        // Only process if the pointer is down
-        if (this.isPointerDown && this.app) {
-           this.updatePointerScreenPosition(e);
+    handleMouseMove(e: MouseEvent) {
+        console.log("MOUSE MOVE");
+        // Only process if the mouse is down
+        if (this.isMouseDown && this.app) {
+           this.updateMouseScreenPosition(e);
         }
     }
 
-    private updatePointerScreenPosition(e: PointerEvent) {
+    handleTouchStart(e: TouchEvent) {
+        console.log("TOUCH START");
+    }
+
+    handleTouchEnd(e: TouchEvent) {
+        console.log("TOUCH END");
+    }
+
+    private updateMouseScreenPosition(e: MouseEvent) {
         if (!this.app) return;
 
         const rect = this.app.canvas.getBoundingClientRect();
-        this.pointerScreenPosition = {
+        this.mouseScreenPosition = {
             x: e.clientX - rect.left,
             y: e.clientY - rect.top
         };

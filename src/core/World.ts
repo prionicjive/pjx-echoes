@@ -55,8 +55,8 @@ export class World {
     // Filters
     // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
-    private entitiesBloomFilter!: BloomFilter;
-    private levelGeometryBloomFilter!: BloomFilter;
+    private blurFiler!: PIXI.BlurFilter;
+    private bloomFilter!: BloomFilter;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -128,35 +128,29 @@ export class World {
         }
 
         // Instantiate filters
+        // TODO Make some of this configurable!
         this.crtFilter = new CRTFilter({
-            curvature: 1,
-            lineWidth: 1.0,
-            lineContrast: 0.25,
-            vignetting: 0.3,
-            vignettingAlpha: 0.4,
+            curvature: 0,
+            lineWidth: 0,
+            lineContrast: 0,
+            vignetting: 0,
             noise: 0.2,
-            noiseSize: 1,
-            time: performance.now() * 0.001
+            noiseSize: 1
         });
 
-        this.entitiesBloomFilter = new BloomFilter({
+        this.bloomFilter = new BloomFilter({
             kernelSize: 5,
             quality: 4,
             resolution: 1.5,
-            strength: 16
+            strength: 12
         });
 
-        
-        this.levelGeometryBloomFilter = new BloomFilter({
-            kernelSize: 11,
-            quality: 4,
-            resolution: 1.5,
-            strength: 32
+        this.blurFiler = new PIXI.BlurFilter({
+            strength: 4
         });
 
-        // Only bloom the entities and level bounds (Not the lights)
-        this.entitiesContainer.filters = [this.entitiesBloomFilter];
-        this.levelGeometryContainer.filters = [this.levelGeometryBloomFilter];
+        // Apply bloom to the world
+        this.worldContainer.filters = [this.bloomFilter];
 
         // Apply the CRT filter to EVERYTHING
         this.app.stage.filters = [this.crtFilter];
@@ -164,7 +158,7 @@ export class World {
 
     /**
      * Resets the game state: clears containers, destroys physics bodies,
- * and generates a fresh level and player.
+     * and generates a fresh level and player.
      */
     private reset() {
         // TODO Consider how / what to reset or destroy and rebuild
@@ -253,8 +247,10 @@ export class World {
 
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
-            this.world,
-            this.entitiesContainer, 
+            this.world, {
+                levelGeometryContainer: this.levelGeometryContainer,
+                entitiesContainer: this.entitiesContainer
+            }, 
             this.rawLevelMap, 
             openSpaces,
             this.mergedEdges
@@ -303,13 +299,13 @@ export class World {
         this.app.stage.addChild(this.worldContainer); // Added directly to the stage
 
         this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
-        this.worldContainer.addChild(this.levelGeometryContainer);
         
         // We MAY want to render without lights
         if (Config.Debug.drawLights) {
             this.worldContainer.addChild(this.lightsContainer); 
-        
+            
         }
+        this.worldContainer.addChild(this.levelGeometryContainer);
         this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
         this.worldContainer.addChild(this.postEntitiesContainer);
@@ -674,10 +670,10 @@ export class World {
         );
     }
 
+    // @ts-ignore
     updatePostProcessing(deltaTime: number) 
     {
         // Update CRT filter
-        this.crtFilter.time += deltaTime; // For animating the CRT effect
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
     
         // TODO Update any other filters

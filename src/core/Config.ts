@@ -163,7 +163,7 @@ export const Config = {
     },
     Debug: {
         drawEdges: true,
-        drawWalls: true,
-        drawLights: false,
+        drawWalls: false,
+        drawLights: true,
     }
 };

@@ -447,10 +447,9 @@ export class World {
 
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
         const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
-        const cameraOffset = { x: this.worldContainer.x, y: this.worldContainer.y };
         const playerScreenPos = {
-            x: playerWorldPos.x + cameraOffset.x,
-            y: playerWorldPos.y + cameraOffset.y
+            x: playerWorldPos.x + levelPosition.x,
+            y: playerWorldPos.y + levelPosition.y
         };
     
         const pointer = this.inputManager.getPointerState();
@@ -459,7 +458,7 @@ export class World {
     
         this.player.handleInput(
             { pointer, swipe, isTouchActive },
-            { levelPosition, cameraOffset, playerScreenPos },
+            { levelPosition, playerScreenPos },
             deltaTime
         );
 
@@ -549,7 +548,7 @@ export class World {
             // Keep camera inside the world edges
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
-
+   
         // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
         this.counteractWorldTransform();
     }

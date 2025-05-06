@@ -16,7 +16,7 @@ export const Config = {
             smoothingSteps: 2 // Try 1-3
         }
     },
-    PixelsPerMeter: 16, // How many pixels represent one physics meter
+    PixelsPerMeter: 32, // How many pixels represent one physics meter
     Camera: {
         lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
         DeadZone: {
@@ -164,7 +164,7 @@ export const Config = {
     },
     Debug: {
         drawEdges: true,
-        drawWalls: false,
+        drawWalls: true,
         drawLights: true,
     }
 };

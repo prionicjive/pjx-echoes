@@ -47,11 +47,11 @@ export class Level {
 
         this.edgesList = edgesList;
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(world, containers.levelGeometryContainer);
+        this.edgesGeometry = this.createLevelEdges(world, containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
-            this.createWalls(levelMap, containers.levelGeometryContainer);
+            this.walls = this.createWalls(levelMap, containers.levelGeometryContainer);
         }
         
         // Create the other various entities
@@ -119,11 +119,11 @@ export class Level {
             body
         });
 
-        this.edgesGeometry = { id, body, graphics: edgeGraphics }
+        return { id, body, graphics: edgeGraphics }
     }
 
     private createWalls(levelMap: number[][], container: PIXI.Container) {
-        this.walls = [];
+        const entitiesToReturn = [];
     
         // Add walls from the map (1 = wall)
         for (let y = 0; y < levelMap.length; y++) {
@@ -140,10 +140,12 @@ export class Level {
                     container.addChild(wall.sprite);
 
                     // Store wall entity for future reference
-                    this.walls.push(wall);
+                    entitiesToReturn.push(wall);
                 }
             }
         }
+
+        return entitiesToReturn;
     }
 
     private createTilesByType(

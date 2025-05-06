@@ -74,7 +74,6 @@ export class Player implements Entity {
         input: { pointer: PointerState, swipe: SwipeState, isTouchActive: boolean },
         context: {
             levelPosition: { x: number, y: number },
-            cameraOffset: { x: number, y: number },
             playerScreenPos: { x: number, y: number }
         },
         deltaTime: number

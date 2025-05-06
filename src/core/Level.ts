@@ -12,7 +12,7 @@ import { Entity } from '../entities/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
-import { Light, StaticLight } from './Light';
+import { Light, LightOptions, StaticLight } from './Light';
 import { EntityFactory } from '../entities/EntityFactory';
 import { EntityUtils } from '../utils/EntityUtils';
 import { EntityType } from '../entities/types';
@@ -55,9 +55,30 @@ export class Level {
         }
         
         // Create the other various entities
-        this.createFinishTiles(validSpaces, containers.entitiesContainer, world);
-        this.createTorchTiles(validSpaces, containers.entitiesContainer);
-        this.createFuelTiles(validSpaces, containers.entitiesContainer, world);
+        this.finishTiles = this.createTilesByType(
+            Config.Finish.type,
+            validSpaces, 
+            Config.FinishTilesDensity,
+            containers.entitiesContainer, 
+            world,
+            Config.FinishLight
+        );
+        this.torchTiles = this.createTilesByType(
+            Config.Torch.type,
+            validSpaces, 
+            Config.TorchesDensity,
+            containers.entitiesContainer, 
+            world,
+            Config.TorchLight
+        );
+        this.fuelTiles = this.createTilesByType(
+            Config.Fuel.type,
+            validSpaces, 
+            Config.FuelTileDensity,
+            containers.entitiesContainer, 
+            world,
+            Config.FuelLight
+        );;
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -125,107 +146,51 @@ export class Level {
         }
     }
 
-    private createFinishTiles(validSpaces: string[], container: PIXI.Container, world: planck.World) {
-        this.finishTiles = [];
-
-        // Randomly place finish tiles in open spaces for the player to reach
-        const numFinishTiles = Math.ceil(validSpaces.length * Config.FinishTilesDensity);
+    private createTilesByType(
+        type: string,
+        validSpaces: string[], 
+        density: number,
+        container: PIXI.Container, 
+        world: planck.World,
+        lightOptions: LightOptions | null = null
+    ): Entity[] {
+        const entitiesToReturn: Entity[] = [];
+    
+        // Randomly place entities in open spaces for the player to reach
+        const numFinishTiles = Math.ceil(validSpaces.length * density);
         for (let i = 0; i < numFinishTiles; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
 
-            const finishTile = EntityFactory.create({
-                id: EntityUtils.generateRandomId(Config.Finish.type),
-                type: Config.Finish.type as EntityType,
+            const entity = EntityFactory.create({
+                id: EntityUtils.generateRandomId(type),
+                type: type as EntityType,
                 x: Number(x),
                 y: Number(y),
                 width: 1,
                 height: 1,
             }, world) as Entity;
 
-            container.addChild(finishTile.sprite);
+            container.addChild(entity.sprite);
 
-            this.finishTiles.push(finishTile);
+            entitiesToReturn.push(entity);
 
-            // Set up lights for finish tiles
-            const finishLight = new StaticLight({
-                x: finishTile.sprite.x / Config.PixelsPerMeter + 0.5,
-                y: finishTile.sprite.y / Config.PixelsPerMeter + 0.5
-            },
-            this.edgesList,
-            Config.FinishLight);
+            if (lightOptions) {
+                // Set up light
+                const lightToCreate = new StaticLight({
+                    x: entity.sprite.x / Config.PixelsPerMeter + 0.5,
+                    y: entity.sprite.y / Config.PixelsPerMeter + 0.5
+                },
+                this.edgesList,
+                lightOptions);
 
-            finishLight.entityId = finishTile.id;
+                lightToCreate.entityId = entity.id;
 
-            this.lights.push(finishLight);
+                this.lights.push(lightToCreate);
+            }
         }
-    }
 
-    private createTorchTiles(validSpaces: string[], container: PIXI.Container) {
-        this.torchTiles = [];
-        
-        // Randomly place torches in open spaces for the player to reach
-        const numTorches = Math.ceil(validSpaces.length * Config.TorchesDensity);
-        for (let i = 0; i < numTorches; i++) {
-            // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-
-            const torch = EntityFactory.create({
-                type: Config.Torch.type as EntityType,
-                id: EntityUtils.generateRandomId(Config.Torch.type),
-                x: Number(x),
-                y: Number(y),
-                width: 1,
-                height: 1,
-            });
-            container.addChild(torch.sprite);
-
-            this.torchTiles.push(torch);
-
-            // Set up torch lights
-            const torchLight = new StaticLight({
-                x: torch.sprite.x / Config.PixelsPerMeter + 0.5,
-                y: torch.sprite.y / Config.PixelsPerMeter + 0.5
-            }, this.edgesList, Config.TorchLight);
-            
-            torchLight.entityId = torch.id;
-            
-            this.lights.push(torchLight);
-        }
-    }
-
-    private createFuelTiles(validSpaces: string[], container: PIXI.Container, world: planck.World) {
-        this.fuelTiles = [];
-
-        // Randomly place fuel tiles in open spaces for the player to reach
-        const numFuelTiles = Math.ceil(validSpaces.length * Config.FuelTileDensity);
-        for (let i = 0; i < numFuelTiles; i++) {
-            // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-            
-            const fuel = EntityFactory.create({
-                id: EntityUtils.generateRandomId(Config.Fuel.type),
-                type: Config.Fuel.type as EntityType,
-                x: Number(x),
-                y: Number(y),
-                width: 1,
-                height: 1,
-            }, world);
-
-            container.addChild(fuel.sprite);
-
-            this.fuelTiles.push(fuel as Entity);
-
-            // Set up fuel lights
-            const fuelLight = new StaticLight({
-                x: fuel.sprite.x / Config.PixelsPerMeter + 0.5,
-                y: fuel.sprite.y / Config.PixelsPerMeter + 0.5
-            }, this.edgesList, Config.FuelLight);
-
-            fuelLight.entityId = fuel.id;
-
-            this.lights.push(fuelLight);
-        }
+        return entitiesToReturn;
     }
 
     getEdgesGeometry(): RenderableGeometry {

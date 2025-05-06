@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 64,       // Width of the generated level (in grid units)
-        height: 64
+        width: 96,       // Width of the generated level (in grid units)
+        height: 96
     },
     MapGeneration: {
         CellularAutomata: {
@@ -16,7 +16,7 @@ export const Config = {
             smoothingSteps: 2 // Try 1-3
         }
     },
-    PixelsPerMeter: 32, // How many pixels represent one physics meter
+    PixelsPerMeter: 16, // How many pixels represent one physics meter
     Camera: {
         lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
         DeadZone: {
@@ -67,7 +67,7 @@ export const Config = {
     Edges: {
         type: "EDGES",
         color: 0x039BDF,
-        thickness: 2
+        thickness: 3
     },
     Textures: {
         player: '/assets/textures/player.png', // Paths to texture assets

@@ -66,7 +66,7 @@ export const Config = {
     },
     Edges: {
         type: "EDGES",
-        color: 0x444444,
+        color: 0x13ff20,
         thickness: 2
     },
     Textures: {

@@ -46,15 +46,14 @@ export class World {
     // Needed for lightmap rendering
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
     private lightmapSprite!: PIXI.Sprite;
-    private blackBgRect!: PIXI.Graphics;
-
+    private transparentBgRect!: PIXI.Graphics;
+    
     // Our home grown particle emitter used for a player trail effect
     private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
-    private blurFiler!: PIXI.BlurFilter;
     private bloomFilter!: BloomFilter;
 
     // Need for viewport calculations
@@ -107,15 +106,15 @@ export class World {
         this.lightmapTexture = PIXI.RenderTexture.create({ width: width, height: height });
         
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
-        this.lightmapSprite.blendMode = 'add'; // Can be either 'multiply' or 'add', depending on the desired effect
+        this.lightmapSprite.blendMode = 'add'; // Additive blending for highly saturated lights
         this.lightmapSprite.width = width; // Make sure the lightmap sprite is as big as the screen
         this.lightmapSprite.height = height;
         this.lightmapSprite.alpha = 1;
 
         // Set up helper background rects
-        this.blackBgRect = new PIXI.Graphics();
-        this.blackBgRect.rect(0, 0, width, height);
-        this.blackBgRect.fill({color: 0x000000, alpha: 0.0});
+        this.transparentBgRect = new PIXI.Graphics();
+        this.transparentBgRect.rect(0, 0, width, height);
+        this.transparentBgRect.fill({color: 0x000000, alpha: 0.0});
     }
 
     private initializePostProcessingFilters() {
@@ -139,10 +138,6 @@ export class World {
             quality: 4,
             resolution: 1.5,
             strength: 12
-        });
-
-        this.blurFiler = new PIXI.BlurFilter({
-            strength: 4
         });
 
         // Apply bloom to the world
@@ -368,7 +363,7 @@ export class World {
      * Instantly centers the camera on the player or the level, depending on which is smaller.
      * Used at game start to avoid jarring camera jumps.
      */
-     instantlyCenterCamera() {
+    private instantlyCenterCamera() {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
         if (!this.player || !this.worldContainer) return;
 
@@ -438,7 +433,7 @@ export class World {
         this.updatePostProcessing(deltaTime);
     }
 
-    processBodiesToDestroy() {
+    private processBodiesToDestroy() {
         this.bodiesToDestroy.forEach(body => {
             if (body) {
                 this.world?.destroyBody(body);
@@ -447,7 +442,7 @@ export class World {
         this.bodiesToDestroy = [];
     }
 
-    updateFromInput(deltaTime: number) {
+    private updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
@@ -472,7 +467,7 @@ export class World {
         this.inputManager.update();
     }
 
-    updateParticleEffects(deltaTime: number) {
+    private updateParticleEffects(deltaTime: number) {
         if (this.player) {
             this.playerTrailEmitter?.setEmitPosition(
                 this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
@@ -485,7 +480,7 @@ export class World {
      /**
      * Handles camera movement each frame, using soft-follow logic and dead zone.
      */
-     updateCamera(deltaTime: number) {
+     private updateCamera(deltaTime: number) {
         // If the level is smaller than the screen, keep it centered.
         // Otherwise, use soft-follow logic with a dead zone to track the player.
 
@@ -639,11 +634,10 @@ export class World {
        }
 
        // Render all lights to the render texture (lightmap)
-       // Clear the RTT to black by rendering the black rectangle first
        this.app.renderer.render({
-            container: this.blackBgRect,
+            container: this.transparentBgRect,
             target: this.lightmapTexture,
-            clear: true // This clears to transparent, but then you immediately draws black over it
+            clear: true
         });
 
         this.app.renderer.render({
@@ -653,7 +647,7 @@ export class World {
         });
     }
 
-    isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
+    private isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
         const x = light.sprite.x;
         const y = light.sprite.y;
         const r = light.radius * Config.PixelsPerMeter; // If radius is in meters
@@ -667,7 +661,7 @@ export class World {
     }
 
     // @ts-ignore
-    updatePostProcessing(deltaTime: number) 
+    private updatePostProcessing(deltaTime: number) 
     {
         // Update CRT filter
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
@@ -694,7 +688,7 @@ export class World {
         this.instantlyCenterCamera();
     }
 
-    resizeTexturesAndGraphicalElements(width: number, height: number) {
+    private resizeTexturesAndGraphicalElements(width: number, height: number) {
         // Recreate the lightmap texture to avoid artifacts
         if (this.lightmapTexture) {
             this.lightmapTexture.destroy(true);
@@ -706,9 +700,9 @@ export class World {
         this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
 
         // Resize backgrounds or overlays used for various post processing effects (and other things)
-        if (this.blackBgRect) {
-            this.blackBgRect.width = width;
-            this.blackBgRect.height = height;
+        if (this.transparentBgRect) {
+            this.transparentBgRect.width = width;
+            this.transparentBgRect.height = height;
         }  
     }
 }

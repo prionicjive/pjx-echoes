@@ -10,7 +10,7 @@ export class EntityFactory {
         switch (desc.type) {
             case 'WALL': {
                 const sprite = SpriteUtils.createSprite({
-                    texture: PIXI.Texture.from(Config.Textures.wall),
+                    texture: PIXI.Texture.from(Config.Textures.block),
                     x: desc.x,
                     y: desc.y,
                     width: desc.width,

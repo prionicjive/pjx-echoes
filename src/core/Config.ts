@@ -50,7 +50,7 @@ export const Config = {
     },
     Wall: {
         type: "WALL",
-        color: 0x444444,  // Tint color for walls
+        color: 0x111111,  // Tint color for walls
     },
     Torch: {
         type: "TORCH",
@@ -66,7 +66,7 @@ export const Config = {
     },
     Edges: {
         type: "EDGES",
-        color: 0x13ff20,
+        color: 0x039BDF,
         thickness: 2
     },
     Textures: {
@@ -75,6 +75,7 @@ export const Config = {
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',
         fuel: '/assets/textures/fuel.png',
+        block: '/assets/textures/block.png',
         Particles: {
             ring: '/assets/textures/particles/ring.png',
             ringSoft: '/assets/textures/particles/ring_soft.png',

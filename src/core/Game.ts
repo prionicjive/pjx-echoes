@@ -81,7 +81,9 @@ export class Game {
         await PIXI.Assets.load(Config.Textures.wall);
         await PIXI.Assets.load(Config.Textures.finish);
         await PIXI.Assets.load(Config.Textures.torch); 
+        await PIXI.Assets.load(Config.Textures.torch); 
         await PIXI.Assets.load(Config.Textures.fuel);
+        await PIXI.Assets.load(Config.Textures.block);
 
         await PIXI.Assets.load(Config.Textures.Particles.ring);
         await PIXI.Assets.load(Config.Textures.Particles.ringSoft);

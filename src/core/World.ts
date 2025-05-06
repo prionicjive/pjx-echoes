@@ -336,7 +336,7 @@ export class World {
             console.log("Player picked up fuel!");
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.worldContainer.removeChild(fuelEntity.sprite);
+            this.entitiesContainer.removeChild(fuelEntity.sprite);
 
             // Remove body
             if (fuelEntity.body) {

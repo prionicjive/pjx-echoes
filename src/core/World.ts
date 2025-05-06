@@ -47,7 +47,6 @@ export class World {
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
     private lightmapSprite!: PIXI.Sprite;
     private blackBgRect!: PIXI.Graphics;
-    private whiteBgRect!: PIXI.Graphics;
 
     // Our home grown particle emitter used for a player trail effect
     private playerTrailEmitter: ParticleEmitter | null = null;
@@ -108,18 +107,15 @@ export class World {
         this.lightmapTexture = PIXI.RenderTexture.create({ width: width, height: height });
         
         this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
-        this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
+        this.lightmapSprite.blendMode = 'add'; // Can be either 'multiply' or 'add', depending on the desired effect
         this.lightmapSprite.width = width; // Make sure the lightmap sprite is as big as the screen
         this.lightmapSprite.height = height;
+        this.lightmapSprite.alpha = 1;
 
-        // Set up white and black background rects
+        // Set up helper background rects
         this.blackBgRect = new PIXI.Graphics();
         this.blackBgRect.rect(0, 0, width, height);
-        this.blackBgRect.fill(0x000000);
-
-        this.whiteBgRect = new PIXI.Graphics();
-        this.whiteBgRect.rect(0, 0, width, height);
-        this.whiteBgRect.fill(0xffffff);
+        this.blackBgRect.fill({color: 0x000000, alpha: 0.0});
     }
 
     private initializePostProcessingFilters() {
@@ -202,8 +198,6 @@ export class World {
         // Add empty containers in the proper order / heiarchy, then we can add directly to the containers as needed
         this.setUpContainersInOrder();
 
-        // Draw a full screen white texture for proper blending effects with post-processing with lights
-        this.lightsContainer.addChild(this.whiteBgRect);
         // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
@@ -299,13 +293,15 @@ export class World {
         this.app.stage.addChild(this.worldContainer); // Added directly to the stage
 
         this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
+        this.worldContainer.addChild(this.levelGeometryContainer);
         
         // We MAY want to render without lights
+        // TODO We might want multiple light containers are different layers with different light colors
         if (Config.Debug.drawLights) {
             this.worldContainer.addChild(this.lightsContainer); 
             
         }
-        this.worldContainer.addChild(this.levelGeometryContainer);
+
         this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
         this.worldContainer.addChild(this.postEntitiesContainer);
@@ -567,7 +563,7 @@ export class World {
         this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
     }
 
-    updateAndRenderLights() {
+    private updateAndRenderLights() {
         // TODO What about handling multiple lights?
         if (!this.playerLight ||  !this.player) return;
 
@@ -643,11 +639,11 @@ export class World {
        }
 
        // Render all lights to the render texture (lightmap)
-       // Clear the RTT to white by rendering the white rectangle first
+       // Clear the RTT to black by rendering the black rectangle first
        this.app.renderer.render({
             container: this.blackBgRect,
             target: this.lightmapTexture,
-            clear: true // This clears to transparent, but then you immediately draw white over it
+            clear: true // This clears to transparent, but then you immediately draws black over it
         });
 
         this.app.renderer.render({
@@ -713,10 +709,6 @@ export class World {
         if (this.blackBgRect) {
             this.blackBgRect.width = width;
             this.blackBgRect.height = height;
-        }
-        if (this.whiteBgRect) {
-            this.whiteBgRect.width = width;
-            this.whiteBgRect.height = height;
-        }   
+        }  
     }
 }

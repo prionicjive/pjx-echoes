@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 96,       // Width of the generated level (in grid units)
-        height: 96
+        width: 64,       // Width of the generated level (in grid units)
+        height: 64
     },
     MapGeneration: {
         CellularAutomata: {
@@ -30,7 +30,8 @@ export const Config = {
             categoryWall: 0x0002,
             categoryEdge: 0x0004,
             categoryFinish: 0x0008,
-            categoryFuel: 0x0010
+            categoryFuel: 0x0010,
+            categorySentry: 0x0020
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
@@ -47,6 +48,11 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
+    },
+    Sentry: {
+        type: "SENTRY",
+        color: 0xBB32FF,  // Tint color for the sentry sprite
+        radius: 0.25,     // Physics radius of the sentry (in meters)
     },
     Wall: {
         type: "WALL",
@@ -71,6 +77,7 @@ export const Config = {
     },
     Textures: {
         player: '/assets/textures/player.png', // Paths to texture assets
+        sentry: '/assets/textures/sentry.png',
         wall: '/assets/textures/wall.png',
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',

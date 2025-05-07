@@ -107,7 +107,7 @@ export class Level {
                 restitution: Config.Physics.Wall.restitution,
                 friction: 0,
                 filterCategoryBits: Config.Physics.Collision.categoryEdge,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer
+                filterMaskBits: Config.Physics.Collision.categoryPlayer | Config.Physics.Collision.categorySentry
             } 
         });
 

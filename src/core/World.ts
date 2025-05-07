@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
-import { Player } from './Player.ts';
+import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
 import { Light } from './Light.ts'; 
@@ -10,12 +10,13 @@ import { MapUtils } from '../utils/MapUtils.ts';
 import { EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
+import { Sentry } from '../entities/Sentry.ts';
+import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
 
 export class World {
     private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-    private player: Player | null = null;
     private level: Level | null = null;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
@@ -24,6 +25,10 @@ export class World {
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
+
+    // Entities
+    private player: Player | null = null;
+    private sentries: Sentry[] = [];
 
     // PIXI Containers different rendering objects / layers
     private worldContainer!: PIXI.Container; // Added to stage directly
@@ -241,14 +246,23 @@ export class World {
         
         // Construct a player at a given location
         this.player = new Player(this.world, this.mergedEdges, this.entitiesContainer, {x: Number(startX), y: Number(startY)}, this.preEntitiesContainer);
+        
+        // Add player's dynamic light to the array if it exists
+        this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
 
-        const playerPos = {
-            x: this.player?.body.getPosition().x,
-            y: this.player?.body.getPosition().y
-        };
+        // Construct the sentries
+        for (let i = 0; i < 20; i++) {
+            // Find random valid start point
+            const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
+            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
+            const sentry = new Sentry(this.world, this.entitiesContainer, {x: Number(spawnX), y: Number(spawnY)}, initialVelocity);
+            this.sentries.push(sentry);
 
-        // Store ALL the dynamic light and static light into two distinct arrays
-        this.dynamicLights = this.player?.dynamicLight ? [this.player.dynamicLight] : [];
+            // Add sentry's dynamic light to the array if it exists
+            sentry.dynamicLight && this.dynamicLights.push(sentry.dynamicLight);
+        }
+
+        // Store  static light
         this.staticLights = this.level.getLights();
 
         // Instantly center camera on player to avoid an initial soft follow
@@ -258,7 +272,10 @@ export class World {
     private tearDownDynamicEntities() {
         this.player?.destroy();
         
-        // TODO Do we need to destroy the player light?
+        this.sentries.forEach((sentry) => {
+            sentry.destroy();
+        });
+        this.sentries = [];
     }
 
     private tearDownContainersInOrder() {
@@ -323,6 +340,17 @@ export class World {
         ) {
             // TODO Handle player hitting a wall
             console.log("Player hit a wall!");
+        } else if (
+            (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
+            (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
+        ) {
+            // TODO Handle player hitting a sentry
+            console.log("Player hit a sentry!");
+        } else if (
+            (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
+        ) {
+            // TODO Handle a sentry hitting another sentry
+            console.log("Sentry hit another sentry!");
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
             (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
@@ -410,6 +438,10 @@ export class World {
         // Update player
         this.player?.update(deltaTime);
     
+        // Update sentries
+        this.sentries.forEach((sentry) => {
+            sentry.update(deltaTime);
+        });
         // TODO Any other entities to update?    
 
         // Update level (For dynamic entities or geometry)

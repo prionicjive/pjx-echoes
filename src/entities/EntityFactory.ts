@@ -3,7 +3,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Config } from '../core/Config';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { Entity, EntityUserData, EntityType } from './types';
+import { Entity, EntityType } from './types';
 
 export interface EntityOptions {
     type: EntityType;
@@ -109,8 +109,8 @@ export class EntityFactory {
             }
             case 'PLAYER': {
                 if (!world) throw new Error('World is required for player entity');
-                const center = new planck.Vec2(desc.x + 0.5, desc.y + 0.5);
                 const radius = desc.radius ?? 0.5;
+                const center = new planck.Vec2(desc.x + radius, desc.y + radius);
                 const color = desc.color ?? Config.Player.color;
 
                 // Create sprite
@@ -133,9 +133,53 @@ export class EntityFactory {
                         density: 1,
                         filterCategoryBits: Config.Physics.Collision.categoryPlayer,
                         filterMaskBits: Config.Physics.Collision.categoryEdge
+                            | Config.Physics.Collision.categorySentry
                             | Config.Physics.Collision.categoryWall
                             | Config.Physics.Collision.categoryFinish
                             | Config.Physics.Collision.categoryFuel
+                    },
+                    linearDamping: desc.linearDamping
+                });
+
+                // Set user data with a self-referencing body
+                body.setUserData({
+                    type: desc.type,
+                    id: desc.id,
+                    sprite,
+                    body
+                });
+
+                return { id: desc.id, sprite, body };
+            }
+            case 'SENTRY': {
+                if (!world) throw new Error('World is required for sentry entity');
+                const radius = desc.radius ?? 0.5;
+                const center = new planck.Vec2(desc.x + radius, desc.y + radius); // The center of a 1x1 meter tile
+                const color = desc.color ?? Config.Sentry.color;
+
+                // Create sprite
+                const sprite = SpriteUtils.createSprite({
+                    texture: PIXI.Texture.from(Config.Textures.player),
+                    x: center.x,
+                    y: center.y,
+                    width: 2 * radius,
+                    height: 2 * radius,
+                    color
+                });
+
+                // Create dynamic body
+                const body = PhysicsUtils.createBody(world, {
+                    type: 'dynamic',
+                    position: center,
+                    circle: { radius },
+                    fixture: {
+                        friction: 0,
+                        density: 1,
+                        filterCategoryBits: Config.Physics.Collision.categorySentry,
+                        filterMaskBits: Config.Physics.Collision.categoryEdge
+                            | Config.Physics.Collision.categoryPlayer
+                            | Config.Physics.Collision.categoryWall
+                            | Config.Physics.Collision.categorySentry
                     },
                     linearDamping: desc.linearDamping
                 });

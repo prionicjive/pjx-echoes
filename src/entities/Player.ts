@@ -6,16 +6,16 @@
  * @module Player
  */
 
-import { Config } from './Config';
-import { Entity, EntityType } from '../entities/types';
+import { Config } from '../core/Config';
+import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
-import { EntityFactory } from '../entities/EntityFactory';
-import { DynamicEntity } from '../entities/DynamicEntity';
+import { EntityFactory } from './EntityFactory';
+import { DynamicEntity } from './DynamicEntity';
 
 /**
  * The Player class implements the controllable player character.
@@ -222,8 +222,8 @@ export class Player extends DynamicEntity implements Entity {
      */
     update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - 0.5) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - 0.5) * Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
         // Call the super to update any particle effects, among other things

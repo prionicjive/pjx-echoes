@@ -14,6 +14,7 @@ import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
+import { EntityFactory } from '../entities/EntityFactory';
 
 /**
  * The Player class implements the controllable player character.
@@ -33,40 +34,19 @@ export class Player implements Entity {
      * @param {Point} spawnPoint - Initial position (in world units).
      */
     constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
-        this.id = EntityUtils.generateRandomId(Config.Player.type);
-        
-        // Place player in the center of the tile
-        const playerRadius = Config.Player.radius;
-        const center = new planck.Vec2(spawnPoint.x + 0.5, spawnPoint.y + 0.5);
-
-        // Generate sprite for the player
-        this.sprite = PIXI.Sprite.from(Config.Textures.player);
-        // Position the sprite to match the physics body
-        this.sprite.x = center.x * Config.PixelsPerMeter;
-        this.sprite.y = center.y * Config.PixelsPerMeter;
-        this.sprite.width = 2 * 0.5 * Config.PixelsPerMeter; // TODO This assme the player's radius is roughly 0.5 meters
-        this.sprite.height = 2 * 0.5 * Config.PixelsPerMeter;
-        this.sprite.tint = Config.Player.color;
-
-        
-        this.body = world.createDynamicBody(center);
-        this.body.setLinearDamping(Config.Physics.Player.linearDamping);
-
-        // Add a circular fixture for collisions
-        this.body.createFixture(new planck.Circle(playerRadius), {
-            friction: 0,
-            density: 1,
-            filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Config.Physics.Collision.categoryEdge | Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
-        });
-
-        this.body.setUserData({
+        const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
-            id: this.id,
-            sprite: this.sprite,
-            body: this.body
-        });
-        
+            id: EntityUtils.generateRandomId(Config.Player.type),
+            x: spawnPoint.x,
+            y: spawnPoint.y,
+            radius: Config.Player.radius,
+            color: Config.Player.color,
+            linearDamping: Config.Physics.Player.linearDamping
+        }, world);
+
+        this.id = entity.id;
+        this.sprite = entity.sprite;
+        this.body = entity.body!;
         container.addChild(this.sprite);
     }
 

@@ -17,18 +17,6 @@ export interface Entity {
     body: planck.Body | null;
 }
 
-export interface EntityOptions {
-    type: EntityType;
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color?: number;
-    // Optionally, add more fields for extensibility
-    [key: string]: any;
-}
-
 export type EntityUserData = {
     type: EntityType;
     id: string;

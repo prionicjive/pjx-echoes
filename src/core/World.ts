@@ -4,11 +4,12 @@ import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
-import { Light, DynamicLight } from './Light.ts'; 
+import { Light } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
+import { LightUtils } from '../utils/LightUtils.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -539,81 +540,31 @@ export class World {
     }
 
     private updateAndRenderLights() {
-        // Get camera offset
         const cameraOffset = {
             x: -this.worldContainer.x,
             y: -this.worldContainer.y
         };
 
-        // See if lights are on screen and render them if they are
-        const screenLeft = -this.worldContainer.x;
-        const screenTop = -this.worldContainer.y;
-        const screenRight = screenLeft + this.viewportWidth;
-        const screenBottom = screenTop + this.viewportHeight;
+        const screenBounds = {
+            left: -this.worldContainer.x,
+            top: -this.worldContainer.y,
+            right: -this.worldContainer.x + this.viewportWidth,
+            bottom: -this.worldContainer.y + this.viewportHeight
+        };
 
-         // Render dynamic lights (Already updated during World.update() call)
-         for (const light of this.dynamicLights) {
-            if (!light) continue;
- 
-            if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
-                 light.sprite.visible = true;
-                 light.mask.visible = true;
- 
-                 const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
-                 const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
- 
-                 light.sprite.x = screenX;
-                 light.sprite.y = screenY;
-                 light.mask.x = screenX;
-                 light.mask.y = screenY;
-                 
-                 light.render();
- 
-                 // Add sprite and mask to the lightmap container
-                 this.tempLightmapContainer.addChild(light.sprite);
-                 this.tempLightmapContainer.addChild(light.mask);
-             } else {
-                 light.sprite.visible = false;
-                 light.mask.visible = false;
-             }
-        }
+        // Clear the lightmap container
+        this.tempLightmapContainer.removeChildren();
 
-        // Process and update all static lights
-        for (const light of this.staticLights) {
-           if (!light) continue;
-           
-           light.update(null);
+        // Render all lights to the lightmap container
+        LightUtils.renderLightsBatch(this.dynamicLights, cameraOffset, screenBounds, this.tempLightmapContainer);
+        LightUtils.renderLightsBatch(this.staticLights, cameraOffset, screenBounds, this.tempLightmapContainer);
 
-           if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
-                light.sprite.visible = true;
-                light.mask.visible = true;
-
-                const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
-                const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
-
-                light.sprite.x = screenX;
-                light.sprite.y = screenY;
-                light.mask.x = screenX;
-                light.mask.y = screenY;
-                
-                light.render();
-
-                // Add sprite and mask to the lightmap container
-                this.tempLightmapContainer.addChild(light.sprite);
-                this.tempLightmapContainer.addChild(light.mask);
-            } else {
-                light.sprite.visible = false;
-                light.mask.visible = false;
-            }
-       }
-
-       // Render all lights to the render texture (lightmap)
+       // Render all lights in the container to the render texture (lightmap)
        this.app.renderer.render({
             container: this.transparentBgRect,
             target: this.lightmapTexture,
             clear: true
         });
-
         this.app.renderer.render({
             container: this.tempLightmapContainer, 
             target: this.lightmapTexture, 
@@ -621,18 +572,7 @@ export class World {
         });
     }
 
-    private isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
-        const x = light.sprite.x;
-        const y = light.sprite.y;
-        const r = light.radius * Config.PixelsPerMeter; // If radius is in meters
     
-        return (
-            x + r > screenLeft &&
-            x - r < screenRight &&
-            y + r > screenTop &&
-            y - r < screenBottom
-        );
-    }
 
     // @ts-ignore
     private updatePostProcessing(deltaTime: number) 

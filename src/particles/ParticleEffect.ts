@@ -1,5 +1,4 @@
 import { Container, Sprite, Color } from 'pixi.js';
-import { Config } from '../core/Config.ts';
 
 export interface ParticleEffectOptions {
     texturePath: string;

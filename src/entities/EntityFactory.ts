@@ -131,6 +131,7 @@ export class EntityFactory {
                     fixture: {
                         friction: 0,
                         density: 1,
+                        restitution: 0, // No bounce
                         filterCategoryBits: Config.Physics.Collision.categoryPlayer,
                         filterMaskBits: Config.Physics.Collision.categoryEdge
                             | Config.Physics.Collision.categorySentry
@@ -175,6 +176,7 @@ export class EntityFactory {
                     fixture: {
                         friction: 0,
                         density: 1,
+                        restitution: 1.0, // Perfect elasticity
                         filterCategoryBits: Config.Physics.Collision.categorySentry,
                         filterMaskBits: Config.Physics.Collision.categoryEdge
                             | Config.Physics.Collision.categoryPlayer

@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 64,       // Width of the generated level (in grid units)
-        height: 64
+        width: 128,       // Width of the generated level (in grid units)
+        height: 128
     },
     MapGeneration: {
         CellularAutomata: {
@@ -53,6 +53,7 @@ export const Config = {
         type: "SENTRY",
         color: 0xBB32FF,  // Tint color for the sentry sprite
         radius: 0.25,     // Physics radius of the sentry (in meters)
+        maxSpeed: 3.00,
     },
     Wall: {
         type: "WALL",
@@ -173,6 +174,7 @@ export const Config = {
     FinishTilesDensity: 0.0001,
     TorchesDensity: 0.0007,
     FuelTileDensity: 0.00065,
+    SentryMaxDensity: 0.0025,
     Movement: {
         Gesture: {
             swipeSpeedScaleExponent: 0.95,

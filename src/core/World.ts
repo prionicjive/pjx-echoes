@@ -251,7 +251,8 @@ export class World {
         this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
 
         // Construct the sentries
-        for (let i = 0; i < 20; i++) {
+        const maxSentries = Math.ceil(Config.SentryMaxDensity * openSpaces.length);
+        for (let i = 0; i < maxSentries; i++) {
             // Find random valid start point
             const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);

@@ -21,21 +21,25 @@ import { Color } from 'pixi.js';
 // TODO Make ParticleEffectOptions more configurable rather than
 // have it defined here.
 const particleEffectOptions: ParticleEffectOptions = {
-    texturePath: Config.Textures.Particles.circleSoft,
+    texturePath: Config.Textures.Particles.ringSoft,
     emitPerSecond: 30,
     maxParticles: 100,
     particleOptions: {
         maxLife: 2,
         startAlpha: 1,
         endAlpha: 0,
-        startScale: 1, // TODO Use to lerp width and height
-        endScale: 0.42,
+        startScaleX: 1,
+        startScaleY: 1,
+        endScaleX: 0.42,
+        endScaleY: 0.42,
         width: Config.Player.radius * 2 * Config.PixelsPerMeter,
         height: Config.Player.radius * 2 * Config.PixelsPerMeter,
         startTint: new Color(Config.Player.color),
         endTint: new Color(0xff13bb), // TODO Just for test, should be configurable
-        startVelocity: {x: 0, y: 0},
-        endVelocity: {x: 0, y: 0}
+        startDirection: {x: 0, y: 0},
+        endDirection: {x: 0, y: 0},
+        startSpeed: 0,
+        endSpeed: 0
     }
 };
 

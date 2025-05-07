@@ -19,14 +19,18 @@ const particleEffectOptions: ParticleEffectOptions = {
         maxLife: 2,
         startAlpha: 1,
         endAlpha: 0,
-        startScale: 1, // TODO Use to lerp width and height
-        endScale: 0.42,
+        startScaleX: 1,
+        startScaleY: 1,
+        endScaleX: 0.42,
+        endScaleY: 0.42,
         width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
         height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
         startTint: new Color(Config.Sentry.color),
         endTint: new Color(0x0000ff), // TODO Just for test, should be configurable
-        startVelocity: {x: 0, y: 0},
-        endVelocity: {x: 0, y: 0}
+        startDirection: {x: 0, y: 0},
+        endDirection: {x: 0, y: 0},
+        startSpeed: 0,
+        endSpeed: 0
     }
 };
 

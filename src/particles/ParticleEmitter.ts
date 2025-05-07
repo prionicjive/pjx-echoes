@@ -12,22 +12,27 @@ interface ParticleOptions {
   maxLife: number;
   startAlpha: number;
   endAlpha: number;
-  startScale: number;
-  endScale: number;
+  startScaleX: number;
+  startScaleY: number;
+  endScaleX: number;
+  endScaleY: number;
   startTint: Color;
   endTint: Color;
   width: number;
   height: number;
-  startVelocity: {x: number, y: number };
-  endVelocity: {x: number, y: number };
+  startSpeed: number;
+  endSpeed: number;
+  startDirection: {x: number, y: number };
+  endDirection: {x: number, y: number };
 }
 
 interface Particle {
   sprite: Sprite;
   alive: boolean;
   life: number;
-  velocity: {x: number, y: number },
   options: ParticleOptions;
+
+  // TODO May want to store more "over time" properties but for not, everything can be calculated on the fly
 }
 
 export class ParticleEffect {
@@ -57,7 +62,6 @@ export class ParticleEffect {
         sprite,
         alive: false,
         life: 0,
-        velocity: { x: 0, y: 0 },
         options: options.particleOptions
       });
     }
@@ -91,14 +95,21 @@ export class ParticleEffect {
 
       const s = particle.sprite;
 
-      s.x += particle.velocity.x * dt;
-      s.y += particle.velocity.y * dt;
+      // Lerp speed and direction
+      const speed = this.lerp(particle.options.startSpeed, particle.options.endSpeed, t);
+      const directionX = this.lerp(particle.options.startDirection.x, particle.options.endDirection.x, t);
+      const directionY = this.lerp(particle.options.startDirection.y, particle.options.endDirection.y, t);
 
+      // Update position based on most recent velocity
+      s.x += directionX * speed * dt;
+      s.y += directionY * speed * dt;
+
+      // Update alpha, scale and tint
       s.alpha = this.lerp(particle.options.startAlpha, particle.options.endAlpha, t);
-      const scale = this.lerp(particle.options.startScale, particle.options.endScale, t);
-      s.width = particle.options.width * scale;
-      s.height = particle.options.height * scale;
-
+      const scaleX = this.lerp(particle.options.startScaleX, particle.options.endScaleX, t);
+      const scaleY = this.lerp(particle.options.startScaleY, particle.options.endScaleY, t);
+      s.width = particle.options.width * scaleX;
+      s.height = particle.options.height * scaleY;
       s.tint = this.lerpColor(particle.options.startTint, particle.options.endTint, t);
     }
   }
@@ -124,8 +135,8 @@ export class ParticleEffect {
     s.visible = true;
     s.alpha = particle.options.startAlpha;
     s.position.set(this.emitPosition.x, this.emitPosition.y);
-    s.width = particle.options.width * particle.options.startScale;
-    s.height = particle.options.height * particle.options.startScale;
+    s.width = particle.options.width * particle.options.startScaleX;
+    s.height = particle.options.height * particle.options.startScaleY;
     s.tint = particle.options.startTint.toNumber();
   }
 
@@ -133,7 +144,7 @@ export class ParticleEffect {
     return a + (b - a) * t;
   }
 
-lerpColor(a: Color, b: Color, t: number): Color {
+private lerpColor(a: Color, b: Color, t: number): Color {
     // Get RGB values as [0, 1]
     const [ar, ag, ab] = a.toRgbArray();
     const [br, bg, bb] = b.toRgbArray();

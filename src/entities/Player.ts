@@ -15,14 +15,19 @@ import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
-import { DynamicEntity } from './DynamicEntity';
+import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 
 /**
  * The Player class implements the controllable player character.
  * Handles physics, rendering, and input-based movement.
  */
 export class Player extends DynamicEntity implements Entity {
-    constructor(world: planck.World, edgesList: Segment[], container: PIXI.Container, spawnPoint: Point, particleContainer: PIXI.Container) {
+    constructor(
+        world: planck.World, 
+        edgesList: Segment[], 
+        spawnPoint: Point,
+        containers: DynamicEntityContainers
+    ) {
         const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
             id: EntityUtils.generateRandomId(Config.Player.type),
@@ -38,13 +43,13 @@ export class Player extends DynamicEntity implements Entity {
             id: entity.id,
             sprite: entity.sprite,
             body: entity.body!,
-            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft),
-            particleContainer,
+            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft), // TODO Break some of this out into ParticleEmitterOptions
+            particleContainer: containers.containerForParticles,
             lightOptions: Config.PlayerLight,
             edgesList
         });
 
-        container.addChild(this.sprite);
+        containers.containerForEntity.addChild(this.sprite);
     }
 
     handleInput(

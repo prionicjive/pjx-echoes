@@ -5,11 +5,17 @@ import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { EntityFactory } from './EntityFactory';
-import { DynamicEntity } from './DynamicEntity';
+import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
 
 export class Sentry extends DynamicEntity implements Entity {
-    constructor(world: planck.World, edgesList: Segment[], container: PIXI.Container, spawnPoint: Point, initialVelocity?: planck.Vec2) {
+    constructor(
+        world: planck.World,
+        edgesList: Segment[], 
+        spawnPoint: Point,
+        containers: DynamicEntityContainers, 
+        initialVelocity?: planck.Vec2
+    ) {
         const entity = EntityFactory.create({
             type: Config.Sentry.type as EntityType,
             id: EntityUtils.generateRandomId(Config.Sentry.type),
@@ -26,6 +32,8 @@ export class Sentry extends DynamicEntity implements Entity {
             body: entity.body!,
             lightOptions: Config.SentryLight,
             edgesList,
+            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft), // TODO Break some of this out into ParticleEmitterOptions
+            particleContainer: containers.containerForParticles,
             entityId: entity.id     
         });
 
@@ -34,7 +42,7 @@ export class Sentry extends DynamicEntity implements Entity {
             this.body.setLinearVelocity(initialVelocity);
         }
 
-        container.addChild(this.sprite);
+        containers.containerForEntity.addChild(this.sprite);
     }
 
     /**

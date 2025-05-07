@@ -245,7 +245,14 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.mergedEdges, this.entitiesContainer, {x: Number(startX), y: Number(startY)}, this.preEntitiesContainer);
+        this.player = new Player(
+            this.world, 
+            this.mergedEdges, 
+            {x: Number(startX), y: Number(startY)}, {
+                containerForEntity: this.entitiesContainer,
+                containerForParticles: this.preEntitiesContainer,
+            }
+        );
         
         // Add player's dynamic light to the array if it exists
         this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
@@ -256,7 +263,15 @@ export class World {
             // Find random valid start point
             const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
-            const sentry = new Sentry(this.world, this.mergedEdges, this.entitiesContainer, {x: Number(spawnX), y: Number(spawnY)}, initialVelocity);
+            const sentry = new Sentry(
+                this.world, 
+                this.mergedEdges, 
+                {x: Number(spawnX), y: Number(spawnY)}, {
+                    containerForEntity: this.entitiesContainer,
+                    containerForParticles: this.preEntitiesContainer,
+                },
+                initialVelocity
+            );
             this.sentries.push(sentry);
 
             // Add sentry's dynamic light to the array if it exists

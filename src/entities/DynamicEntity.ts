@@ -4,6 +4,11 @@ import { ParticleEmitter } from '../particles/ParticleEmitter';
 import { LightOptions, DynamicLight } from '../core/Light';
 import { Segment } from '../utils/types';
 
+export interface DynamicEntityContainers {
+    containerForEntity: PIXI.Container;
+    containerForParticles?: PIXI.Container;
+}
+
 export interface DynamicEntityOptions {
     id: string;
     sprite: PIXI.Sprite;
@@ -28,6 +33,7 @@ export class DynamicEntity {
         this.body = options.body;
 
         // If a particle texture and container are provided, set up an emitter
+        // TODO See if there is a ParticleEffectOptions object AND a container
         if (options.particleTexture && options.particleContainer) {
             this.emitter = new ParticleEmitter(options.particleTexture);
             options.particleContainer.addChild(this.emitter.container);

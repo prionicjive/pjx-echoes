@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 128,       // Width of the generated level (in grid units)
-        height: 128
+        width: 96,       // Width of the generated level (in grid units)
+        height: 96
     },
     MapGeneration: {
         CellularAutomata: {
@@ -50,7 +50,7 @@ export const Config = {
     },
     Wall: {
         type: "WALL",
-        color: 0x444444,  // Tint color for walls
+        color: 0x111111,  // Tint color for walls
     },
     Torch: {
         type: "TORCH",
@@ -66,8 +66,8 @@ export const Config = {
     },
     Edges: {
         type: "EDGES",
-        color: 0x444444,
-        thickness: 2
+        color: 0x039BDF,
+        thickness: 3
     },
     Textures: {
         player: '/assets/textures/player.png', // Paths to texture assets
@@ -75,6 +75,7 @@ export const Config = {
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',
         fuel: '/assets/textures/fuel.png',
+        block: '/assets/textures/block.png',
         Particles: {
             ring: '/assets/textures/particles/ring.png',
             ringSoft: '/assets/textures/particles/ring_soft.png',
@@ -162,7 +163,8 @@ export const Config = {
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
     Debug: {
-        drawEdges: false,
-        drawWalls: true
+        drawEdges: true,
+        drawWalls: true,
+        drawLights: true,
     }
 };

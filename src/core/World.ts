@@ -3,16 +3,16 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from './Player.ts';
 import { Level } from './Level.ts';
-import { Point, Segment } from '../utils/types';
+import { Segment } from '../utils/types';
 import { Light, DynamicLight } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
-import { SwipeGesture } from '../input/SwipeGesture.ts';
+import { InputManager } from '../input/InputManager.ts';
 
 export class World {
-    private app: PIXI.Application | null = null;
+    private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
     private player: Player | null = null;
@@ -20,37 +20,41 @@ export class World {
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
     // Input related
-    private isMouseDown: boolean = false;
-    private mouseScreenPosition: Point = { x: 0, y: 0 };
-    private mouseDownAtLeastOnce: boolean = false;
-    private mouseJustReleased: boolean = false;
-    private swipeGesture: SwipeGesture;
+    private inputManager: InputManager;
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
 
     // PIXI Containers different rendering objects / layers
-    private worldContainer: PIXI.Container;
-    private lightsContainer: PIXI.Container;
+    private worldContainer!: PIXI.Container; // Added to stage directly
+    private bgContainer!: PIXI.Container; // Here and below are added to the world container
+    private lightsContainer!: PIXI.Container;
+    private levelGeometryContainer!: PIXI.Container; 
+    private preEntitiesContainer!: PIXI.Container;
+    private entitiesContainer!: PIXI.Container;
+    private postEntitiesContainer!: PIXI.Container;
+    private fgContainer!: PIXI.Container; // Final world container / layer
+    private uiContainer!: PIXI.Container; // Added lastly to the stage directly
+
+    // Scratch containers never added anywhere, used for temporary rendering
+    private tempLightmapContainer!: PIXI.Container; // Not directly added to world
     
     // Lights
     private playerLight: Light | null = null;
     private staticLights: Light[] = [];
 
     // Needed for lightmap rendering
-    private tempLightmapContainer: PIXI.Container;
-    private lightmapTexture: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
-    private lightmapSprite: PIXI.Sprite;
-    private blackBgRect: PIXI.Graphics;
-    private whiteBgRect: PIXI.Graphics;
-
+    private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
+    private lightmapSprite!: PIXI.Sprite;
+    private transparentBgRect!: PIXI.Graphics;
+    
     // Our home grown particle emitter used for a player trail effect
     private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
-    private crtFilter: CRTFilter;
-    private bloomFilter: BloomFilter;
+    private crtFilter!: CRTFilter;
+    private bloomFilter!: BloomFilter;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -58,67 +62,22 @@ export class World {
 
     constructor(app: PIXI.Application) {
         this.app = app;
-        
-        // Set up input event handlers
-        this.app.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.app.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.app.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
 
-        this.app.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
-        this.app.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        // Initialize input manager
+        this.inputManager = new InputManager(app.canvas);
 
         // Instantiate the various PIXI containers
-        this.lightsContainer = new PIXI.Container();
-        this.worldContainer = new PIXI.Container();
-
+        this.initializeContainers();
+        
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
 
-        // Set up basic lightmap-related things
-        // This doesn't get added to the world, it is just used for rendering lights to a texture
-        this.lightmapTexture = PIXI.RenderTexture.create({ width: screenWidth, height: screenHeight });
-        this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
-        this.lightmapSprite.blendMode = 'multiply'; // Can be either 'multiply' or 'add', depending on the desired effect
-        this.lightmapSprite.width = screenWidth; // Make sure the lightmap sprite is as big as the screen
-        this.lightmapSprite.height = screenHeight;
-        this.tempLightmapContainer = new PIXI.Container();
+        this.initializeTexturesAndGraphicalElements(this.viewportWidth, this.viewportHeight);
 
-        // Set up white and black background rects
-        this.blackBgRect = new PIXI.Graphics();
-        this.blackBgRect.rect(0, 0, screenWidth, screenHeight);
-        this.blackBgRect.fill(0x000000);
-        this.whiteBgRect = new PIXI.Graphics();
-        this.whiteBgRect.rect(0, 0, screenWidth, screenHeight);
-        this.whiteBgRect.fill(0xffffff);
-
-        // Instantiate filters
-        this.crtFilter = new CRTFilter({
-            curvature: 1,
-            lineWidth: 1.0,
-            lineContrast: 0.25,
-            vignetting: 0.3,
-            vignettingAlpha: 0.4,
-            noise: 0.2,
-            noiseSize: 1,
-            time: performance.now() * 0.001
-        });
-
-        this.bloomFilter = new BloomFilter({
-            kernelSize: 5,
-            quality: 4,
-            resolution: 1.5,
-            strength: 16
-        });
-
-        // Set up post-processing
+        // Create post-processing
         // TODO Find out how to dynamically alter these
-        this.setupPostProcessingFilters();
-
-        // Set up swipe gesture
-        this.swipeGesture = new SwipeGesture();
+        this.initializePostProcessingFilters();
 
         // TODO Handle additional setup if needed
 
@@ -126,15 +85,62 @@ export class World {
         this.reset();
     }
 
-    /**
-     * Sets up post-processing filters for the game.
-     */
-    setupPostProcessingFilters() {
+    private initializeContainers() {
+        this.tempLightmapContainer = new PIXI.Container(); // Not directly added to anything, only used for render to texture / post processing
+        
+        this.worldContainer = new PIXI.Container(); // Added directly to the stage
+        this.bgContainer = new PIXI.Container(); // Here and below are added to the world container
+        this.lightsContainer = new PIXI.Container();
+        this.levelGeometryContainer = new PIXI.Container();
+        this.preEntitiesContainer = new PIXI.Container();
+        this.entitiesContainer = new PIXI.Container();
+        this.postEntitiesContainer = new PIXI.Container();
+        this.fgContainer = new PIXI.Container(); // Final world container / layer
+        
+        this.uiContainer = new PIXI.Container(); // Added lastly to the stage directly
+    }
+
+    private initializeTexturesAndGraphicalElements(width: number, height: number) {
+        // Set up basic lightmap-related things
+        // This doesn't get added to the world, it is just used for rendering lights to a texture
+        this.lightmapTexture = PIXI.RenderTexture.create({ width: width, height: height });
+        
+        this.lightmapSprite = new PIXI.Sprite(this.lightmapTexture);
+        this.lightmapSprite.blendMode = 'add'; // Additive blending for highly saturated lights
+        this.lightmapSprite.width = width; // Make sure the lightmap sprite is as big as the screen
+        this.lightmapSprite.height = height;
+        this.lightmapSprite.alpha = 1;
+
+        // Set up helper background rects
+        this.transparentBgRect = new PIXI.Graphics();
+        this.transparentBgRect.rect(0, 0, width, height);
+        this.transparentBgRect.fill({color: 0x000000, alpha: 0.0});
+    }
+
+    private initializePostProcessingFilters() {
         if(!this.app) {
             return;
         }
 
-        // Only bloom the world (Not the lights)
+        // Instantiate filters
+        // TODO Make some of this configurable!
+        this.crtFilter = new CRTFilter({
+            curvature: 0,
+            lineWidth: 0,
+            lineContrast: 0,
+            vignetting: 0,
+            noise: 0.2,
+            noiseSize: 1
+        });
+
+        this.bloomFilter = new BloomFilter({
+            kernelSize: 5,
+            quality: 4,
+            resolution: 1.5,
+            strength: 12
+        });
+
+        // Apply bloom to the world
         this.worldContainer.filters = [this.bloomFilter];
 
         // Apply the CRT filter to EVERYTHING
@@ -143,43 +149,28 @@ export class World {
 
     /**
      * Resets the game state: clears containers, destroys physics bodies,
- * and generates a fresh level and player.
+     * and generates a fresh level and player.
      */
-    reset() {
+    private reset() {
         // TODO Consider how / what to reset or destroy and rebuild
         if (!this.app) return;
 
-        // Destroy any particle related things
-        this.playerTrailEmitter?.destroy();
-        
-        // Empty the various PIXI containers
-        this.tempLightmapContainer.removeChildren();
-        this.lightsContainer.removeChildren();
-        this.worldContainer.removeChildren();
-        this.app.stage.removeChildren();
+        // Tear down the old world
+        this.tearDownWorld();
 
         // ------------------------
         // NOW, it's time to add things / reinitialize the world
         // ------------------------
+        this.setUpWorld();
+    }
 
-        // Draw a full screen white texture for proper blending effects with post-processing with lights
-        this.lightsContainer.addChild(this.whiteBgRect);
-
-        // Setup the world container as a big container that will hold the entire world with all its entities (like a big carpet I can slide around)
-        // ORDER IS IMPORTANT
-        this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
-        // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
-
-        // TODO For the next two lines, figure out best / better way to do layering with containers
-        // FIRST, add the lights container to the stage
-        this.app.stage.addChild(this.lightsContainer);
-
-        // THEN, add this mondo world container add the only direct child to the  stage
-        this.app.stage.addChild(this.worldContainer);
-
-        // Try out homegrown particle emitter
-        this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
-        this.worldContainer.addChild(this.playerTrailEmitter.container);
+    private tearDownWorld() {
+        // Destroy any particle related things
+        this.playerTrailEmitter?.destroy();
+        this.playerTrailEmitter = null;
+        
+        // Empty the various PIXI containers in order
+        this.tearDownContainersInOrder();
         
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -192,9 +183,24 @@ export class World {
         }
         this.bodiesToDestroy = [];
 
+        // Remove any listeners
         if (this.world) {
             this.world.off('begin-contact', this.onBeginContact.bind(this));
         }
+    }
+
+    private setUpWorld() {
+        // Add empty containers in the proper order / heiarchy, then we can add directly to the containers as needed
+        this.setUpContainersInOrder();
+
+        // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
+        this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
+        // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
+
+        // Any immediate particle effects (like particle trail player)
+        // TODO Set up particle effects and add them to the appropriate layer
+        this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
+        this.preEntitiesContainer.addChild(this.playerTrailEmitter.container);
 
         // TODO This may be too drastic, but regenerate entire Planck world
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
@@ -230,8 +236,10 @@ export class World {
 
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
-            this.world,
-            this.worldContainer, 
+            this.world, {
+                levelGeometryContainer: this.levelGeometryContainer,
+                entitiesContainer: this.entitiesContainer
+            }, 
             this.rawLevelMap, 
             openSpaces,
             this.mergedEdges
@@ -243,7 +251,7 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.worldContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)});
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -255,7 +263,46 @@ export class World {
         this.playerLight.entityId = this.player?.id;
 
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();  
+        this.instantlyCenterCamera();      
+    }
+
+    private tearDownContainersInOrder() {
+        this.tempLightmapContainer.removeChildren();
+        
+        this.fgContainer.removeChildren();
+        this.postEntitiesContainer.removeChildren();        
+        this.entitiesContainer.removeChildren();
+        this.preEntitiesContainer.removeChildren();
+        this.levelGeometryContainer.removeChildren();
+        this.lightsContainer.removeChildren();
+        this.bgContainer.removeChildren();
+        this.worldContainer.removeChildren();
+        
+        this.uiContainer.removeChildren();
+        this.app.stage.removeChildren();
+    }
+
+    private setUpContainersInOrder() {
+        // Add the world container as a big container that will hold the entire world with all its entities and layer
+        // that can mimic having a camera, serving as a big carpet that can slide around above the stage.
+        this.app.stage.addChild(this.worldContainer); // Added directly to the stage
+
+        this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
+        this.worldContainer.addChild(this.levelGeometryContainer);
+        
+        // We MAY want to render without lights
+        // TODO We might want multiple light containers are different layers with different light colors
+        if (Config.Debug.drawLights) {
+            this.worldContainer.addChild(this.lightsContainer); 
+            
+        }
+
+        this.worldContainer.addChild(this.preEntitiesContainer);
+        this.worldContainer.addChild(this.entitiesContainer);
+        this.worldContainer.addChild(this.postEntitiesContainer);
+        this.worldContainer.addChild(this.fgContainer); // End of world containers / layers
+        
+        this.app.stage.addChild(this.uiContainer); // Added lastly to the stage directly
     }
     
     /**
@@ -263,7 +310,7 @@ export class World {
      * or interacting with walls.
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
-    onBeginContact(contact: planck.Contact) {
+    private onBeginContact(contact: planck.Contact) {
         const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
@@ -289,7 +336,7 @@ export class World {
             console.log("Player picked up fuel!");
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.worldContainer.removeChild(fuelEntity.sprite);
+            this.entitiesContainer.removeChild(fuelEntity.sprite);
 
             // Remove body
             if (fuelEntity.body) {
@@ -316,7 +363,7 @@ export class World {
      * Instantly centers the camera on the player or the level, depending on which is smaller.
      * Used at game start to avoid jarring camera jumps.
      */
-     instantlyCenterCamera() {
+    private instantlyCenterCamera() {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
         if (!this.player || !this.worldContainer) return;
 
@@ -356,26 +403,70 @@ export class World {
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) {
-        // Destroy any flagged bodies
+        // Destroy any bodies that need to be destroyed
+        this.processBodiesToDestroy();
+        
+        // Handle input, as this might affect the physics
+        this.updateFromInput(deltaTime);
+
+        // Step the physics
+        this.world?.step(deltaTime);
+    
+        // Update player
+        this.player?.update();
+    
+        // TODO Any other entities to update?    
+
+        // Update level (For dynamic entities or geometry)
+        this.level?.update();
+
+        // Update particle related things
+        this.updateParticleEffects(deltaTime);;
+
+        // Update camera
+        this.updateCamera(deltaTime);
+
+        // Update and render the lights
+        this.updateAndRenderLights();
+
+        // Update anything needed for post processing
+        this.updatePostProcessing(deltaTime);
+    }
+
+    private processBodiesToDestroy() {
         this.bodiesToDestroy.forEach(body => {
             if (body) {
                 this.world?.destroyBody(body);
             }
         });
         this.bodiesToDestroy = [];
-        
-        // Handle input, as this might affect the physics
-        this.updateFromNonTouchInput(deltaTime);
+    }
 
-        // Step the physics
-        this.world?.step(deltaTime);
-        // Update player and level
-        this.player?.update();
-        this.level?.update();
+    private updateFromInput(deltaTime: number) {
+        if (!this.player || !this.player.sprite) return;
 
-        // Update particle related things
+        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
+        const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
+        const playerScreenPos = {
+            x: playerWorldPos.x + levelPosition.x,
+            y: playerWorldPos.y + levelPosition.y
+        };
+    
+        const pointer = this.inputManager.getPointerState();
+        const swipe = this.inputManager.getSwipeState();
+        const isTouchActive = this.inputManager.getIsTouchActive();
+    
+        this.player.handleInput(
+            { pointer, swipe, isTouchActive },
+            { levelPosition, playerScreenPos },
+            deltaTime
+        );
 
-        // Update the player trail emitter
+        // Reset flags
+        this.inputManager.update();
+    }
+
+    private updateParticleEffects(deltaTime: number) {
         if (this.player) {
             this.playerTrailEmitter?.setEmitPosition(
                 this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
@@ -383,86 +474,12 @@ export class World {
             );
         }
         this.playerTrailEmitter?.update(deltaTime);
-
-        // TODO Any other entities to update?
-        // Update camera
-        this.updateCamera(deltaTime);
-
-        // Update and render the lights
-        this.updateAndRenderLights();
-
-        // TODO Any other entities to update?
-    
-        // Update any changing values for filters
-        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
-    }
-
-    /**
-     * Updates the world based on non-touchinput, such as applying impulses to the player.
-     */
-    updateFromNonTouchInput(deltaTime: number) {
-        const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
-
-        // Convert screen click to level-relative position
-        const mouseLevelRelativePositionInPixels ={
-            x: this.mouseScreenPosition.x - levelPosition.x,
-            y: this.mouseScreenPosition.y - levelPosition.y
-        };
-
-        if (!this.player || !this.player.sprite) return;
-
-        const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
-        const cameraOffset = { x: this.worldContainer.x, y: this.worldContainer.y };
-        const playerScreenPos = {
-            x: playerWorldPos.x + cameraOffset.x,
-            y: playerWorldPos.y + cameraOffset.y
-        };
-
-        const dx = playerScreenPos.x - this.mouseScreenPosition.x;
-        const dy = playerScreenPos.y - this.mouseScreenPosition.y;
-        const screenDistance = Math.sqrt(dx * dx + dy * dy);
-
-        const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
-
-        // Only update if the mouse is down and (player is not "at" the mouse in screen space OR we don't want to change instantly)
-        if (this.isMouseDown) {
-            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
-                // Apply force to the player
-                if (Config.Movement.towardsPoint) {
-                    this.player.applyForceTowards(mouseLevelRelativePositionInPixels, deltaTime);
-                } else {
-                    this.player.applyForceAwayFrom(mouseLevelRelativePositionInPixels, deltaTime);
-                }
-            } else {
-                // Otherwise, we are too close and need to "stop" the player
-                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-        } else if(this.mouseDownAtLeastOnce && this.mouseJustReleased) {
-            // The mouse is no longer "just" released going forward
-            this.mouseJustReleased = false;
-
-            if (!this.player) return;
-
-            const playerPos = this.player.body.getPosition();
-            const targetPos = new planck.Vec2(
-                mouseLevelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                mouseLevelRelativePositionInPixels.y / Config.PixelsPerMeter
-            );
-            const delta = targetPos.clone().sub(playerPos);
-            const distance = delta.length();
-
-            // If the last good mouse position's distance is insignificant from the player, zero out linear velocity
-            if (distance <= 0.15) {
-                this.player.body.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-
-        }
     }
 
      /**
      * Handles camera movement each frame, using soft-follow logic and dead zone.
      */
-     updateCamera(deltaTime: number) {
+     private updateCamera(deltaTime: number) {
         // If the level is smaller than the screen, keep it centered.
         // Otherwise, use soft-follow logic with a dead zone to track the player.
 
@@ -474,7 +491,7 @@ export class World {
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
-        // Center if level is smaller than screen
+        // Center on x-axis if level is narrower than screen
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
@@ -503,6 +520,7 @@ export class World {
             this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
         }
 
+        // Center on y-axis if level is shorter than screen
         if (levelHeightInPixels <= screenHeight) {
             this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
@@ -530,12 +548,21 @@ export class World {
             // Keep camera inside the world edges
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
         }
+   
+        // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
+        this.counteractWorldTransform();
     }
 
-    updateAndRenderLights() {
+    private counteractWorldTransform() {
+        this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
+    }
+
+    private updateAndRenderLights() {
         // TODO What about handling multiple lights?
         if (!this.playerLight ||  !this.player) return;
 
+        // TODO Genericize this to support any dynamic lights on dynamic entities we might have
+        // TODO Maybe body/entity + light object
         const playerPos = {
             x: this.player?.body.getPosition().x,
             y: this.player?.body.getPosition().y
@@ -606,21 +633,20 @@ export class World {
        }
 
        // Render all lights to the render texture (lightmap)
-       // Clear the RTT to white by rendering the white rectangle first
-       this.app?.renderer.render({
-            container: this.blackBgRect,
+       this.app.renderer.render({
+            container: this.transparentBgRect,
             target: this.lightmapTexture,
-            clear: true // This clears to transparent, but then you immediately draw white over it
+            clear: true
         });
 
-        this.app?.renderer.render({
+        this.app.renderer.render({
             container: this.tempLightmapContainer, 
             target: this.lightmapTexture, 
             clear: false
         });
     }
 
-    isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
+    private isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
         const x = light.sprite.x;
         const y = light.sprite.y;
         const r = light.radius * Config.PixelsPerMeter; // If radius is in meters
@@ -631,6 +657,15 @@ export class World {
             y + r > screenTop &&
             y - r < screenBottom
         );
+    }
+
+    // @ts-ignore
+    private updatePostProcessing(deltaTime: number) 
+    {
+        // Update CRT filter
+        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
+    
+        // TODO Update any other filters
     }
 
     /**
@@ -644,7 +679,15 @@ export class World {
         // Update viewport dimensions
         this.viewportWidth = width;
         this.viewportHeight = height;
+
+        // Resize textures, render textures and graphical helper elements
+        this.resizeTexturesAndGraphicalElements(width, height);
     
+        // Optionally, recenter camera or update camera logic
+        this.instantlyCenterCamera();
+    }
+
+    private resizeTexturesAndGraphicalElements(width: number, height: number) {
         // Recreate the lightmap texture to avoid artifacts
         if (this.lightmapTexture) {
             this.lightmapTexture.destroy(true);
@@ -654,88 +697,11 @@ export class World {
         this.lightmapSprite.width = width;
         this.lightmapSprite.height = height;
         this.lightmapSprite.anchor.set(0, 0); // Ensure anchor is top-left
-    
+
         // Resize backgrounds or overlays used for various post processing effects (and other things)
-        if (this.blackBgRect) {
-            this.blackBgRect.width = width;
-            this.blackBgRect.height = height;
-        }
-        if (this.whiteBgRect) {
-            this.whiteBgRect.width = width;
-            this.whiteBgRect.height = height;
-        }
-    
-        // Optionally, recenter camera or update camera logic
-        this.instantlyCenterCamera();
-    }
-
-    handleMouseDown(e: MouseEvent) {
-        if (!this.player || !this.worldContainer || !this.app) return;
-
-        // Set the flag for the mouse being down
-        this.isMouseDown = true;
-        this.mouseDownAtLeastOnce = true;
-    
-        // Capture the initial mouse location
-        this.updateMouseScreenPosition(e);
-    }
-
-    handleMouseUp() {
-        // Flag the mouse as no longer being down
-        this.isMouseDown = false;
-        this.mouseJustReleased = true;
-    }
-
-    handleMouseMove(e: MouseEvent) {
-        // Only process if the mouse is down
-        if (this.isMouseDown && this.app) {
-           this.updateMouseScreenPosition(e);
-        }
-    }
-
-    handleTouchStart(e: TouchEvent) {
-        if (!this.app) return;
-
-        const touch = e.touches[0];
-        const rect = this.app.canvas.getBoundingClientRect();
-        this.swipeGesture.onTouchStart(
-            touch.clientX - rect.left,
-            touch.clientY - rect.top
-        );
-    }
-    
-    handleTouchEnd(e: TouchEvent) {
-        if (!this.app) return;
-        
-        const touch = e.changedTouches[0];
-        const rect = this.app.canvas.getBoundingClientRect();
-        const swipe = this.swipeGesture.onTouchEnd(
-            touch.clientX - rect.left,
-            touch.clientY - rect.top
-        );
-        if (swipe) {
-            // Convert to world units
-            let vx = swipe.velocityX / Config.PixelsPerMeter;
-            let vy = swipe.velocityY / Config.PixelsPerMeter;
-    
-            // This exaggerates fast flicks, and damps slow ones
-            const speed = Math.sqrt(vx * vx + vy * vy);
-            const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
-            vx = (vx / speed) * nonlinearScale;
-            vy = (vy / speed) * nonlinearScale;
-    
-            // Apply to player body
-            this.player?.body.setLinearVelocity(new planck.Vec2(vx, vy));
-        }
-    }
-
-    private updateMouseScreenPosition(e: MouseEvent) {
-        if (!this.app) return;
-
-        const rect = this.app.canvas.getBoundingClientRect();
-        this.mouseScreenPosition = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
+        if (this.transparentBgRect) {
+            this.transparentBgRect.width = width;
+            this.transparentBgRect.height = height;
+        }  
     }
 }

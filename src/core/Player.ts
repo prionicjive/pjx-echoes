@@ -13,6 +13,7 @@ import { Point } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { PointerState, SwipeState } from '../input/InputManager';
 
 /**
  * The Player class implements the controllable player character.
@@ -67,6 +68,77 @@ export class Player implements Entity {
         });
         
         container.addChild(this.sprite);
+    }
+
+    handleInput(
+        input: { pointer: PointerState, swipe: SwipeState, isTouchActive: boolean },
+        context: {
+            levelPosition: { x: number, y: number },
+            playerScreenPos: { x: number, y: number }
+        },
+        deltaTime: number
+    ) {
+        // If a swipe just happened, skip any pointer logic and handle the swipe
+        if (input.swipe.detected) {
+            this.handleSwipe(input.swipe);
+            return;
+        }
+        
+        // If we are in touch mode, skip any pointer logic
+        if (input.isTouchActive) {
+            return;
+        }
+
+        // Convert pointer to level-relative position
+        const pointerLevelRelativePositionInPixels = {
+            x: input.pointer.screen.x - context.levelPosition.x,
+            y: input.pointer.screen.y - context.levelPosition.y
+        };
+    
+        const dx = context.playerScreenPos.x - input.pointer.screen.x;
+        const dy = context.playerScreenPos.y - input.pointer.screen.y;
+        const screenDistance = Math.sqrt(dx * dx + dy * dy);
+    
+        const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
+    
+        if (input.pointer.isDown) {
+            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
+                if (Config.Movement.towardsPoint) {
+                    this.applyForceTowards(pointerLevelRelativePositionInPixels, deltaTime);
+                } else {
+                    this.applyForceAwayFrom(pointerLevelRelativePositionInPixels, deltaTime);
+                }
+            } else {
+                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+            }
+        } else if (input.pointer.justReleased) {
+            // On mouse up, stop player if close enough
+            const playerPos = this.body.getPosition();
+            const targetPos = new planck.Vec2(
+                pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter,
+                pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+            );
+            const delta = targetPos.clone().sub(playerPos);
+            const distance = delta.length();
+            if (distance <= 0.15) { // TODO Make this configurable as dead zone
+                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+            }
+        }
+    }
+
+    handleSwipe(swipe: SwipeState) {
+     // Convert to world units
+        let vx = swipe.velocityX / Config.PixelsPerMeter;
+        let vy = swipe.velocityY / Config.PixelsPerMeter;
+         
+        // This exaggerates fast flicks, and damps slow ones
+        const speed = Math.sqrt(vx * vx + vy * vy);
+        const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
+        vx = (vx / speed) * nonlinearScale;
+        vy = (vy / speed) * nonlinearScale;
+         
+        // Apply to player body
+        this.body.setLinearVelocity(new planck.Vec2(vx, vy));   
     }
 
     applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {

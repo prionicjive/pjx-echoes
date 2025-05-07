@@ -78,8 +78,19 @@ export class PhysicsUtils {
         return new planck.Vec2(vec.x / length, vec.y / length);
     }
 
-    static randomUnitVector(): planck.Vec2 {
-        const angle = Math.random() * 2 * Math.PI;
-        return new planck.Vec2(Math.cos(angle), Math.sin(angle));
+    static randomUnitVector(minAngleFromAxis: number = 0.17): planck.Vec2 {
+        // minAngleFromAxis in radians, default is about 10 degrees (Roughly .17 radians)
+        // Ensures vector is not too close to horizontal or vertical axes
+        while (true) {
+            const angle = Math.random() * 2 * Math.PI;
+            const angleMod = angle % (Math.PI / 2);
+            if (
+                angleMod > minAngleFromAxis &&
+                angleMod < (Math.PI / 2) - minAngleFromAxis
+            ) {
+                return new planck.Vec2(Math.cos(angle), Math.sin(angle));
+            }
+            // Otherwise, re-roll!
+        }
     }
 }

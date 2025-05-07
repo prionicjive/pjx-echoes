@@ -184,9 +184,8 @@ export class Level {
                     y: entity.sprite.y / Config.PixelsPerMeter + 0.5
                 },
                 this.edgesList,
-                lightOptions);
-
-                lightToCreate.entityId = entity.id;
+                lightOptions,
+                entity.id);
 
                 this.lights.push(lightToCreate);
             }

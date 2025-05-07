@@ -25,7 +25,8 @@ export class Sentry extends DynamicEntity implements Entity {
             sprite: entity.sprite,
             body: entity.body!,
             lightOptions: Config.SentryLight,
-            edgesList       
+            edgesList,
+            entityId: entity.id     
         });
 
         // Set an initial velocity if provided

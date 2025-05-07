@@ -12,6 +12,7 @@ export interface DynamicEntityOptions {
     particleContainer?: PIXI.Container; // Where to add the emitter's container
     lightOptions?: LightOptions;
     edgesList?: Segment[]; // For shadow casting, etc.
+    entityId?: string; // Needed to link lights to entity
 }
 
 export class DynamicEntity {
@@ -37,7 +38,8 @@ export class DynamicEntity {
             this.dynamicLight = new DynamicLight(
                 { x: this.body.getPosition().x, y: this.body.getPosition().y },
                 options.edgesList,
-                options.lightOptions
+                options.lightOptions,
+                options.entityId ?? ""
             );
         }
     }

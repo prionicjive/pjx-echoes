@@ -49,7 +49,7 @@ export abstract class Light {
     protected alphaTween?: gsap.core.Tween;
     protected tweenables: { radius: number, tint: number, alpha: number };
 
-    constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
+    constructor(pos: Point, collisionData: Segment[], options: LightOptions, entityId: string) {
         if (new.target === Light) {
             throw new Error("Light cannot be instantiated directly");
         }
@@ -86,6 +86,9 @@ export abstract class Light {
             tint: this.tint
         };
         this.setupTweens();
+
+        // Link with entity if needed
+        this.entityId = entityId;
 
         // TODO Any additional setup / initialization
     }
@@ -138,8 +141,8 @@ export abstract class Light {
 }
 
 export class DynamicLight extends Light {    
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions) {;
-        super(pos, collisionData, options);
+    constructor(pos: Point, collisionData: Segment[],options: LightOptions, entityId: string = "") {;
+        super(pos, collisionData, options, entityId);
         // TODO Any additional setup / initialization
     }
 
@@ -221,8 +224,8 @@ export class StaticLight extends Light {
     // which would be used to invalidate and regenerate the light points
     private lastPos: Point;
    
-    constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
-        super(pos, collisionData, options);
+    constructor(pos: Point, collisionData: Segment[], options: LightOptions, entityId: string = "") {
+        super(pos, collisionData, options, entityId);
 
         // Set up values we assume will RARELY change
         this.lastPos = pos;

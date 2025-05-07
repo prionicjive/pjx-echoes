@@ -345,8 +345,41 @@ export class World {
             (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
             (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
         ) {
-            // TODO Handle player hitting a sentry
+            // Handle player hitting a sentry
             console.log("Player hit a sentry!");
+
+            const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
+            this.entitiesContainer.removeChild(sentryEntity.sprite);
+
+            // Remove body
+            if (sentryEntity.body) {
+                this.world?.destroyBody(sentryEntity.body);
+            }
+
+            // Remove light (if it exists)
+            let index = this.dynamicLights.findIndex((light) => {
+                return light.entityId === sentryEntity.id;
+            });
+
+            if (index !== -1) {
+                const [light] = this.dynamicLights.splice(index, 1);
+                light.mask.destroy();
+                light.sprite.destroy();
+            }
+
+            // Now destroy the sentry (With any particle emitter associated)
+            // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
+            index = this.sentries.findIndex((sentry) => {
+                return sentry.id === sentryEntity.id;
+            });
+
+            if (index !== -1) {
+                const [sentry] = this.sentries.splice(index, 1);
+                sentry.destroy();
+            }
+
+            // Lastly, flag the body of the fuel entity for destruction
+            this.bodiesToDestroy.push(sentryEntity.body);
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {

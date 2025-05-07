@@ -371,15 +371,21 @@ export class World {
                 this.world?.destroyBody(sentryEntity.body);
             }
 
-            // Remove light (if it exists)
-            let index = this.dynamicLights.findIndex((light) => {
-                return light.entityId === sentryEntity.id;
-            });
+            // Find the light
+            let index = this.dynamicLights.findIndex((light) => light.entityId === sentryEntity.id);
 
             if (index !== -1) {
-                const [light] = this.dynamicLights.splice(index, 1);
-                light.mask.destroy();
-                light.sprite.destroy();
+                const light = this.dynamicLights[index]; // We'll handle removal after fade
+                light.fadeOutAndDestroy(() => {
+                    const idx = this.dynamicLights.indexOf(light);
+                    
+                    // Actually remove from dynamicLights after fade, if not already done
+                    if (idx !== -1) {
+                        this.dynamicLights.splice(idx, 1);
+                    }
+
+                    // Light sprite and mask are destroyed in the fadeOut method
+                });
             }
 
             // Now destroy the sentry (With any particle emitter associated)
@@ -415,15 +421,21 @@ export class World {
                 this.world?.destroyBody(fuelEntity.body);
             }
 
-            // Remove light (if it exists)
-            const index = this.staticLights.findIndex((light) => {
-                return light.entityId === fuelEntity.id;
-            });
+            // Find the light
+            const index = this.staticLights.findIndex((light) => light.entityId === fuelEntity.id);
 
             if (index !== -1) {
-                const [light] = this.staticLights.splice(index, 1);
-                light.mask.destroy();
-                light.sprite.destroy();
+                const light = this.staticLights[index]; // We'll handle removal after fade
+                light.fadeOutAndDestroy(() => {
+                    const idx = this.staticLights.indexOf(light);
+                    
+                    // Actually remove from dynamicLights after fade, if not already done
+                    if (idx !== -1) {
+                        this.staticLights.splice(idx, 1);
+                    }
+
+                    // Light sprite and mask are destroyed in the fadeOut method
+                });
             }
 
             // Lastly, flag the body of the fuel entity for destruction

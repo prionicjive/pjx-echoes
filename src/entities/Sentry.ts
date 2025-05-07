@@ -7,6 +7,7 @@ import * as PIXI from 'pixi.js';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
+import { ParticleEffectOptions } from '../particles/ParticleEmitter';
 
 export class Sentry extends DynamicEntity implements Entity {
     constructor(
@@ -25,16 +26,24 @@ export class Sentry extends DynamicEntity implements Entity {
             color: Config.Sentry.color,
         }, world);
 
-        // TODO Pass a ParticleEmitterOptions object
+        // TODO Make ParticleEffectOptions more configurable rather than
+        // have it defined here.
+        const particleEffectOptions: ParticleEffectOptions = {
+            texture: PIXI.Texture.from(Config.Textures.Particles.circleSoft),
+            width: Config.Sentry.radius * 2,
+            height: Config.Sentry.radius * 2,
+            emitPerSecond: 10,
+            maxParticles: 100
+        };
+
         super({
             id: entity.id,
             sprite: entity.sprite,
             body: entity.body!,
-            lightOptions: Config.SentryLight,
-            edgesList,
-            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft), // TODO Break some of this out into ParticleEmitterOptions
+            particleEffectOptions,
             particleContainer: containers.containerForParticles,
-            entityId: entity.id     
+            lightOptions: Config.SentryLight,
+            edgesList
         });
 
         // Set an initial velocity if provided

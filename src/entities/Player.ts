@@ -16,6 +16,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
+import { ParticleEffectOptions } from '../particles/ParticleEmitter';
 
 /**
  * The Player class implements the controllable player character.
@@ -38,12 +39,21 @@ export class Player extends DynamicEntity implements Entity {
             linearDamping: Config.Physics.Player.linearDamping
         }, world);
 
-        // TODO Pass a ParticleEmitterOptions object
+        // TODO Make ParticleEffectOptions more configurable rather than
+        // have it defined here.
+        const particleEffectOptions: ParticleEffectOptions = {
+            texture: PIXI.Texture.from(Config.Textures.Particles.ringSoft),
+            width: Config.Player.radius * 2,
+            height: Config.Player.radius * 2,
+            emitPerSecond: 30,
+            maxParticles: 100
+        };
+
         super({
             id: entity.id,
             sprite: entity.sprite,
             body: entity.body!,
-            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft), // TODO Break some of this out into ParticleEmitterOptions
+            particleEffectOptions,
             particleContainer: containers.containerForParticles,
             lightOptions: Config.PlayerLight,
             edgesList

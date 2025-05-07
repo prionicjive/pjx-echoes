@@ -1,6 +1,6 @@
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { ParticleEmitter } from '../particles/ParticleEmitter';
+import { ParticleEffectOptions, ParticleEffect } from '../particles/ParticleEmitter';
 import { LightOptions, DynamicLight } from '../core/Light';
 import { Segment } from '../utils/types';
 
@@ -13,11 +13,10 @@ export interface DynamicEntityOptions {
     id: string;
     sprite: PIXI.Sprite;
     body: planck.Body;
-    particleTexture?: PIXI.Texture; // Optional: pass for entities with a trail/effect
+    particleEffectOptions?: ParticleEffectOptions; // Optional: pass for entities with a trail/effect
     particleContainer?: PIXI.Container; // Where to add the emitter's container
     lightOptions?: LightOptions;
     edgesList?: Segment[]; // For shadow casting, etc.
-    entityId?: string; // Needed to link lights to entity
 }
 
 export class DynamicEntity {
@@ -25,7 +24,7 @@ export class DynamicEntity {
     public sprite: PIXI.Sprite;
     public body: planck.Body;
     public dynamicLight?: DynamicLight;
-    protected emitter?: ParticleEmitter;
+    protected emitter?: ParticleEffect;
 
     constructor(options: DynamicEntityOptions) {
         this.id = options.id;
@@ -34,8 +33,8 @@ export class DynamicEntity {
 
         // If a particle texture and container are provided, set up an emitter
         // TODO See if there is a ParticleEffectOptions object AND a container
-        if (options.particleTexture && options.particleContainer) {
-            this.emitter = new ParticleEmitter(options.particleTexture);
+        if (options.particleEffectOptions && options.particleContainer) {
+            this.emitter = new ParticleEffect(options.particleEffectOptions);
             options.particleContainer.addChild(this.emitter.container);
         }
 
@@ -45,17 +44,19 @@ export class DynamicEntity {
                 { x: this.body.getPosition().x, y: this.body.getPosition().y },
                 options.edgesList,
                 options.lightOptions,
-                options.entityId ?? ""
+                options.id
             );
         }
     }
 
     update(deltaTime: number) {
+        // TODO Perhaps lights and effects are best handled by a manager?
+        // TODO Best to NOT have entities update their own lights and effects??
         // Update emitter position and animate, if present
         if (this.emitter) {
             // TODO We might not always want to follow the position
             this.emitter.setEmitPosition(
-                this.sprite.x + this.sprite.width / 2, // TODO May need something like (0.5 * Config.PixelsPerMeter)
+                this.sprite.x + this.sprite.width / 2, // TODO Not that this is in PIXELS and NOT meters
                 this.sprite.y + this.sprite.height / 2
             );
             this.emitter.update(deltaTime);

@@ -1,6 +1,16 @@
 import { Container, Sprite, Texture, Color } from 'pixi.js';
 import { Config } from '../core/Config.ts';
 
+export interface ParticleEffectOptions {
+    texture: Texture;
+    maxParticles?: number;
+    emitPerSecond?: number;
+
+    // TODO Should really be part of an internal particle config option
+    width: number;
+    height: number;
+}
+
 interface ParticleOptions {
   sprite: Sprite;
   alive: boolean;
@@ -17,7 +27,7 @@ interface ParticleOptions {
   height: number;
 }
 
-export class ParticleEmitter {
+export class ParticleEffect {
   private emitPerSecond: number;
   private accum: number = 0;
   public container: Container;
@@ -25,17 +35,15 @@ export class ParticleEmitter {
   private maxParticles: number;
   private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
 
-  constructor(texture: Texture, maxParticles = 100, emitPerSecond = 30) {
+  constructor(options: ParticleEffectOptions) {
     this.container = new Container();
-    this.maxParticles = maxParticles;
-    this.emitPerSecond = emitPerSecond;
+    this.maxParticles = options.maxParticles ?? 100;
+    this.emitPerSecond = options.emitPerSecond ?? 30;
 
     for (let i = 0; i < this.maxParticles; i++) {
       
-      const sprite = Sprite.from(texture);
+      const sprite = Sprite.from(options.texture);
       sprite.visible = false;
-      sprite.width = Config.Particle.width * Config.PixelsPerMeter; // TODO Configure this!
-      sprite.height = Config.Particle.height * Config.PixelsPerMeter; // TODO Configure this!
       sprite.anchor.set(0.5);
 
       // Add our particle sprite to the container
@@ -46,8 +54,8 @@ export class ParticleEmitter {
         sprite,
         alive: false,
         life: 0,
-        width: Config.Particle.width * Config.PixelsPerMeter, // TODO Best to go here?
-        height: Config.Particle.height * Config.PixelsPerMeter, // TODO Best to go here?
+        width: options.width * Config.PixelsPerMeter, // TODO Best to go here?
+        height: options.height * Config.PixelsPerMeter, // TODO Best to go here?
         maxLife: 2,
         velocity: { x: 0, y: 0 },
         startAlpha: 1,

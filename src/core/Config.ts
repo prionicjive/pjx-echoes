@@ -40,10 +40,6 @@ export const Config = {
             restitution: 0.15,
         }
     },
-    Particle: {
-        width: 1, // Meters
-        height: 1 // Meters
-    },
     Player: {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
@@ -188,6 +184,7 @@ export const Config = {
         forceFactorPerSecond: 300.00, // Default as factor of constant force over time
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
+    ParticlesEffects: {},
     Debug: {
         drawEdges: true,
         drawWalls: true,

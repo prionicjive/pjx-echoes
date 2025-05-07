@@ -1,6 +1,6 @@
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { ParticleEffectOptions, ParticleEffect } from '../particles/ParticleEmitter';
+import { ParticleEffectOptions, ParticleEffect } from '../particles/ParticleEffect';
 import { LightOptions, DynamicLight } from '../core/Light';
 import { Segment } from '../utils/types';
 

@@ -15,7 +15,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
-import { ParticleEffectOptions } from '../particles/ParticleEmitter';
+import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Color } from 'pixi.js';
 
 // TODO Make ParticleEffectOptions more configurable rather than

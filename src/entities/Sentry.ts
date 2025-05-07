@@ -6,7 +6,7 @@ import * as planck from 'planck';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
-import { ParticleEffectOptions } from '../particles/ParticleEmitter';
+import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Color } from 'pixi.js';
 
 // TODO Make ParticleEffectOptions more configurable rather than

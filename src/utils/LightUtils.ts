@@ -1,17 +1,9 @@
 import { Segment, Point } from "../utils/types";
 import { CollisionUtils } from "./CollisionUtils";
+import { Config } from "../core/Config";
+import { Light } from "../core/Light";
+import * as PIXI from "pixi.js";
 
-// LightUtils.ts
-/**
- * A collection of light utility functions for pjx-echoes.
- * Used building out light points.
- *
- * @module LightUtils
- */
-
-/**
- * LightUtils provides static helper functions for light operations commonly needed in this game.
- */
 export class LightUtils {
     /**
      * Constructs a polygon representing the visible area ("light cone") from a point, given a set of obstacle segments.
@@ -52,5 +44,65 @@ export class LightUtils {
         points.sort((a, b) => a.angle - b.angle);
 
         return points;
+    }
+
+    // Take in an array of lights and render them all at once
+    static renderLightsBatch(
+        lights: Light[],
+        cameraOffset: { x: number; y: number },
+        screenBounds: { left: number; top: number; right: number; bottom: number },
+        container: PIXI.Container,
+        preUpdate?: (light: Light) => void
+    ) {
+        for (const light of lights) {
+            if (preUpdate) preUpdate(light);
+            LightUtils.updateAndRenderLight(light, cameraOffset, screenBounds, container);
+        }
+    }
+
+    static updateAndRenderLight(
+        light: Light,
+        cameraOffset: { x: number; y: number },
+        screenBounds: { left: number; top: number; right: number; bottom: number },
+        container: PIXI.Container
+    ) {
+        if (!light) return;
+    
+        // Update logic (if needed)
+        light.update(null); // or pass position if required
+    
+        if (LightUtils.isLightOnScreen(light, screenBounds.left, screenBounds.top, screenBounds.right, screenBounds.bottom)) {
+            light.sprite.visible = true;
+            light.mask.visible = true;
+    
+            const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
+            const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
+    
+            light.sprite.x = screenX;
+            light.sprite.y = screenY;
+            light.mask.x = screenX;
+            light.mask.y = screenY;
+    
+            light.render();
+    
+            container.addChild(light.sprite);
+            container.addChild(light.mask);
+        } else {
+            light.sprite.visible = false;
+            light.mask.visible = false;
+        }
+    }
+
+    static isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
+        const x = light.sprite.x;
+        const y = light.sprite.y;
+        const r = light.radius * Config.PixelsPerMeter; // If radius is in meters
+    
+        return (
+            x + r > screenLeft &&
+            x - r < screenRight &&
+            y + r > screenTop &&
+            y - r < screenBottom
+        );
     }
 }

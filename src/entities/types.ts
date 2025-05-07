@@ -9,24 +9,12 @@ import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 
 // TODO Could be refactored
-export type EntityType = 'PLAYER' | 'WALL' | 'FINISH' | 'TORCH' | 'FUEL';
+export type EntityType = 'PLAYER' | 'SENTRY' | 'WALL' | 'FINISH' | 'TORCH' | 'FUEL';
 
 export interface Entity {
     id: string;
     sprite: PIXI.Sprite;
     body: planck.Body | null;
-}
-
-export interface EntityOptions {
-    type: EntityType;
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color?: number;
-    // Optionally, add more fields for extensibility
-    [key: string]: any;
 }
 
 export type EntityUserData = {

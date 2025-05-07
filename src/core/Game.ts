@@ -78,6 +78,7 @@ export class Game {
         // Load textures
         // TODO Refactor how assets are fetched
         await PIXI.Assets.load(Config.Textures.player);
+        await PIXI.Assets.load(Config.Textures.sentry);
         await PIXI.Assets.load(Config.Textures.wall);
         await PIXI.Assets.load(Config.Textures.finish);
         await PIXI.Assets.load(Config.Textures.torch); 

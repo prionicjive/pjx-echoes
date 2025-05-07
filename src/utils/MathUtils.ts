@@ -25,4 +25,8 @@ export class MathUtils {
         // Generate random integer in the range [min, max)
         return Math.floor(Math.random() * (max - min)) + min;
     }
+
+    static isNumberInRange(number: number, start: number, end: number): boolean {
+        return number >= Math.min(start, end) && number <= Math.max(start, end);
+    }
 }

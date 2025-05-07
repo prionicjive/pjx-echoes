@@ -1,21 +1,22 @@
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
-import { Player } from './Player.ts';
+import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
-import { Light, DynamicLight } from './Light.ts'; 
+import { Light } from './Light.ts'; 
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
-import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
 import { InputManager } from '../input/InputManager.ts';
+import { LightUtils } from '../utils/LightUtils.ts';
+import { Sentry } from '../entities/Sentry.ts';
+import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
 
 export class World {
     private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-    private player: Player | null = null;
     private level: Level | null = null;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
@@ -24,6 +25,10 @@ export class World {
     
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
+
+    // Entities
+    private player: Player | null = null;
+    private sentries: Sentry[] = [];
 
     // PIXI Containers different rendering objects / layers
     private worldContainer!: PIXI.Container; // Added to stage directly
@@ -40,16 +45,13 @@ export class World {
     private tempLightmapContainer!: PIXI.Container; // Not directly added to world
     
     // Lights
-    private playerLight: Light | null = null;
+    private dynamicLights: Light[] = [];
     private staticLights: Light[] = [];
 
     // Needed for lightmap rendering
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
     private lightmapSprite!: PIXI.Sprite;
     private transparentBgRect!: PIXI.Graphics;
-    
-    // Our home grown particle emitter used for a player trail effect
-    private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
@@ -165,9 +167,8 @@ export class World {
     }
 
     private tearDownWorld() {
-        // Destroy any particle related things
-        this.playerTrailEmitter?.destroy();
-        this.playerTrailEmitter = null;
+        // Tear down dynamic entities
+        this.tearDownDynamicEntities();
         
         // Empty the various PIXI containers in order
         this.tearDownContainersInOrder();
@@ -196,11 +197,6 @@ export class World {
         // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
-
-        // Any immediate particle effects (like particle trail player)
-        // TODO Set up particle effects and add them to the appropriate layer
-        this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
-        this.preEntitiesContainer.addChild(this.playerTrailEmitter.container);
 
         // TODO This may be too drastic, but regenerate entire Planck world
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
@@ -245,25 +241,57 @@ export class World {
             this.mergedEdges
         );
 
-        this.staticLights = this.level.getLights();
-
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(
+            this.world, 
+            this.mergedEdges, 
+            {x: Number(startX), y: Number(startY)}, {
+                containerForEntity: this.entitiesContainer,
+                containerForParticles: this.preEntitiesContainer,
+            }
+        );
+        
+        // Add player's dynamic light to the array if it exists
+        this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
 
-        const playerPos = {
-            x: this.player?.body.getPosition().x,
-            y: this.player?.body.getPosition().y
-        };
+        // Construct the sentries
+        const maxSentries = Math.ceil(Config.SentryMaxDensity * openSpaces.length);
+        for (let i = 0; i < maxSentries; i++) {
+            // Find random valid start point
+            const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
+            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
+            const sentry = new Sentry(
+                this.world, 
+                this.mergedEdges, 
+                {x: Number(spawnX), y: Number(spawnY)}, {
+                    containerForEntity: this.entitiesContainer,
+                    containerForParticles: this.preEntitiesContainer,
+                },
+                initialVelocity
+            );
+            this.sentries.push(sentry);
 
-        // TODO Set up dynamic lights, including player light
-        this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Config.PlayerLight);
-        this.playerLight.entityId = this.player?.id;
+            // Add sentry's dynamic light to the array if it exists
+            sentry.dynamicLight && this.dynamicLights.push(sentry.dynamicLight);
+        }
+
+        // Store  static light
+        this.staticLights = this.level.getLights();
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
+    }
+
+    private tearDownDynamicEntities() {
+        this.player?.destroy();
+        
+        this.sentries.forEach((sentry) => {
+            sentry.destroy();
+        });
+        this.sentries = [];
     }
 
     private tearDownContainersInOrder() {
@@ -328,6 +356,50 @@ export class World {
         ) {
             // TODO Handle player hitting a wall
             console.log("Player hit a wall!");
+        } else if (
+            (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
+            (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
+        ) {
+            // Handle player hitting a sentry
+            console.log("Player hit a sentry!");
+
+            const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
+            this.entitiesContainer.removeChild(sentryEntity.sprite);
+
+            // Remove body
+            if (sentryEntity.body) {
+                this.world?.destroyBody(sentryEntity.body);
+            }
+
+            // Remove light (if it exists)
+            let index = this.dynamicLights.findIndex((light) => {
+                return light.entityId === sentryEntity.id;
+            });
+
+            if (index !== -1) {
+                const [light] = this.dynamicLights.splice(index, 1);
+                light.mask.destroy();
+                light.sprite.destroy();
+            }
+
+            // Now destroy the sentry (With any particle emitter associated)
+            // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
+            index = this.sentries.findIndex((sentry) => {
+                return sentry.id === sentryEntity.id;
+            });
+
+            if (index !== -1) {
+                const [sentry] = this.sentries.splice(index, 1);
+                sentry.destroy();
+            }
+
+            // Lastly, flag the body of the fuel entity for destruction
+            this.bodiesToDestroy.push(sentryEntity.body);
+        } else if (
+            (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
+        ) {
+            // TODO Handle a sentry hitting another sentry
+            console.log("Sentry hit another sentry!");
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
             (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
@@ -413,15 +485,16 @@ export class World {
         this.world?.step(deltaTime);
     
         // Update player
-        this.player?.update();
+        this.player?.update(deltaTime);
     
+        // Update sentries
+        this.sentries.forEach((sentry) => {
+            sentry.update(deltaTime);
+        });
         // TODO Any other entities to update?    
 
         // Update level (For dynamic entities or geometry)
         this.level?.update();
-
-        // Update particle related things
-        this.updateParticleEffects(deltaTime);;
 
         // Update camera
         this.updateCamera(deltaTime);
@@ -464,16 +537,6 @@ export class World {
 
         // Reset flags
         this.inputManager.update();
-    }
-
-    private updateParticleEffects(deltaTime: number) {
-        if (this.player) {
-            this.playerTrailEmitter?.setEmitPosition(
-                this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
-                this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
-            );
-        }
-        this.playerTrailEmitter?.update(deltaTime);
     }
 
      /**
@@ -558,87 +621,31 @@ export class World {
     }
 
     private updateAndRenderLights() {
-        // TODO What about handling multiple lights?
-        if (!this.playerLight ||  !this.player) return;
-
-        // TODO Genericize this to support any dynamic lights on dynamic entities we might have
-        // TODO Maybe body/entity + light object
-        const playerPos = {
-            x: this.player?.body.getPosition().x,
-            y: this.player?.body.getPosition().y
-        };
-
-        // Get camera offset
         const cameraOffset = {
             x: -this.worldContainer.x,
             y: -this.worldContainer.y
         };
 
-        // Before rendering to texture, make sure we clear out any old lights from the lightmap container
+        const screenBounds = {
+            left: -this.worldContainer.x,
+            top: -this.worldContainer.y,
+            right: -this.worldContainer.x + this.viewportWidth,
+            bottom: -this.worldContainer.y + this.viewportHeight
+        };
+
+        // Clear the lightmap container
         this.tempLightmapContainer.removeChildren();
 
-        // Player light is always on screen
-        this.playerLight.update(playerPos);
-        this.playerLight.render();
+        // Render all lights to the lightmap container
+        LightUtils.renderLightsBatch(this.dynamicLights, cameraOffset, screenBounds, this.tempLightmapContainer);
+        LightUtils.renderLightsBatch(this.staticLights, cameraOffset, screenBounds, this.tempLightmapContainer);
 
-        const screenX = (playerPos.x * Config.PixelsPerMeter) - cameraOffset.x;
-        const screenY = (playerPos.y * Config.PixelsPerMeter) - cameraOffset.y;
-
-        // Set the light sprite's position in screen space
-        this.playerLight.sprite.x = screenX;
-        this.playerLight.sprite.y = screenY;
-        this.playerLight.mask.x = screenX;
-        this.playerLight.mask.y = screenY;
-
-        this.tempLightmapContainer.addChild(this.playerLight.sprite);
-        this.tempLightmapContainer.addChild(this.playerLight.mask);
-
-        // 
-        // TODO Add any dynamic lights that need some more special update logic to their position, life span, etc...
-        // TODO Consider hiding them when they are offscreen but still alive
-
-        // See if lights are on screen and render them if they are
-        const screenLeft = -this.worldContainer.x;
-        const screenTop = -this.worldContainer.y;
-        const screenRight = screenLeft + this.viewportWidth;
-        const screenBottom = screenTop + this.viewportHeight;
-
-        // Process and update all static lights
-        for (const light of this.staticLights) {
-           if (!light) continue;
-           
-           light.update(null);
-
-           if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
-                light.sprite.visible = true;
-                light.mask.visible = true;
-
-                const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
-                const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
-
-                light.sprite.x = screenX;
-                light.sprite.y = screenY;
-                light.mask.x = screenX;
-                light.mask.y = screenY;
-                
-                light.render();
-
-                // Add sprite and mask to the lightmap container
-                this.tempLightmapContainer.addChild(light.sprite);
-                this.tempLightmapContainer.addChild(light.mask);
-            } else {
-                light.sprite.visible = false;
-                light.mask.visible = false;
-            }
-       }
-
-       // Render all lights to the render texture (lightmap)
+       // Render all lights in the container to the render texture (lightmap)
        this.app.renderer.render({
             container: this.transparentBgRect,
             target: this.lightmapTexture,
             clear: true
         });
-
         this.app.renderer.render({
             container: this.tempLightmapContainer, 
             target: this.lightmapTexture, 
@@ -646,18 +653,7 @@ export class World {
         });
     }
 
-    private isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
-        const x = light.sprite.x;
-        const y = light.sprite.y;
-        const r = light.radius * Config.PixelsPerMeter; // If radius is in meters
     
-        return (
-            x + r > screenLeft &&
-            x - r < screenRight &&
-            y + r > screenTop &&
-            y - r < screenBottom
-        );
-    }
 
     // @ts-ignore
     private updatePostProcessing(deltaTime: number) 

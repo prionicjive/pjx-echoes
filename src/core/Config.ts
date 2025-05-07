@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 96,       // Width of the generated level (in grid units)
-        height: 96
+        width: 128,       // Width of the generated level (in grid units)
+        height: 128
     },
     MapGeneration: {
         CellularAutomata: {
@@ -30,7 +30,8 @@ export const Config = {
             categoryWall: 0x0002,
             categoryEdge: 0x0004,
             categoryFinish: 0x0008,
-            categoryFuel: 0x0010
+            categoryFuel: 0x0010,
+            categorySentry: 0x0020
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
@@ -39,14 +40,16 @@ export const Config = {
             restitution: 0.15,
         }
     },
-    Particle: {
-        width: 1, // Meters
-        height: 1 // Meters
-    },
     Player: {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
+    },
+    Sentry: {
+        type: "SENTRY",
+        color: 0xBB32FF,  // Tint color for the sentry sprite
+        radius: 0.25,     // Physics radius of the sentry (in meters)
+        maxSpeed: 3.00,
     },
     Wall: {
         type: "WALL",
@@ -71,6 +74,7 @@ export const Config = {
     },
     Textures: {
         player: '/assets/textures/player.png', // Paths to texture assets
+        sentry: '/assets/textures/sentry.png',
         wall: '/assets/textures/wall.png',
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',
@@ -92,6 +96,23 @@ export const Config = {
         alphaVariance: 0.4,
         startColor: 0x55aaff,
         endColor: 0x77edff,
+        flickerAlphaDuration: 0.5,
+        flickerAlphaDurationVariance: 2.5,
+        flickerRadiusDuration: 1.5,
+        flickerRadiusDurationVariance: 0.5,
+        oscillateColorDuration: 1.5,
+        oscillateColorDurationVariance: 2,
+        oscillateColorDelay: 0,
+        oscillateColorDelayVariance: 2,
+    },
+    SentryLight: {
+        numRays: 360,
+        baseRadius: 2,
+        radiusVariance: 1,
+        baseAlpha: 0.5,
+        alphaVariance: 0.4,
+        startColor: 0xBB32FF,
+        endColor: 0x6e00a5,
         flickerAlphaDuration: 0.5,
         flickerAlphaDurationVariance: 2.5,
         flickerRadiusDuration: 1.5,
@@ -149,6 +170,7 @@ export const Config = {
     FinishTilesDensity: 0.0001,
     TorchesDensity: 0.0007,
     FuelTileDensity: 0.00065,
+    SentryMaxDensity: 0.0025,
     Movement: {
         Gesture: {
             swipeSpeedScaleExponent: 0.95,
@@ -162,6 +184,7 @@ export const Config = {
         forceFactorPerSecond: 300.00, // Default as factor of constant force over time
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
+    ParticlesEffects: {},
     Debug: {
         drawEdges: true,
         drawWalls: true,

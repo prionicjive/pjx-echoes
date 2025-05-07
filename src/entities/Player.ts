@@ -6,68 +6,71 @@
  * @module Player
  */
 
-import { Config } from './Config';
-import { Entity, EntityType } from '../entities/types';
+import { Config } from '../core/Config';
+import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { Point } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
-import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
+import { EntityFactory } from './EntityFactory';
+import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
+import { ParticleEffectOptions } from '../particles/ParticleEffect';
+import { Color } from 'pixi.js';
 
-/**
- * The Player class implements the controllable player character.
- * Handles physics, rendering, and input-based movement.
- */
-export class Player implements Entity {
-    id: string;
-    body: planck.Body;
-    sprite: PIXI.Sprite;
+// TODO Make ParticleEffectOptions more configurable rather than
+// have it defined here.
+const particleEffectOptions: ParticleEffectOptions = {
+    texturePath: Config.Textures.Particles.ringSoft,
+    emitPerSecond: 30,
+    maxParticles: 100,
+    particleOptions: {
+        maxLife: 2,
+        startAlpha: 1,
+        endAlpha: 0,
+        startScaleX: 1,
+        startScaleY: 1,
+        endScaleX: 0.42,
+        endScaleY: 0.42,
+        width: Config.Player.radius * 2 * Config.PixelsPerMeter,
+        height: Config.Player.radius * 2 * Config.PixelsPerMeter,
+        startTint: new Color(Config.Player.color),
+        endTint: new Color(0xff13bb), // TODO Just for test, should be configurable
+        startDirection: {x: 0, y: 0},
+        endDirection: {x: 0, y: 0},
+        startSpeed: 0,
+        endSpeed: 0
+    }
+};
 
-    /**
-     * Creates a new Player instance, including its physics body and sprite.
-     * Adds the sprite to the provided PIXI container.
-     *
-     * @param {planck.World} world - The Planck.js world to add the player to.
-     * @param {PIXI.Container} container - Where to add the player's sprite for rendering.
-     * @param {Point} spawnPoint - Initial position (in world units).
-     */
-    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
-        this.id = EntityUtils.generateRandomId(Config.Player.type);
-        
-        // Place player in the center of the tile
-        const playerRadius = Config.Player.radius;
-        const center = new planck.Vec2(spawnPoint.x + 0.5, spawnPoint.y + 0.5);
-
-        // Generate sprite for the player
-        this.sprite = PIXI.Sprite.from(Config.Textures.player);
-        // Position the sprite to match the physics body
-        this.sprite.x = center.x * Config.PixelsPerMeter;
-        this.sprite.y = center.y * Config.PixelsPerMeter;
-        this.sprite.width = 2 * 0.5 * Config.PixelsPerMeter; // TODO This assme the player's radius is roughly 0.5 meters
-        this.sprite.height = 2 * 0.5 * Config.PixelsPerMeter;
-        this.sprite.tint = Config.Player.color;
-
-        
-        this.body = world.createDynamicBody(center);
-        this.body.setLinearDamping(Config.Physics.Player.linearDamping);
-
-        // Add a circular fixture for collisions
-        this.body.createFixture(new planck.Circle(playerRadius), {
-            friction: 0,
-            density: 1,
-            filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-            filterMaskBits: Config.Physics.Collision.categoryEdge | Config.Physics.Collision.categoryWall | Config.Physics.Collision.categoryFinish | Config.Physics.Collision.categoryFuel
-        });
-
-        this.body.setUserData({
+export class Player extends DynamicEntity implements Entity {
+    constructor(
+        world: planck.World, 
+        edgesList: Segment[], 
+        spawnPoint: Point,
+        containers: DynamicEntityContainers
+    ) {
+        const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
-            id: this.id,
-            sprite: this.sprite,
-            body: this.body
+            id: EntityUtils.generateRandomId(Config.Player.type),
+            x: spawnPoint.x,
+            y: spawnPoint.y,
+            radius: Config.Player.radius,
+            color: Config.Player.color,
+            linearDamping: Config.Physics.Player.linearDamping
+        }, world);
+
+        super({
+            id: entity.id,
+            sprite: entity.sprite,
+            body: entity.body!,
+            particleEffectOptions,
+            particleContainer: containers.containerForParticles,
+            lightOptions: Config.PlayerLight,
+            edgesList
         });
-        
-        container.addChild(this.sprite);
+
+        containers.containerForEntity.addChild(this.sprite);
     }
 
     handleInput(
@@ -243,10 +246,13 @@ export class Player implements Entity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    update() {
+    update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - 0.5) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - 0.5) * Config.PixelsPerMeter;
+        this.sprite.x = (this.body.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
+
+        // Call the super to update any particle effects, among other things
+        super.update(deltaTime);
     }
 }

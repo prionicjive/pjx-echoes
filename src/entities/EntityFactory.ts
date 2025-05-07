@@ -44,7 +44,7 @@ export class EntityFactory {
                 });
                 if (!world) throw new Error('World is required for finish entity');
 
-                const body = PhysicsUtils.createBoxBody(world, {
+                const body = PhysicsUtils.createBody(world, {
                     type: 'static',
                     position: new planck.Vec2(desc.x, desc.y),
                     box: { width: desc.width!, height: desc.height! },
@@ -87,7 +87,7 @@ export class EntityFactory {
                     color: desc.color ?? Config.Fuel.color,
                 });
                 if (!world) throw new Error('World is required for fuel entity');
-                const body = PhysicsUtils.createBoxBody(world, {
+                const body = PhysicsUtils.createBody(world, {
                     type: 'static',
                     position: new planck.Vec2(desc.x, desc.y),
                     box: { width: desc.width!, height: desc.height! },
@@ -124,22 +124,20 @@ export class EntityFactory {
                 });
 
                 // Create dynamic body
-                const body = world.createDynamicBody(center);
-
-                // Only set linear damping if it is provided
-                if(desc.linearDamping) {
-                    body.setLinearDamping(desc.linearDamping);
-                }
-
-                // Circle fixture
-                body.createFixture(new planck.Circle(radius), {
-                    friction: 0,
-                    density: 1,
-                    filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-                    filterMaskBits: Config.Physics.Collision.categoryEdge
-                        | Config.Physics.Collision.categoryWall
-                        | Config.Physics.Collision.categoryFinish
-                        | Config.Physics.Collision.categoryFuel
+                const body = PhysicsUtils.createBody(world, {
+                    type: 'dynamic',
+                    position: center,
+                    circle: { radius },
+                    fixture: {
+                        friction: 0,
+                        density: 1,
+                        filterCategoryBits: Config.Physics.Collision.categoryPlayer,
+                        filterMaskBits: Config.Physics.Collision.categoryEdge
+                            | Config.Physics.Collision.categoryWall
+                            | Config.Physics.Collision.categoryFinish
+                            | Config.Physics.Collision.categoryFuel
+                    },
+                    linearDamping: desc.linearDamping
                 });
 
                 // Set user data with a self-referencing body

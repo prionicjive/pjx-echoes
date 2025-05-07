@@ -173,7 +173,7 @@ export class DynamicLight extends Light {
 
         this.alphaTween = gsap.to(this.tweenables, {
             alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: Config.PlayerLight.flickerAlphaDuration + Math.random() * Config.PlayerLight.flickerAlphaDurationVariance,
+            duration: this.options.flickerAlphaDuration + Math.random() * this.options.flickerAlphaDurationVariance,
             ease: 'power1.inOut',
             onComplete: () => this.flickerAlpha()
         });
@@ -204,10 +204,10 @@ export class DynamicLight extends Light {
         this.colorTween = gsap.fromTo(this.tweenables, {
             tint: startColor,
         }, {
-            duration: Config.PlayerLight.oscillateColorDuration + (Math.random() * Config.PlayerLight.oscillateColorDurationVariance),
+            duration: this.options.oscillateColorDuration + (Math.random() * this.options.oscillateColorDurationVariance),
             pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
             yoyo: true,
-            delay: Config.PlayerLight.oscillateColorDelay + (Math.random() * Config.PlayerLight.oscillateColorDelayVariance),
+            delay: this.options.oscillateColorDelay + (Math.random() * this.options.oscillateColorDelayVariance),
             repeat: -1
         });
 
@@ -288,7 +288,7 @@ export class StaticLight extends Light {
 
         this.alphaTween = gsap.to(this.tweenables, {
             alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: Config.PlayerLight.flickerAlphaDuration + Math.random() * Config.PlayerLight.flickerAlphaDurationVariance,
+            duration: this.options.flickerAlphaDuration + Math.random() * this.options.flickerAlphaDurationVariance,
             ease: 'power1.inOut',
             onComplete: () => this.flickerAlpha()
         });
@@ -304,10 +304,10 @@ export class StaticLight extends Light {
         this.colorTween = gsap.fromTo(this.tweenables, {
             tint: startColor,
         }, {
-            duration: Config.PlayerLight.oscillateColorDuration + (Math.random() * Config.PlayerLight.oscillateColorDurationVariance),
+            duration: this.options.oscillateColorDuration + (Math.random() * this.options.oscillateColorDurationVariance),
             pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
             yoyo: true,
-            delay: Config.PlayerLight.oscillateColorDelay + (Math.random() * Config.PlayerLight.oscillateColorDelayVariance),
+            delay: this.options.oscillateColorDelay + (Math.random() * this.options.oscillateColorDelayVariance),
             repeat: -1
         });
 

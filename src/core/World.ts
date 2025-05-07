@@ -255,7 +255,7 @@ export class World {
             // Find random valid start point
             const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
-            const sentry = new Sentry(this.world, this.entitiesContainer, {x: Number(spawnX), y: Number(spawnY)}, initialVelocity);
+            const sentry = new Sentry(this.world, this.mergedEdges, this.entitiesContainer, {x: Number(spawnX), y: Number(spawnY)}, initialVelocity);
             this.sentries.push(sentry);
 
             // Add sentry's dynamic light to the array if it exists

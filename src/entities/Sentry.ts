@@ -6,9 +6,10 @@ import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity } from './DynamicEntity';
+import { Segment } from '../utils/types';
 
 export class Sentry extends DynamicEntity implements Entity {
-    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point, initialVelocity?: planck.Vec2) {
+    constructor(world: planck.World, edgesList: Segment[], container: PIXI.Container, spawnPoint: Point, initialVelocity?: planck.Vec2) {
         const entity = EntityFactory.create({
             type: Config.Sentry.type as EntityType,
             id: EntityUtils.generateRandomId(Config.Sentry.type),
@@ -22,7 +23,9 @@ export class Sentry extends DynamicEntity implements Entity {
         super({
             id: entity.id,
             sprite: entity.sprite,
-            body: entity.body!
+            body: entity.body!,
+            lightOptions: Config.SentryLight,
+            edgesList       
         });
 
         // Set an initial velocity if provided

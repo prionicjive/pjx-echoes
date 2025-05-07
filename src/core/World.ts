@@ -39,7 +39,7 @@ export class World {
     private tempLightmapContainer!: PIXI.Container; // Not directly added to world
     
     // Lights
-    private playerLight: Light | null = null;
+    private dynamicLights: Light[] = [];
     private staticLights: Light[] = [];
 
     // Needed for lightmap rendering
@@ -235,22 +235,20 @@ export class World {
             this.mergedEdges
         );
 
-        this.staticLights = this.level.getLights();
-
         // Find a random valid starting spot for player
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)}, this.preEntitiesContainer);
+        this.player = new Player(this.world, this.mergedEdges, this.entitiesContainer, {x: Number(startX), y: Number(startY)}, this.preEntitiesContainer);
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
             y: this.player?.body.getPosition().y
         };
 
-        // TODO Set up dynamic lights, including player light
-        this.playerLight = new DynamicLight(playerPos, this.mergedEdges, Config.PlayerLight);
-        this.playerLight.entityId = this.player?.id;
+        // Store ALL the dynamic light and static light into two distinct arrays
+        this.dynamicLights = this.player?.dynamicLight ? [this.player.dynamicLight] : [];
+        this.staticLights = this.level.getLights();
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
@@ -541,50 +539,44 @@ export class World {
     }
 
     private updateAndRenderLights() {
-        // TODO What about handling multiple lights?
-        if (!this.playerLight ||  !this.player) return;
-
-        // TODO Genericize this to support any dynamic lights on dynamic entities we might have
-        // TODO Maybe body/entity + light object
-        const playerPos = {
-            x: this.player?.body.getPosition().x,
-            y: this.player?.body.getPosition().y
-        };
-
         // Get camera offset
         const cameraOffset = {
             x: -this.worldContainer.x,
             y: -this.worldContainer.y
         };
 
-        // Before rendering to texture, make sure we clear out any old lights from the lightmap container
-        this.tempLightmapContainer.removeChildren();
-
-        // Player light is always on screen
-        this.playerLight.update(playerPos);
-        this.playerLight.render();
-
-        const screenX = (playerPos.x * Config.PixelsPerMeter) - cameraOffset.x;
-        const screenY = (playerPos.y * Config.PixelsPerMeter) - cameraOffset.y;
-
-        // Set the light sprite's position in screen space
-        this.playerLight.sprite.x = screenX;
-        this.playerLight.sprite.y = screenY;
-        this.playerLight.mask.x = screenX;
-        this.playerLight.mask.y = screenY;
-
-        this.tempLightmapContainer.addChild(this.playerLight.sprite);
-        this.tempLightmapContainer.addChild(this.playerLight.mask);
-
-        // 
-        // TODO Add any dynamic lights that need some more special update logic to their position, life span, etc...
-        // TODO Consider hiding them when they are offscreen but still alive
-
         // See if lights are on screen and render them if they are
         const screenLeft = -this.worldContainer.x;
         const screenTop = -this.worldContainer.y;
         const screenRight = screenLeft + this.viewportWidth;
         const screenBottom = screenTop + this.viewportHeight;
+
+         // Render dynamic lights (Already updated during World.update() call)
+         for (const light of this.dynamicLights) {
+            if (!light) continue;
+ 
+            if (this.isLightOnScreen(light, screenLeft, screenTop, screenRight, screenBottom)) {
+                 light.sprite.visible = true;
+                 light.mask.visible = true;
+ 
+                 const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
+                 const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
+ 
+                 light.sprite.x = screenX;
+                 light.sprite.y = screenY;
+                 light.mask.x = screenX;
+                 light.mask.y = screenY;
+                 
+                 light.render();
+ 
+                 // Add sprite and mask to the lightmap container
+                 this.tempLightmapContainer.addChild(light.sprite);
+                 this.tempLightmapContainer.addChild(light.mask);
+             } else {
+                 light.sprite.visible = false;
+                 light.mask.visible = false;
+             }
+        }
 
         // Process and update all static lights
         for (const light of this.staticLights) {

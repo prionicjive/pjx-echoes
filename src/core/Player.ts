@@ -9,7 +9,7 @@
 import { Config } from './Config';
 import { Entity, EntityType } from '../entities/types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { Point } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
@@ -22,7 +22,7 @@ import { DynamicEntity } from '../entities/DynamicEntity';
  * Handles physics, rendering, and input-based movement.
  */
 export class Player extends DynamicEntity implements Entity {
-    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point, particleContainer: PIXI.Container) {
+    constructor(world: planck.World, edgesList: Segment[], container: PIXI.Container, spawnPoint: Point, particleContainer: PIXI.Container) {
         const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
             id: EntityUtils.generateRandomId(Config.Player.type),
@@ -39,7 +39,9 @@ export class Player extends DynamicEntity implements Entity {
             sprite: entity.sprite,
             body: entity.body!,
             particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft),
-            particleContainer
+            particleContainer,
+            lightOptions: Config.PlayerLight,
+            edgesList
         });
 
         container.addChild(this.sprite);

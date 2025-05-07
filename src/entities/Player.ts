@@ -16,11 +16,29 @@ import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { ParticleEffectOptions } from '../particles/ParticleEmitter';
+import { Color } from 'pixi.js';
 
-/**
- * The Player class implements the controllable player character.
- * Handles physics, rendering, and input-based movement.
- */
+// TODO Make ParticleEffectOptions more configurable rather than
+// have it defined here.
+const particleEffectOptions: ParticleEffectOptions = {
+    texturePath: Config.Textures.Particles.circleSoft,
+    emitPerSecond: 30,
+    maxParticles: 100,
+    particleOptions: {
+        maxLife: 2,
+        startAlpha: 1,
+        endAlpha: 0,
+        startScale: 1, // TODO Use to lerp width and height
+        endScale: 0.42,
+        width: Config.Player.radius * 2 * Config.PixelsPerMeter,
+        height: Config.Player.radius * 2 * Config.PixelsPerMeter,
+        startTint: new Color(Config.Player.color),
+        endTint: new Color(0xff13bb), // TODO Just for test, should be configurable
+        startVelocity: {x: 0, y: 0},
+        endVelocity: {x: 0, y: 0}
+    }
+};
+
 export class Player extends DynamicEntity implements Entity {
     constructor(
         world: planck.World, 
@@ -37,16 +55,6 @@ export class Player extends DynamicEntity implements Entity {
             color: Config.Player.color,
             linearDamping: Config.Physics.Player.linearDamping
         }, world);
-
-        // TODO Make ParticleEffectOptions more configurable rather than
-        // have it defined here.
-        const particleEffectOptions: ParticleEffectOptions = {
-            texturePath: Config.Textures.Particles.ringSoft,
-            width: Config.Player.radius * 2,
-            height: Config.Player.radius * 2,
-            emitPerSecond: 30,
-            maxParticles: 100
-        };
 
         super({
             id: entity.id,

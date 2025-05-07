@@ -5,18 +5,11 @@ export interface ParticleEffectOptions {
     texturePath: string;
     maxParticles?: number;
     emitPerSecond?: number;
-
-    // TODO Should really be part of an internal particle config option
-    width: number;
-    height: number;
+    particleOptions: ParticleOptions;
 }
 
 interface ParticleOptions {
-  sprite: Sprite;
-  alive: boolean;
-  life: number;
   maxLife: number;
-  velocity: { x: number; y: number };
   startAlpha: number;
   endAlpha: number;
   startScale: number;
@@ -25,13 +18,23 @@ interface ParticleOptions {
   endTint: Color;
   width: number;
   height: number;
+  startVelocity: {x: number, y: number };
+  endVelocity: {x: number, y: number };
+}
+
+interface Particle {
+  sprite: Sprite;
+  alive: boolean;
+  life: number;
+  velocity: {x: number, y: number },
+  options: ParticleOptions;
 }
 
 export class ParticleEffect {
   private emitPerSecond: number;
   private accum: number = 0;
   public container: Container;
-  private particles: ParticleOptions[] = [];
+  private particles: Particle[] = [];
   private maxParticles: number;
   private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
 
@@ -44,7 +47,7 @@ export class ParticleEffect {
       
       const sprite = Sprite.from(options.texturePath);
       sprite.visible = false;
-      sprite.anchor.set(0.5);
+      sprite.anchor.set(0.5); // TODO May we want a different anchor somepoint in the future?
 
       // Add our particle sprite to the container
       this.container.addChild(sprite);
@@ -54,16 +57,8 @@ export class ParticleEffect {
         sprite,
         alive: false,
         life: 0,
-        width: options.width * Config.PixelsPerMeter, // TODO Best to go here?
-        height: options.height * Config.PixelsPerMeter, // TODO Best to go here?
-        maxLife: 2,
         velocity: { x: 0, y: 0 },
-        startAlpha: 1,
-        endAlpha: 0,
-        startScale: 1, // TODO Use to lerp width and height
-        endScale: 0.42,
-        startTint: new Color(Config.Player.color),
-        endTint: new Color(0xff13bb) // TODO Just for test, should be configurable
+        options: options.particleOptions
       });
     }
   }
@@ -82,29 +77,29 @@ export class ParticleEffect {
       this._emitOne();
     }
 
-    for (const meta of this.particles) {
-      if (!meta.alive) continue;
+    for (const particle of this.particles) {
+      if (!particle.alive) continue;
 
-      meta.life += dt;
-      const t = meta.life / meta.maxLife;
+      particle.life += dt;
+      const t = particle.life / particle.options.maxLife;
 
       if (t >= 1) {
-        meta.alive = false;
-        meta.sprite.visible = false;
+        particle.alive = false;
+        particle.sprite.visible = false;
         continue;
       }
 
-      const s = meta.sprite;
+      const s = particle.sprite;
 
-      s.x += meta.velocity.x * dt;
-      s.y += meta.velocity.y * dt;
+      s.x += particle.velocity.x * dt;
+      s.y += particle.velocity.y * dt;
 
-      s.alpha = this.lerp(meta.startAlpha, meta.endAlpha, t);
-      const scale = this.lerp(meta.startScale, meta.endScale, t);
-      s.width = meta.width * scale;
-      s.height = meta.height * scale;
+      s.alpha = this.lerp(particle.options.startAlpha, particle.options.endAlpha, t);
+      const scale = this.lerp(particle.options.startScale, particle.options.endScale, t);
+      s.width = particle.options.width * scale;
+      s.height = particle.options.height * scale;
 
-        s.tint = this.lerpColor(meta.startTint, meta.endTint, t);
+      s.tint = this.lerpColor(particle.options.startTint, particle.options.endTint, t);
     }
   }
 
@@ -116,23 +111,22 @@ export class ParticleEffect {
   }
 
   private _emitOne(): void {
-    const meta = this.particles.find(p => !p.alive);
-    if (!meta) return;
+    const particle = this.particles.find(p => !p.alive);
+    if (!particle) return;
 
     // Reset living related things
-    meta.alive = true;
-    meta.life = 0;
+    particle.alive = true;
+    particle.life = 0;
 
     // Init the sprite
     // TODO Make init function?
-    const s = meta.sprite;
+    const s = particle.sprite;
     s.visible = true;
-    s.alpha = meta.startAlpha;
-    s.scale.set(meta.startScale);
+    s.alpha = particle.options.startAlpha;
     s.position.set(this.emitPosition.x, this.emitPosition.y);
-    s.width = meta.width * meta.startScale;
-    s.height = meta.height * meta.startScale;
-    s.tint = meta.startTint.toNumber();
+    s.width = particle.options.width * particle.options.startScale;
+    s.height = particle.options.height * particle.options.startScale;
+    s.tint = particle.options.startTint.toNumber();
   }
 
   private lerp(a: number, b: number, t: number): number {

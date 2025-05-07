@@ -7,6 +7,28 @@ import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
 import { ParticleEffectOptions } from '../particles/ParticleEmitter';
+import { Color } from 'pixi.js';
+
+// TODO Make ParticleEffectOptions more configurable rather than
+// have it defined here.
+const particleEffectOptions: ParticleEffectOptions = {
+    texturePath: Config.Textures.Particles.circleSoft,
+    emitPerSecond: 10,
+    maxParticles: 100,
+    particleOptions: {
+        maxLife: 2,
+        startAlpha: 1,
+        endAlpha: 0,
+        startScale: 1, // TODO Use to lerp width and height
+        endScale: 0.42,
+        width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+        height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+        startTint: new Color(Config.Sentry.color),
+        endTint: new Color(0x0000ff), // TODO Just for test, should be configurable
+        startVelocity: {x: 0, y: 0},
+        endVelocity: {x: 0, y: 0}
+    }
+};
 
 export class Sentry extends DynamicEntity implements Entity {
     constructor(
@@ -24,16 +46,6 @@ export class Sentry extends DynamicEntity implements Entity {
             radius: Config.Sentry.radius,
             color: Config.Sentry.color,
         }, world);
-
-        // TODO Make ParticleEffectOptions more configurable rather than
-        // have it defined here.
-        const particleEffectOptions: ParticleEffectOptions = {
-            texturePath: Config.Textures.Particles.circleSoft,
-            width: Config.Sentry.radius * 2,
-            height: Config.Sentry.radius * 2,
-            emitPerSecond: 10,
-            maxParticles: 100
-        };
 
         super({
             id: entity.id,

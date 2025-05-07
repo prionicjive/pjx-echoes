@@ -3,7 +3,6 @@ import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import * as PIXI from 'pixi.js';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
@@ -29,7 +28,7 @@ export class Sentry extends DynamicEntity implements Entity {
         // TODO Make ParticleEffectOptions more configurable rather than
         // have it defined here.
         const particleEffectOptions: ParticleEffectOptions = {
-            texture: PIXI.Texture.from(Config.Textures.Particles.circleSoft),
+            texturePath: Config.Textures.Particles.circleSoft,
             width: Config.Sentry.radius * 2,
             height: Config.Sentry.radius * 2,
             emitPerSecond: 10,

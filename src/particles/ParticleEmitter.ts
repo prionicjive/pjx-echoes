@@ -1,8 +1,8 @@
-import { Container, Sprite, Texture, Color } from 'pixi.js';
+import { Container, Sprite, Color } from 'pixi.js';
 import { Config } from '../core/Config.ts';
 
 export interface ParticleEffectOptions {
-    texture: Texture;
+    texturePath: string;
     maxParticles?: number;
     emitPerSecond?: number;
 
@@ -42,7 +42,7 @@ export class ParticleEffect {
 
     for (let i = 0; i < this.maxParticles; i++) {
       
-      const sprite = Sprite.from(options.texture);
+      const sprite = Sprite.from(options.texturePath);
       sprite.visible = false;
       sprite.anchor.set(0.5);
 

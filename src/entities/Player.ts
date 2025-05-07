@@ -11,7 +11,6 @@ import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
-import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
@@ -42,7 +41,7 @@ export class Player extends DynamicEntity implements Entity {
         // TODO Make ParticleEffectOptions more configurable rather than
         // have it defined here.
         const particleEffectOptions: ParticleEffectOptions = {
-            texture: PIXI.Texture.from(Config.Textures.Particles.ringSoft),
+            texturePath: Config.Textures.Particles.ringSoft,
             width: Config.Player.radius * 2,
             height: Config.Player.radius * 2,
             emitPerSecond: 30,

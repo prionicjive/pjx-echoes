@@ -8,7 +8,6 @@ import { Light, DynamicLight } from './Light.ts';
 import { Config } from './Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
-import { ParticleEmitter } from '../particles/ParticleEmitter.ts';
 import { InputManager } from '../input/InputManager.ts';
 
 export class World {
@@ -47,9 +46,6 @@ export class World {
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
     private lightmapSprite!: PIXI.Sprite;
     private transparentBgRect!: PIXI.Graphics;
-    
-    // Our home grown particle emitter used for a player trail effect
-    private playerTrailEmitter: ParticleEmitter | null = null;
 
     // Filters
     // TODO Do we need to have these here?
@@ -165,9 +161,8 @@ export class World {
     }
 
     private tearDownWorld() {
-        // Destroy any particle related things
-        this.playerTrailEmitter?.destroy();
-        this.playerTrailEmitter = null;
+        // Tear down dynamic entities
+        this.tearDownDynamicEntities();
         
         // Empty the various PIXI containers in order
         this.tearDownContainersInOrder();
@@ -196,11 +191,6 @@ export class World {
         // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
-
-        // Any immediate particle effects (like particle trail player)
-        // TODO Set up particle effects and add them to the appropriate layer
-        this.playerTrailEmitter = new ParticleEmitter(PIXI.Texture.from(Config.Textures.Particles.ringSoft));
-        this.preEntitiesContainer.addChild(this.playerTrailEmitter.container);
 
         // TODO This may be too drastic, but regenerate entire Planck world
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
@@ -251,7 +241,7 @@ export class World {
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
-        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)});
+        this.player = new Player(this.world, this.entitiesContainer, {x: Number(startX), y: Number(startY)}, this.preEntitiesContainer);
 
         const playerPos = {
             x: this.player?.body.getPosition().x,
@@ -264,6 +254,12 @@ export class World {
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
+    }
+
+    private tearDownDynamicEntities() {
+        this.player?.destroy();
+        
+        // TODO Do we need to destroy the player light?
     }
 
     private tearDownContainersInOrder() {
@@ -413,15 +409,12 @@ export class World {
         this.world?.step(deltaTime);
     
         // Update player
-        this.player?.update();
+        this.player?.update(deltaTime);
     
         // TODO Any other entities to update?    
 
         // Update level (For dynamic entities or geometry)
         this.level?.update();
-
-        // Update particle related things
-        this.updateParticleEffects(deltaTime);;
 
         // Update camera
         this.updateCamera(deltaTime);
@@ -464,16 +457,6 @@ export class World {
 
         // Reset flags
         this.inputManager.update();
-    }
-
-    private updateParticleEffects(deltaTime: number) {
-        if (this.player) {
-            this.playerTrailEmitter?.setEmitPosition(
-                this.player.sprite.x + (0.5 * Config.PixelsPerMeter), 
-                this.player.sprite.y + (0.5 * Config.PixelsPerMeter)
-            );
-        }
-        this.playerTrailEmitter?.update(deltaTime);
     }
 
      /**

@@ -15,25 +15,14 @@ import * as PIXI from 'pixi.js';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from '../entities/EntityFactory';
+import { DynamicEntity } from '../entities/DynamicEntity';
 
 /**
  * The Player class implements the controllable player character.
  * Handles physics, rendering, and input-based movement.
  */
-export class Player implements Entity {
-    id: string;
-    body: planck.Body;
-    sprite: PIXI.Sprite;
-
-    /**
-     * Creates a new Player instance, including its physics body and sprite.
-     * Adds the sprite to the provided PIXI container.
-     *
-     * @param {planck.World} world - The Planck.js world to add the player to.
-     * @param {PIXI.Container} container - Where to add the player's sprite for rendering.
-     * @param {Point} spawnPoint - Initial position (in world units).
-     */
-    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point) {
+export class Player extends DynamicEntity implements Entity {
+    constructor(world: planck.World, container: PIXI.Container, spawnPoint: Point, particleContainer: PIXI.Container) {
         const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
             id: EntityUtils.generateRandomId(Config.Player.type),
@@ -44,9 +33,15 @@ export class Player implements Entity {
             linearDamping: Config.Physics.Player.linearDamping
         }, world);
 
-        this.id = entity.id;
-        this.sprite = entity.sprite;
-        this.body = entity.body!;
+        // TODO Pass a ParticleEmitterOptions object
+        super({
+            id: entity.id,
+            sprite: entity.sprite,
+            body: entity.body!,
+            particleTexture: PIXI.Texture.from(Config.Textures.Particles.ringSoft),
+            particleContainer
+        });
+
         container.addChild(this.sprite);
     }
 
@@ -223,10 +218,13 @@ export class Player implements Entity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    update() {
+    update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body.getPosition().x - 0.5) * Config.PixelsPerMeter;
         this.sprite.y = (this.body.getPosition().y - 0.5) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
+
+        // Call the super to update any particle effects, among other things
+        super.update(deltaTime);
     }
 }

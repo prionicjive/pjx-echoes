@@ -378,6 +378,9 @@ export class World {
             const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             this.player?.handlePickup(sentryEntity.type);
             this.softlyKillSentryEntity(sentryEntity);
+
+            // Disable the contact to prevent the sentry from physically reacting with the player
+            contact.setEnabled(false)
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {

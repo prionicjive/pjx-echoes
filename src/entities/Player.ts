@@ -18,6 +18,8 @@ import { EntityContainers } from './BaseEntity';
 import { DynamicEntity } from './DynamicEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import * as PIXI from 'pixi.js';
 
 export class Player extends DynamicEntity {
     constructor(
@@ -26,23 +28,53 @@ export class Player extends DynamicEntity {
         spawnPoint: Point,
         containers: EntityContainers
     ) {
-        const entity = EntityFactory.create({
-            type: Config.Player.type as EntityType,
-            id: EntityUtils.generateRandomId(Config.Player.type),
-            x: spawnPoint.x,
-            y: spawnPoint.y,
-            radius: Config.Player.radius,
-            color: Config.Player.color,
+        // Generate unique ID
+        const id = EntityUtils.generateRandomId(Config.Sentry.type);
+
+        // Create the sprite
+        const sprite = SpriteUtils.createSprite({
+            texture: PIXI.Texture.from(Config.Textures.sentry),
+            x: spawnPoint.x * Config.PixelsPerMeter,
+            y: spawnPoint.y * Config.PixelsPerMeter,
+            width: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            color: Config.Player.color
+        });
+
+        // Create dynamic body
+        const body = PhysicsUtils.createBody(world, {
+            type: 'dynamic',
+            position: new planck.Vec2(spawnPoint.x + Config.Player.radius, spawnPoint.y + Config.Player.radius),
+            circle: { radius: Config.Player.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 0, // No bounce
+                filterCategoryBits: Config.Physics.Collision.categoryPlayer,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categorySentry
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categoryFinish
+                    | Config.Physics.Collision.categoryFuel
+            },
             linearDamping: Config.Physics.Player.linearDamping
-        }, world);
+        });
+
+        // Set user data with a self-referencing body
+        body.setUserData({
+            type: Config.Player.type,
+            id,
+            sprite,
+            body
+        });
 
         super({
-            id: entity.id,
-            sprite: entity.sprite,
-            body: entity.body!,
-            particleEffectOptions: {...ParticleEffectsConfig.PlayerTrail},
+            id,
+            sprite,
+            body,
+            particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
             particleEffectContainer: containers.containerForParticleEffects,
-            lightOptions: {...LightsConfig.PlayerLight},
+            lightOptions: { ...LightsConfig.PlayerLight },
             edgesList
         });
 

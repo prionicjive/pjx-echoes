@@ -35,7 +35,7 @@ export class Sentry extends DynamicEntity {
         // Create dynamic body
         const body = PhysicsUtils.createBody(world, {
             type: 'dynamic',
-            position: new planck.Vec2(spawnPoint.x, spawnPoint.y),
+            position: new planck.Vec2(spawnPoint.x + Config.Sentry.radius, spawnPoint.y + Config.Sentry.radius),
             circle: { radius: Config.Sentry.radius },
             fixture: {
                 friction: 0,

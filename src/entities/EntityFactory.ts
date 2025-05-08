@@ -107,51 +107,6 @@ export class EntityFactory {
                 });
                 return { id: desc.id, sprite, body };
             }
-            case Config.Player.type: {
-                if (!world) throw new Error('World is required for player entity');
-                const radius = desc.radius ?? 0.5;
-                const center = new planck.Vec2(desc.x + radius, desc.y + radius);
-                const color = desc.color ?? Config.Player.color;
-
-                // Create sprite
-                const sprite = SpriteUtils.createSprite({
-                    texture: PIXI.Texture.from(Config.Textures.player),
-                    x: center.x * Config.PixelsPerMeter,
-                    y: center.y * Config.PixelsPerMeter,
-                    width: 2 * radius * Config.PixelsPerMeter,
-                    height: 2 * radius * Config.PixelsPerMeter,
-                    color
-                });
-
-                // Create dynamic body
-                const body = PhysicsUtils.createBody(world, {
-                    type: 'dynamic',
-                    position: center,
-                    circle: { radius },
-                    fixture: {
-                        friction: 0,
-                        density: 1,
-                        restitution: 0, // No bounce
-                        filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-                        filterMaskBits: Config.Physics.Collision.categoryEdge
-                            | Config.Physics.Collision.categorySentry
-                            | Config.Physics.Collision.categoryWall
-                            | Config.Physics.Collision.categoryFinish
-                            | Config.Physics.Collision.categoryFuel
-                    },
-                    linearDamping: desc.linearDamping
-                });
-
-                // Set user data with a self-referencing body
-                body.setUserData({
-                    type: desc.type,
-                    id: desc.id,
-                    sprite,
-                    body
-                });
-
-                return { id: desc.id, sprite, body };
-            }
             // Add more entity types as needed...
             default:
                 throw new Error(`Unknown entity type: ${desc.type}`);

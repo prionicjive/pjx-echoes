@@ -68,7 +68,7 @@ export class ParticleEffect {
     }
   }
 
-  setEmitPosition(x: number, y: number): void {
+  setEffectPosition(x: number, y: number): void {
     this.emitPosition.x = x;
     this.emitPosition.y = y;
   }

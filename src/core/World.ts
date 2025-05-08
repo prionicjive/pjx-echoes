@@ -255,7 +255,7 @@ export class World {
         );
         
         // Add player's dynamic light to the array if it exists
-        this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
+        this.player?.light && this.dynamicLights.push(this.player.light);
 
         // Construct the sentries
         const maxSentries = Math.ceil(Config.SentryMaxDensity * openSpaces.length);
@@ -275,7 +275,7 @@ export class World {
             this.sentries.push(sentry);
 
             // Add sentry's dynamic light to the array if it exists
-            sentry.dynamicLight && this.dynamicLights.push(sentry.dynamicLight);
+            sentry.light && this.dynamicLights.push(sentry.light);
         }
 
         // Store  static light

@@ -1,8 +1,8 @@
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
-        width: 128,       // Width of the generated level (in grid units)
-        height: 128
+        width: 96,       // Width of the generated level (in grid units)
+        height: 96
     },
     MapGeneration: {
         CellularAutomata: {
@@ -44,6 +44,11 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
+        lightRadiusIncrement: 1,
+        maxLightRadius: 20,
+        lightGrowDuration: 0.15,
+        particleTrailMaxAgeIncrement: 1,
+        particleTrailMaxAgeCap: 5,
     },
     Sentry: {
         type: "SENTRY",
@@ -90,16 +95,16 @@ export const Config = {
     // TODO Consolidate light definitions?
     PlayerLight: {
         numRays: 360,
-        baseRadius: 10,
-        radiusVariance: 5,
+        baseRadius: 3,
+        radiusVariance: 1,
         baseAlpha: 0.5,
         alphaVariance: 0.4,
         startColor: 0x55aaff,
         endColor: 0x77edff,
         flickerAlphaDuration: 0.5,
         flickerAlphaDurationVariance: 2.5,
-        flickerRadiusDuration: 1.5,
-        flickerRadiusDurationVariance: 0.5,
+        flickerRadiusDuration: 0.75,
+        flickerRadiusDurationVariance: 0.25,
         oscillateColorDuration: 1.5,
         oscillateColorDurationVariance: 2,
         oscillateColorDelay: 0,
@@ -155,9 +160,9 @@ export const Config = {
     FuelLight: {
         numRays: 360,
         baseRadius: 5,
-        radiusVariance: 0,
-        baseAlpha: 0.9,
-        alphaVariance: 0.1,
+        radiusVariance: 2,
+        baseAlpha: 0.7,
+        alphaVariance: 0.3,
         startColor: 0xff0022,
         endColor: 0xff2244,
         flickerAlphaDuration: 0.5,
@@ -184,7 +189,7 @@ export const Config = {
         forceFactorPerSecond: 300.00, // Default as factor of constant force over time
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
-    ParticlesEffects: {},
+    ParticlesEffects: {}, // TODO Move particle effects config out of Dynamic Entities and to here
     Debug: {
         drawEdges: true,
         drawWalls: true,

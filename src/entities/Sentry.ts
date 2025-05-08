@@ -16,7 +16,7 @@ const particleEffectOptions: ParticleEffectOptions = {
     emitPerSecond: 10,
     maxParticles: 100,
     particleOptions: {
-        maxLife: 2,
+        maxAge: 2,
         startAlpha: 1,
         endAlpha: 0,
         startScaleX: 1,
@@ -57,7 +57,7 @@ export class Sentry extends DynamicEntity implements Entity {
             body: entity.body!,
             particleEffectOptions,
             particleContainer: containers.containerForParticles,
-            lightOptions: Config.SentryLight,
+            lightOptions: {...Config.SentryLight},
             edgesList
         });
 

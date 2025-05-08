@@ -36,7 +36,7 @@ export abstract class Light {
     protected lightPoints: { point: Point; angle: number }[];
 
     // Hold config options to reference back to
-    protected options: LightOptions;
+    public options: LightOptions;
 
     // Key components that could possibly be modified
     public radius: number;
@@ -138,9 +138,31 @@ export abstract class Light {
     public setCollisionData(edges: Segment[]) {
         this.collisionData = edges;
     }
+
+    public fadeOutAndDestroy(onComplete?: () => void) {
+    // Stop any alpha tween
+    if (this.alphaTween) this.alphaTween.kill();
+
+    this.alphaTween = gsap.to(this.tweenables, {
+        alpha: 0,
+        duration: 0.75, 
+        ease: 'power1.inOut',
+        onComplete: () => {
+            // Clean up visual resources
+            this.mask?.destroy();
+            this.sprite?.destroy();
+
+            // Optionally call the onComplete callback if provided
+            if (onComplete) onComplete();
+        }
+    });
+}
 }
 
-export class DynamicLight extends Light {    
+export class DynamicLight extends Light {
+    // Tween for "growing" to a new base radius
+    private growTween?: gsap.core.Tween;   
+
     constructor(pos: Point, collisionData: Segment[],options: LightOptions, entityId: string = "") {;
         super(pos, collisionData, options, entityId);
         // TODO Any additional setup / initialization
@@ -166,6 +188,23 @@ export class DynamicLight extends Light {
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
+    }
+
+    public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+        const target = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
+
+        // Kill any previous grow tweens
+        if (this.growTween) this.growTween.kill();
+
+        // Tween the baseRadius property
+        this.growTween = gsap.to(this.options, {
+            baseRadius: target,
+            duration,
+            ease: "power1.out",
+            onUpdate: () => {
+                this.radius = this.options.baseRadius;
+            }
+        });
     }
 
     private flickerAlpha() {

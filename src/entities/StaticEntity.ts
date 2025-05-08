@@ -7,6 +7,8 @@ export interface StaticEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;
     edgesList?: Segment[];
     position: { x: number, y: number };
+    width: number;
+    height: number;
 }
 
 export class StaticEntity extends BaseEntity {
@@ -15,8 +17,13 @@ export class StaticEntity extends BaseEntity {
 
         // Construct a static light if options provided
         if (options.lightOptions && options.edgesList) {
+            const center = {
+                x: options.position.x + options.width / 2,
+                y: options.position.y + options.height / 2
+            };
+            
             this.light = new StaticLight(
-                options.position,
+                center,
                 options.edgesList,
                 options.lightOptions,
                 options.id

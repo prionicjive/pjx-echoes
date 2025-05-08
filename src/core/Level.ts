@@ -19,9 +19,11 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { EntityType } from '../entities/types';
 import { RenderableGeometry } from './types';
 import { Fuel } from '../entities/Fuel';
+import { Torch } from '../entities/Torch';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
+    preEntitiesContainer: PIXI.Container;
     entitiesContainer: PIXI.Container;
 }
 
@@ -34,7 +36,7 @@ export class Level {
     private edgesGeometry!: RenderableGeometry;
     private walls: Entity[];
     private finishTiles: Entity[];
-    private torchTiles: Entity[];
+    private torchEntities: Entity[];
     private fuelEntities: Entity[];
     private lights: Light[];
     private edgesList: Segment[];
@@ -43,7 +45,7 @@ export class Level {
         // Store references to the various level entities
         this.walls = [];
         this.finishTiles = [];
-        this.torchTiles = [];
+        this.torchEntities = [];
         this.fuelEntities = [];
         this.lights = [];
 
@@ -60,21 +62,14 @@ export class Level {
         this.finishTiles = this.createTilesByType(
             Config.Finish.type,
             validSpaces, 
-            Config.FinishTilesDensity,
+            Config.FinishTileChance,
             containers.entitiesContainer, 
             world,
             {...LightsConfig.FinishLight}
         );
-        this.torchTiles = this.createTilesByType(
-            Config.Torch.type,
-            validSpaces, 
-            Config.TorchesDensity,
-            containers.entitiesContainer, 
-            world,
-            {...LightsConfig.TorchLight}
-        );
 
-        this.fuelEntities = this.createFuelEntities(validSpaces, containers.entitiesContainer, world);
+        this.torchEntities = this.createTorchEntities(validSpaces, containers, world);
+        this.fuelEntities = this.createFuelEntities(validSpaces, containers, world);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -144,11 +139,41 @@ export class Level {
         return entitiesToReturn;
     }
 
-    private createFuelEntities(validSpaces: string[], container: PIXI.Container, world: planck.World) {
+    private createTorchEntities(validSpaces: string[], containers: LevelContainers, world: planck.World) {
+        const entitiesToReturn = [];
+        
+        // Randomly place torch entities in open spaces for the player to reach
+        const numTorchEntities = Math.ceil(validSpaces.length * Config.TorchChance);
+        for (let i = 0; i < numTorchEntities; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+
+            const entity = new Torch({
+                world,
+                spawnPoint: { x: Number(x), y: Number(y) },
+                containers: { 
+                    containerForEntity: containers.entitiesContainer,
+                    containerForParticleEffects: containers.preEntitiesContainer 
+                },
+                edgesList: this.edgesList
+            });
+
+            entitiesToReturn.push(entity);
+
+            // Add light if it exists
+            if (entity.light) {
+                this.lights.push(entity.light);
+            }
+        }
+
+        return entitiesToReturn;
+    }
+
+    private createFuelEntities(validSpaces: string[], container: LevelContainers, world: planck.World) {
         const entitiesToReturn = [];
         
         // Randomly place fuel entities in open spaces for the player to reach
-        const numFuelEntities = Math.ceil(validSpaces.length * Config.FuelTileDensity);
+        const numFuelEntities = Math.ceil(validSpaces.length * Config.FuelChance);
         for (let i = 0; i < numFuelEntities; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
@@ -156,7 +181,7 @@ export class Level {
             const entity = new Fuel({
                 world,
                 spawnPoint: { x: Number(x), y: Number(y) },
-                containers: { containerForEntity: container },
+                containers: { containerForEntity: container.entitiesContainer },
                 edgesList: this.edgesList
             });
 
@@ -203,8 +228,8 @@ export class Level {
             if (lightOptions) {
                 // Set up light
                 const lightToCreate = new StaticLight({
-                    x: entity.sprite.x / Config.PixelsPerMeter + 0.5,
-                    y: entity.sprite.y / Config.PixelsPerMeter + 0.5
+                    x: entity.sprite.x / Config.PixelsPerMeter + (entity.sprite.width / Config.PixelsPerMeter * 0.5),
+                    y: entity.sprite.y / Config.PixelsPerMeter + (entity.sprite.height / Config.PixelsPerMeter * 0.5)
                 },
                 this.edgesList,
                 lightOptions,
@@ -238,7 +263,7 @@ export class Level {
      * @returns {Entity[]} Array of torch entities.
      */
     getTorchTiles(): Entity[] {
-        return this.torchTiles;
+        return this.torchEntities;
     }
 
     /**

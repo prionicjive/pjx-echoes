@@ -61,6 +61,8 @@ export class Fuel extends StaticEntity {
             lightOptions: { ...LightsConfig.FuelLight },
             edgesList: options.edgesList,
             position: options.spawnPoint,
+            width: Config.Fuel.width,
+            height: Config.Fuel.height,
         });
 
         // Add the sprite to the main entity container

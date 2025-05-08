@@ -65,48 +65,6 @@ export class EntityFactory {
 
                 return { id: desc.id, sprite, body };
             }
-            case Config.Torch.type: {
-                const sprite = SpriteUtils.createSprite({
-                    texture: PIXI.Texture.from(Config.Textures.torch),
-                    x: desc.x * Config.PixelsPerMeter,
-                    y: desc.y * Config.PixelsPerMeter,
-                    width: desc.width! * Config.PixelsPerMeter,
-                    height: desc.height! * Config.PixelsPerMeter,
-                    color: desc.color ?? Config.Torch.color,
-                });
-                // Torches may not need a body, but you can add one if needed
-                return { id: desc.id, sprite, body: null };
-            }
-            case Config.Fuel.type: {
-                const sprite = SpriteUtils.createSprite({
-                    texture: PIXI.Texture.from(Config.Textures.fuel),
-                    x: desc.x * Config.PixelsPerMeter,
-                    y: desc.y * Config.PixelsPerMeter,
-                    width: desc.width! * Config.PixelsPerMeter,
-                    height: desc.height! * Config.PixelsPerMeter,
-                    color: desc.color ?? Config.Fuel.color,
-                });
-                if (!world) throw new Error('World is required for fuel entity');
-                const body = PhysicsUtils.createBody(world, {
-                    type: 'static',
-                    position: new planck.Vec2(desc.x, desc.y),
-                    box: { width: desc.width!, height: desc.height! },
-                    fixture: {
-                        isSensor: true,
-                        filterCategoryBits: Config.Physics.Collision.categoryFuel,
-                        filterMaskBits: Config.Physics.Collision.categoryPlayer,
-                    }
-                });
-
-                // Set user data with a self-referencing body
-                body.setUserData({
-                    type: desc.type,
-                    id: desc.id,
-                    sprite,
-                    body
-                });
-                return { id: desc.id, sprite, body };
-            }
             // Add more entity types as needed...
             default:
                 throw new Error(`Unknown entity type: ${desc.type}`);

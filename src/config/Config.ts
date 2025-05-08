@@ -54,14 +54,18 @@ export const Config = {
         type: "SENTRY",
         color: 0xBB32FF,  // Tint color for the sentry sprite
         radius: 0.25,     // Physics radius of the sentry (in meters)
-        maxSpeed: 3.00,
+        maxSpeed: 5.00,
     },
     Wall: {
         type: "WALL",
+        width: 1,
+        height: 1,
         color: 0x111111,  // Tint color for walls
     },
     Torch: {
         type: "TORCH",
+        width: 1,
+        height: 1,
         color: 0xdfb503,  // Tint color for torches
     },
     Fuel: {
@@ -72,6 +76,8 @@ export const Config = {
     },
     Finish: {
         type: "FINISH",
+        width: 1,
+        height: 1,
         color: 0x2ddf03,  // Tint color for finish tiles
     },
     Edges: {
@@ -94,10 +100,10 @@ export const Config = {
             circleSoft: '/assets/textures/particles/circle_soft.png'
         }
     },
-    FinishTilesDensity: 0.0001,
-    TorchesDensity: 0.0007,
-    FuelTileDensity: 0.00065,
-    SentryMaxDensity: 0.0025,
+    FinishTileChance: 0.0001,
+    TorchChance: 0.0007,
+    FuelChance: 0.00065,
+    SentryChance: 0.0025,
     Movement: {
         Gesture: {
             swipeSpeedScaleExponent: 0.95,

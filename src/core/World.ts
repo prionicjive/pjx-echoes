@@ -234,6 +234,7 @@ export class World {
         this.level = new Level(
             this.world, {
                 levelGeometryContainer: this.levelGeometryContainer,
+                preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             }, 
             this.rawLevelMap, 
@@ -258,11 +259,11 @@ export class World {
         this.player?.light && this.dynamicLights.push(this.player.light);
 
         // Construct the sentries
-        const maxSentries = Math.ceil(Config.SentryMaxDensity * openSpaces.length);
+        const maxSentries = Math.ceil(Config.SentryChance * openSpaces.length);
         for (let i = 0; i < maxSentries; i++) {
             // Find random valid start point
             const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
+            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
             const sentry = new Sentry(
                 this.world, 
                 this.mergedEdges, 

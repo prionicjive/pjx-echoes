@@ -66,6 +66,8 @@ export const Config = {
     },
     Fuel: {
         type: "FUEL",
+        width: 1,
+        height: 1,
         color: 0xff0888,  // Tint color for fuel
     },
     Finish: {

@@ -25,10 +25,10 @@ export class EntityFactory {
             case Config.Wall.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.block),
-                    x: desc.x,
-                    y: desc.y,
-                    width: desc.width!,
-                    height: desc.height!,
+                    x: desc.x * Config.PixelsPerMeter,
+                    y: desc.y * Config.PixelsPerMeter,
+                    width: desc.width! * Config.PixelsPerMeter,
+                    height: desc.height! * Config.PixelsPerMeter,
                     color: desc.color ?? Config.Wall.color,
                 });
                 return { id: desc.id, sprite, body: null };
@@ -36,10 +36,10 @@ export class EntityFactory {
             case Config.Finish.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.finish),
-                    x: desc.x,
-                    y: desc.y,
-                    width: desc.width!,
-                    height: desc.height!,
+                    x: desc.x * Config.PixelsPerMeter,
+                    y: desc.y * Config.PixelsPerMeter,
+                    width: desc.width! * Config.PixelsPerMeter,
+                    height: desc.height! * Config.PixelsPerMeter,
                     color: desc.color ?? Config.Finish.color,
                 });
                 if (!world) throw new Error('World is required for finish entity');
@@ -68,10 +68,10 @@ export class EntityFactory {
             case Config.Torch.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.torch),
-                    x: desc.x,
-                    y: desc.y,
-                    width: desc.width!,
-                    height: desc.height!,
+                    x: desc.x * Config.PixelsPerMeter,
+                    y: desc.y * Config.PixelsPerMeter,
+                    width: desc.width! * Config.PixelsPerMeter,
+                    height: desc.height! * Config.PixelsPerMeter,
                     color: desc.color ?? Config.Torch.color,
                 });
                 // Torches may not need a body, but you can add one if needed
@@ -80,10 +80,10 @@ export class EntityFactory {
             case Config.Fuel.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.fuel),
-                    x: desc.x,
-                    y: desc.y,
-                    width: desc.width!,
-                    height: desc.height!,
+                    x: desc.x * Config.PixelsPerMeter,
+                    y: desc.y * Config.PixelsPerMeter,
+                    width: desc.width! * Config.PixelsPerMeter,
+                    height: desc.height! * Config.PixelsPerMeter,
                     color: desc.color ?? Config.Fuel.color,
                 });
                 if (!world) throw new Error('World is required for fuel entity');
@@ -116,10 +116,10 @@ export class EntityFactory {
                 // Create sprite
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.player),
-                    x: center.x,
-                    y: center.y,
-                    width: 2 * radius,
-                    height: 2 * radius,
+                    x: center.x * Config.PixelsPerMeter,
+                    y: center.y * Config.PixelsPerMeter,
+                    width: 2 * radius * Config.PixelsPerMeter,
+                    height: 2 * radius * Config.PixelsPerMeter,
                     color
                 });
 
@@ -138,50 +138,6 @@ export class EntityFactory {
                             | Config.Physics.Collision.categoryWall
                             | Config.Physics.Collision.categoryFinish
                             | Config.Physics.Collision.categoryFuel
-                    },
-                    linearDamping: desc.linearDamping
-                });
-
-                // Set user data with a self-referencing body
-                body.setUserData({
-                    type: desc.type,
-                    id: desc.id,
-                    sprite,
-                    body
-                });
-
-                return { id: desc.id, sprite, body };
-            }
-            case Config.Sentry.type: {
-                if (!world) throw new Error('World is required for sentry entity');
-                const radius = desc.radius ?? 0.5;
-                const center = new planck.Vec2(desc.x + radius, desc.y + radius); // The center of a 1x1 meter tile
-                const color = desc.color ?? Config.Sentry.color;
-
-                // Create sprite
-                const sprite = SpriteUtils.createSprite({
-                    texture: PIXI.Texture.from(Config.Textures.player),
-                    x: center.x,
-                    y: center.y,
-                    width: 2 * radius,
-                    height: 2 * radius,
-                    color
-                });
-
-                // Create dynamic body
-                const body = PhysicsUtils.createBody(world, {
-                    type: 'dynamic',
-                    position: center,
-                    circle: { radius },
-                    fixture: {
-                        friction: 0,
-                        density: 1,
-                        restitution: 1.0, // Perfect elasticity
-                        filterCategoryBits: Config.Physics.Collision.categorySentry,
-                        filterMaskBits: Config.Physics.Collision.categoryEdge
-                            | Config.Physics.Collision.categoryPlayer
-                            | Config.Physics.Collision.categoryWall
-                            | Config.Physics.Collision.categorySentry
                     },
                     linearDamping: desc.linearDamping
                 });

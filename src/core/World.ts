@@ -395,11 +395,13 @@ export class World {
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
             this.player?.handlePickup(fuelEntity.type);
+            // TODO Do we need to call Fuel's onPickup()?
             this.softlyKillStaticEntity(fuelEntity);
         }
     }
 
     private softlyKillSentryEntity(sentryEntity: EntityUserData) {
+        // TODO Should the world do this? Should it be handled in the sentry class?
         this.entitiesContainer.removeChild(sentryEntity.sprite);
 
         // Remove body

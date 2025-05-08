@@ -1,16 +1,17 @@
 import { Config } from '../config/Config';
-import { Entity, EntityType } from './types';
-import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityFactory } from './EntityFactory';
 import { EntityContainers } from './BaseEntity';
 import { DynamicEntity } from './DynamicEntity';
 import { Segment } from '../utils/types';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import * as PIXI from 'pixi.js';
+import { EntityUtils } from '../utils/EntityUtils';
 
-export class Sentry extends DynamicEntity implements Entity {
+export class Sentry extends DynamicEntity {
     constructor(
         world: planck.World,
         edgesList: Segment[], 
@@ -18,22 +19,51 @@ export class Sentry extends DynamicEntity implements Entity {
         containers: EntityContainers, 
         initialVelocity?: planck.Vec2
     ) {
-        const entity = EntityFactory.create({
-            type: Config.Sentry.type as EntityType,
-            id: EntityUtils.generateRandomId(Config.Sentry.type),
-            x: spawnPoint.x,
-            y: spawnPoint.y,
-            radius: Config.Sentry.radius,
-            color: Config.Sentry.color,
-        }, world);
+        // Generate unique ID
+        const id = EntityUtils.generateRandomId(Config.Sentry.type);
+
+        // Create the sprite
+        const sprite = SpriteUtils.createSprite({
+            texture: PIXI.Texture.from(Config.Textures.sentry),
+            x: spawnPoint.x * Config.PixelsPerMeter,
+            y: spawnPoint.y * Config.PixelsPerMeter,
+            width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            color: Config.Sentry.color
+        });
+
+        // Create dynamic body
+        const body = PhysicsUtils.createBody(world, {
+            type: 'dynamic',
+            position: new planck.Vec2(spawnPoint.x, spawnPoint.y),
+            circle: { radius: Config.Sentry.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 1, // Perfect elasticity
+                filterCategoryBits: Config.Physics.Collision.categorySentry,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categoryPlayer
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categorySentry
+            }
+        });
+
+        // Set user data with a self-referencing body
+        body.setUserData({
+            type: Config.Sentry.type,
+            id,
+            sprite,
+            body
+        });
 
         super({
-            id: entity.id,
-            sprite: entity.sprite,
-            body: entity.body!,
-            particleEffectOptions: {...ParticleEffectsConfig.SentryTrail},
+            id,
+            sprite,
+            body,
+            particleEffectOptions: { ...ParticleEffectsConfig.SentryTrail },
             particleEffectContainer: containers.containerForParticleEffects,
-            lightOptions: {...LightsConfig.SentryLight},
+            lightOptions: { ...LightsConfig.SentryLight },
             edgesList
         });
 

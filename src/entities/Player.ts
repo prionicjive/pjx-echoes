@@ -7,7 +7,7 @@
  */
 
 import { Config } from '../config/Config';
-import { Entity, EntityType } from './types';
+import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
@@ -19,7 +19,7 @@ import { DynamicEntity } from './DynamicEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
 
-export class Player extends DynamicEntity implements Entity {
+export class Player extends DynamicEntity {
     constructor(
         world: planck.World, 
         edgesList: Segment[], 

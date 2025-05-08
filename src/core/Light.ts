@@ -94,6 +94,11 @@ export abstract class Light {
     }
 
     abstract setupTweens(): void;
+
+    // @ts-ignore
+    public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+        this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
+    }
     
     public update(pos: Point | null): void {
         // Use the sprite's current position if no updated position is given
@@ -191,8 +196,8 @@ export class DynamicLight extends Light {
     }
 
     public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
-        this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
-
+        super.setBaseRadius(newRadius, maxRadius, duration);
+        
         // Kill any previous grow tweens
         if (this.growTween) this.growTween.kill();
 

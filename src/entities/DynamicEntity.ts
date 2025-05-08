@@ -3,7 +3,6 @@ import * as planck from 'planck';
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { DynamicLight, LightOptions } from '../core/Light';
 import { Segment } from '../utils/types';
-import { Config } from '../config/Config';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
     body: planck.Body;

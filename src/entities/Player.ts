@@ -14,7 +14,8 @@ import * as planck from 'planck';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
-import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
+import { EntityContainers } from './BaseEntity';
+import { DynamicEntity } from './DynamicEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
 
@@ -23,7 +24,7 @@ export class Player extends DynamicEntity implements Entity {
         world: planck.World, 
         edgesList: Segment[], 
         spawnPoint: Point,
-        containers: DynamicEntityContainers
+        containers: EntityContainers
     ) {
         const entity = EntityFactory.create({
             type: Config.Player.type as EntityType,
@@ -40,7 +41,7 @@ export class Player extends DynamicEntity implements Entity {
             sprite: entity.sprite,
             body: entity.body!,
             particleEffectOptions: {...ParticleEffectsConfig.PlayerTrail},
-            particleContainer: containers.containerForParticles,
+            particleEffectContainer: containers.containerForParticleEffects,
             lightOptions: {...LightsConfig.PlayerLight},
             edgesList
         });
@@ -235,8 +236,8 @@ export class Player extends DynamicEntity implements Entity {
         switch (type) {
             case Config.Fuel.type:
                 // Grow the light
-                this.dynamicLight?.setBaseRadius(
-                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
+                this.light?.setBaseRadius(
+                    this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
                     Config.Player.maxLightRadius,
                     Config.Player.lightGrowDuration
                 );
@@ -250,8 +251,8 @@ export class Player extends DynamicEntity implements Entity {
                 break;
             case Config.Sentry.type:
                 // Grow the light
-                this.dynamicLight?.setBaseRadius(
-                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
+                this.light?.setBaseRadius(
+                    this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
                     Config.Player.maxLightRadius,
                     Config.Player.lightGrowDuration
                 );

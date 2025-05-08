@@ -250,7 +250,7 @@ export class World {
             this.mergedEdges, 
             {x: Number(startX), y: Number(startY)}, {
                 containerForEntity: this.entitiesContainer,
-                containerForParticles: this.preEntitiesContainer,
+                containerForParticleEffects: this.preEntitiesContainer,
             }
         );
         
@@ -268,7 +268,7 @@ export class World {
                 this.mergedEdges, 
                 {x: Number(spawnX), y: Number(spawnY)}, {
                     containerForEntity: this.entitiesContainer,
-                    containerForParticles: this.preEntitiesContainer,
+                    containerForParticleEffects: this.preEntitiesContainer,
                 },
                 initialVelocity
             );

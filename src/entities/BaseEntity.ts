@@ -2,11 +2,16 @@ import * as PIXI from 'pixi.js';
 import { Light } from '../core/Light';
 import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 
+export interface EntityContainers {
+    containerForEntity: PIXI.Container;
+    containerForParticleEffects: PIXI.Container;
+}
+
 export interface BaseEntityOptions {
     id: string;
     sprite: PIXI.Sprite;
     particleEffectOptions?: ParticleEffectOptions;
-    particleContainer?: PIXI.Container;
+    particleEffectContainer?: PIXI.Container;
 }
 
 export class BaseEntity {
@@ -19,9 +24,9 @@ export class BaseEntity {
         this.id = options.id;
         this.sprite = options.sprite;
 
-        if (options.particleEffectOptions && options.particleContainer) {
+        if (options.particleEffectOptions && options.particleEffectContainer) {
             this.particleEffect = new ParticleEffect(options.particleEffectOptions);
-            options.particleContainer.addChild(this.particleEffect.container);
+            options.particleEffectContainer.addChild(this.particleEffect.container);
         }
         // No light construction here!
     }

@@ -4,7 +4,8 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { EntityFactory } from './EntityFactory';
-import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
+import { EntityContainers } from './BaseEntity';
+import { DynamicEntity } from './DynamicEntity';
 import { Segment } from '../utils/types';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
@@ -14,7 +15,7 @@ export class Sentry extends DynamicEntity implements Entity {
         world: planck.World,
         edgesList: Segment[], 
         spawnPoint: Point,
-        containers: DynamicEntityContainers, 
+        containers: EntityContainers, 
         initialVelocity?: planck.Vec2
     ) {
         const entity = EntityFactory.create({
@@ -31,7 +32,7 @@ export class Sentry extends DynamicEntity implements Entity {
             sprite: entity.sprite,
             body: entity.body!,
             particleEffectOptions: {...ParticleEffectsConfig.SentryTrail},
-            particleContainer: containers.containerForParticles,
+            particleEffectContainer: containers.containerForParticleEffects,
             lightOptions: {...LightsConfig.SentryLight},
             edgesList
         });

@@ -23,9 +23,9 @@ import { Color } from 'pixi.js';
 const particleEffectOptions: ParticleEffectOptions = {
     texturePath: Config.Textures.Particles.ringSoft,
     emitPerSecond: 30,
-    maxParticles: 100,
+    maxParticles: 250,
     particleOptions: {
-        maxLife: 2,
+        maxAge: 0.5,
         startAlpha: 1,
         endAlpha: 0,
         startScaleX: 1,
@@ -267,7 +267,19 @@ export class Player extends DynamicEntity implements Entity {
                 );
 
                 // Increase the age of the particle trail
-                //this.particleEffect?.setMaxLife(this.particleEffect.options.maxLife + Config.Player.particleTrailMaxLifeIncrement);
+                // TODO Better encapsulate
+                if(this.particleEffect) {
+                    this.particleEffect.template.maxAge += Config.Player.particleTrailMaxAgeIncrement;
+                    this.particleEffect.template.maxAge = Math.min(this.particleEffect.template.maxAge, Config.Player.particleTrailMaxAgeCap);
+                }
+                break;
+            case Config.Sentry.type:
+                // Grow the light
+                this.dynamicLight?.setBaseRadius(
+                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
+                    Config.Player.maxLightRadius,
+                    Config.Player.lightGrowDuration
+                );
                 break;
             default:
                 break;

@@ -44,10 +44,11 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
-        lightRadiusIncrement: 2,
+        lightRadiusIncrement: 1,
         maxLightRadius: 20,
         lightGrowDuration: 0.15,
-        particleTrailMaxLifeIncrement: 1,
+        particleTrailMaxAgeIncrement: 1,
+        particleTrailMaxAgeCap: 5,
     },
     Sentry: {
         type: "SENTRY",
@@ -188,7 +189,7 @@ export const Config = {
         forceFactorPerSecond: 300.00, // Default as factor of constant force over time
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
-    ParticlesEffects: {},
+    ParticlesEffects: {}, // TODO Move particle effects config out of Dynamic Entities and to here
     Debug: {
         drawEdges: true,
         drawWalls: true,

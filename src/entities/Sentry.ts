@@ -16,7 +16,7 @@ const particleEffectOptions: ParticleEffectOptions = {
     emitPerSecond: 10,
     maxParticles: 100,
     particleOptions: {
-        maxLife: 2,
+        maxAge: 2,
         startAlpha: 1,
         endAlpha: 0,
         startScaleX: 1,

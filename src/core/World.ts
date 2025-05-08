@@ -376,6 +376,7 @@ export class World {
             console.log("Player hit a sentry!");
 
             const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
+            this.player?.handlePickup(sentryEntity.type);
             this.softlyKillSentryEntity(sentryEntity);
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
@@ -390,10 +391,7 @@ export class World {
             console.log("Player picked up fuel!");
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            
-            // TODO Is it proper to encapsulate?
             this.player?.handlePickup(fuelEntity.type);
-            
             this.softlyKillStaticEntity(fuelEntity);
         }
     }

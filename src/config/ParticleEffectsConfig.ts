@@ -3,7 +3,7 @@ import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Config } from './Config';
 
 // Centralized particle effect configuration
-export const ParticleEffects: Record<string, ParticleEffectOptions> = {
+export const ParticleEffectsConfig: Record<string, ParticleEffectOptions> = {
     PlayerTrail: {
         texturePath: Config.Textures.Particles.ringSoft,
         emitPerSecond: 30,

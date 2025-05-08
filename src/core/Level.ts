@@ -7,6 +7,7 @@
  */
 
 import { Config } from '../config/Config';
+import { LightsConfig } from '../config/LightsConfig';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Entity } from '../entities/types';
 import * as planck from 'planck';
@@ -61,7 +62,7 @@ export class Level {
             Config.FinishTilesDensity,
             containers.entitiesContainer, 
             world,
-            {...Config.FinishLight}
+            {...LightsConfig.FinishLight}
         );
         this.torchTiles = this.createTilesByType(
             Config.Torch.type,
@@ -69,7 +70,7 @@ export class Level {
             Config.TorchesDensity,
             containers.entitiesContainer, 
             world,
-            {...Config.TorchLight}
+            {...LightsConfig.TorchLight}
         );
         this.fuelTiles = this.createTilesByType(
             Config.Fuel.type,
@@ -77,7 +78,7 @@ export class Level {
             Config.FuelTileDensity,
             containers.entitiesContainer, 
             world,
-            {...Config.FuelLight}
+            {...LightsConfig.FuelLight}
         );;
     }
 

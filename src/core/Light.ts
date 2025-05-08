@@ -170,7 +170,7 @@ export class DynamicLight extends Light {
 
     public setupTweens() {
         this.flickerAlpha();
-        this.flickerRadius();
+        //this.flickerRadius();
         this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
@@ -191,19 +191,16 @@ export class DynamicLight extends Light {
     }
 
     public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
-        const target = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
+        this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
 
         // Kill any previous grow tweens
         if (this.growTween) this.growTween.kill();
 
         // Tween the baseRadius property
-        this.growTween = gsap.to(this.options, {
-            baseRadius: target,
+        this.growTween = gsap.to(this.tweenables, {
+            radius: this.options.baseRadius,
             duration,
-            ease: "power1.out",
-            onUpdate: () => {
-                this.radius = this.options.baseRadius;
-            }
+            ease: "power1.out"
         });
     }
 

@@ -46,7 +46,7 @@ export const Config = {
         radius: 0.48,     // Physics radius of the player (in meters)
         lightRadiusIncrement: 1,
         maxLightRadius: 20,
-        lightGrowDuration: 0.15,
+        lightGrowDuration: 0.75,
         particleTrailMaxAgeIncrement: 1,
         particleTrailMaxAgeCap: 5,
     },

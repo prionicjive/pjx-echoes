@@ -288,10 +288,22 @@ export class World {
     private tearDownDynamicEntities() {
         this.player?.destroy();
         
+        // Destroy the sentries
         this.sentries.forEach((sentry) => {
             sentry.destroy();
         });
         this.sentries = [];
+
+        // Kill the lights
+        // this.staticLights.forEach((light) => {
+        //     light.destroy();
+        // });
+        this.staticLights = [];
+
+        // this.dynamicLights.forEach((light) => {
+        //     light.destroy();
+        // });
+        this.dynamicLights = [];
     }
 
     private tearDownContainersInOrder() {
@@ -364,43 +376,7 @@ export class World {
             console.log("Player hit a sentry!");
 
             const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
-            this.entitiesContainer.removeChild(sentryEntity.sprite);
-
-            // Remove body
-            if (sentryEntity.body) {
-                this.world?.destroyBody(sentryEntity.body);
-            }
-
-            // Find the light
-            let index = this.dynamicLights.findIndex((light) => light.entityId === sentryEntity.id);
-
-            if (index !== -1) {
-                const light = this.dynamicLights[index]; // We'll handle removal after fade
-                light.fadeOutAndDestroy(() => {
-                    const idx = this.dynamicLights.indexOf(light);
-                    
-                    // Actually remove from dynamicLights after fade, if not already done
-                    if (idx !== -1) {
-                        this.dynamicLights.splice(idx, 1);
-                    }
-
-                    // Light sprite and mask are destroyed in the fadeOut method
-                });
-            }
-
-            // Now destroy the sentry (With any particle emitter associated)
-            // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
-            index = this.sentries.findIndex((sentry) => {
-                return sentry.id === sentryEntity.id;
-            });
-
-            if (index !== -1) {
-                const [sentry] = this.sentries.splice(index, 1);
-                sentry.destroy();
-            }
-
-            // Lastly, flag the body of the fuel entity for destruction
-            this.bodiesToDestroy.push(sentryEntity.body);
+            this.softlyKillSentryEntity(sentryEntity);
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {
@@ -414,33 +390,84 @@ export class World {
             console.log("Player picked up fuel!");
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.entitiesContainer.removeChild(fuelEntity.sprite);
-
-            // Remove body
-            if (fuelEntity.body) {
-                this.world?.destroyBody(fuelEntity.body);
-            }
-
-            // Find the light
-            const index = this.staticLights.findIndex((light) => light.entityId === fuelEntity.id);
-
-            if (index !== -1) {
-                const light = this.staticLights[index]; // We'll handle removal after fade
-                light.fadeOutAndDestroy(() => {
-                    const idx = this.staticLights.indexOf(light);
-                    
-                    // Actually remove from dynamicLights after fade, if not already done
-                    if (idx !== -1) {
-                        this.staticLights.splice(idx, 1);
-                    }
-
-                    // Light sprite and mask are destroyed in the fadeOut method
-                });
-            }
-
-            // Lastly, flag the body of the fuel entity for destruction
-            this.bodiesToDestroy.push(fuelEntity.body);
+            
+            // TODO Is it proper to encapsulate?
+            this.player?.handlePickup(fuelEntity.type);
+            
+            this.softlyKillStaticEntity(fuelEntity);
         }
+    }
+
+    private softlyKillSentryEntity(sentryEntity: EntityUserData) {
+        this.entitiesContainer.removeChild(sentryEntity.sprite);
+
+        // Remove body
+        if (sentryEntity.body) {
+            this.world?.destroyBody(sentryEntity.body);
+        }
+
+        // Find the light
+        let index = this.dynamicLights.findIndex((light) => light.entityId === sentryEntity.id);
+
+        if (index !== -1) {
+            const light = this.dynamicLights[index]; // We'll handle removal after fade
+            light.fadeOutAndDestroy(() => {
+                const idx = this.dynamicLights.indexOf(light);
+                
+                // Actually remove from dynamic lights array after fade, if not already done
+                if (idx !== -1) {
+                    this.dynamicLights.splice(idx, 1);
+                }
+
+                // Light sprite and mask are destroyed in the fadeOut method
+            });
+        }
+
+        // Now destroy the sentry (With any particle emitter associated)
+        // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
+        index = this.sentries.findIndex((sentry) => {
+            return sentry.id === sentryEntity.id;
+        });
+
+        if (index !== -1) {
+            const [sentry] = this.sentries.splice(index, 1);
+            sentry.destroy();
+        }
+
+        // Lastly, flag the body of the sentry entity for destruction
+        this.bodiesToDestroy.push(sentryEntity.body);
+    }
+
+    private softlyKillStaticEntity(staticEntity: EntityUserData) {
+        // TODO Entity might live in a different container
+        this.entitiesContainer.removeChild(staticEntity.sprite);
+
+        // Remove body
+        if (staticEntity.body) {
+            this.world?.destroyBody(staticEntity.body);
+        }
+
+        // Find the light
+        const index = this.staticLights.findIndex((light) => light.entityId === staticEntity.id);
+
+        if (index !== -1) {
+            const light = this.staticLights[index]; // We'll handle removal after fade
+            light.fadeOutAndDestroy(() => {
+                const idx = this.staticLights.indexOf(light);
+                
+                // Actually remove from static lights after fade, if not already done
+                if (idx !== -1) {
+                    this.staticLights.splice(idx, 1);
+                }
+
+                // Light sprite and mask are destroyed in the fadeOut method
+            });
+        }
+
+        // TODO Do any other additional destruction on the entity or its subsystems
+
+        // Lastly, flag the body of the entity for destruction
+        this.bodiesToDestroy.push(staticEntity.body);
     }
 
     /**

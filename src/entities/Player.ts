@@ -66,7 +66,7 @@ export class Player extends DynamicEntity implements Entity {
             body: entity.body!,
             particleEffectOptions,
             particleContainer: containers.containerForParticles,
-            lightOptions: Config.PlayerLight,
+            lightOptions: {...Config.PlayerLight},
             edgesList
         });
 
@@ -254,5 +254,23 @@ export class Player extends DynamicEntity implements Entity {
 
         // Call the super to update any particle effects, among other things
         super.update(deltaTime);
+    }
+
+    handlePickup(type: EntityType) {
+        switch (type) {
+            case Config.Fuel.type:
+                // Grow the light
+                this.dynamicLight?.setBaseRadius(
+                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
+                    Config.Player.maxLightRadius,
+                    Config.Player.lightGrowDuration
+                );
+
+                // Increase the age of the particle trail
+                //this.particleEffect?.setMaxLife(this.particleEffect.options.maxLife + Config.Player.particleTrailMaxLifeIncrement);
+                break;
+            default:
+                break;
+        }
     }
 }

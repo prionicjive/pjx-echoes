@@ -61,7 +61,7 @@ export class Level {
             Config.FinishTilesDensity,
             containers.entitiesContainer, 
             world,
-            Config.FinishLight
+            {...Config.FinishLight}
         );
         this.torchTiles = this.createTilesByType(
             Config.Torch.type,
@@ -69,7 +69,7 @@ export class Level {
             Config.TorchesDensity,
             containers.entitiesContainer, 
             world,
-            Config.TorchLight
+            {...Config.TorchLight}
         );
         this.fuelTiles = this.createTilesByType(
             Config.Fuel.type,
@@ -77,7 +77,7 @@ export class Level {
             Config.FuelTileDensity,
             containers.entitiesContainer, 
             world,
-            Config.FuelLight
+            {...Config.FuelLight}
         );;
     }
 

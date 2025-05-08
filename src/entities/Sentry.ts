@@ -57,7 +57,7 @@ export class Sentry extends DynamicEntity implements Entity {
             body: entity.body!,
             particleEffectOptions,
             particleContainer: containers.containerForParticles,
-            lightOptions: Config.SentryLight,
+            lightOptions: {...Config.SentryLight},
             edgesList
         });
 

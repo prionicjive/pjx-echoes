@@ -24,7 +24,7 @@ export class DynamicEntity {
     public sprite: PIXI.Sprite;
     public body: planck.Body;
     public dynamicLight?: DynamicLight;
-    protected emitter?: ParticleEffect;
+    protected particleEffect?: ParticleEffect;
 
     constructor(options: DynamicEntityOptions) {
         this.id = options.id;
@@ -34,8 +34,8 @@ export class DynamicEntity {
         // If a particle texture and container are provided, set up an emitter
         // TODO See if there is a ParticleEffectOptions object AND a container
         if (options.particleEffectOptions && options.particleContainer) {
-            this.emitter = new ParticleEffect(options.particleEffectOptions);
-            options.particleContainer.addChild(this.emitter.container);
+            this.particleEffect = new ParticleEffect(options.particleEffectOptions);
+            options.particleContainer.addChild(this.particleEffect.container);
         }
 
         // See if we have what it takes to create a light
@@ -53,13 +53,13 @@ export class DynamicEntity {
         // TODO Perhaps lights and effects are best handled by a manager?
         // TODO Best to NOT have entities update their own lights and effects??
         // Update emitter position and animate, if present
-        if (this.emitter) {
+        if (this.particleEffect) {
             // TODO We might not always want to follow the position
-            this.emitter.setEmitPosition(
+            this.particleEffect.setEmitPosition(
                 this.sprite.x + this.sprite.width / 2, // TODO Not that this is in PIXELS and NOT meters
                 this.sprite.y + this.sprite.height / 2
             );
-            this.emitter.update(deltaTime);
+            this.particleEffect.update(deltaTime);
         }
 
         // Update light position, if present
@@ -74,7 +74,7 @@ export class DynamicEntity {
     }
 
     destroy() {
-        this.emitter?.destroy();
+        this.particleEffect?.destroy();
         // Clean up other resources if needed
     }
 }

@@ -22,7 +22,7 @@ export interface EntityOptions {
 export class EntityFactory {
     static create(desc: EntityOptions, world?: planck.World): Entity {
         switch (desc.type) {
-            case 'WALL': {
+            case Config.Wall.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.block),
                     x: desc.x,
@@ -33,7 +33,7 @@ export class EntityFactory {
                 });
                 return { id: desc.id, sprite, body: null };
             }
-            case 'FINISH': {
+            case Config.Finish.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.finish),
                     x: desc.x,
@@ -65,7 +65,7 @@ export class EntityFactory {
 
                 return { id: desc.id, sprite, body };
             }
-            case 'TORCH': {
+            case Config.Torch.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.torch),
                     x: desc.x,
@@ -77,7 +77,7 @@ export class EntityFactory {
                 // Torches may not need a body, but you can add one if needed
                 return { id: desc.id, sprite, body: null };
             }
-            case 'FUEL': {
+            case Config.Fuel.type: {
                 const sprite = SpriteUtils.createSprite({
                     texture: PIXI.Texture.from(Config.Textures.fuel),
                     x: desc.x,
@@ -107,7 +107,7 @@ export class EntityFactory {
                 });
                 return { id: desc.id, sprite, body };
             }
-            case 'PLAYER': {
+            case Config.Player.type: {
                 if (!world) throw new Error('World is required for player entity');
                 const radius = desc.radius ?? 0.5;
                 const center = new planck.Vec2(desc.x + radius, desc.y + radius);
@@ -152,7 +152,7 @@ export class EntityFactory {
 
                 return { id: desc.id, sprite, body };
             }
-            case 'SENTRY': {
+            case Config.Sentry.type: {
                 if (!world) throw new Error('World is required for sentry entity');
                 const radius = desc.radius ?? 0.5;
                 const center = new planck.Vec2(desc.x + radius, desc.y + radius); // The center of a 1x1 meter tile

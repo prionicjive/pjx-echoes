@@ -5,22 +5,22 @@ import { DynamicLight, LightOptions } from '../core/Light';
 import { Segment } from '../utils/types';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
-    body: planck.Body;
     lightOptions?: LightOptions;
     edgesList?: Segment[];
 }
 
 export class DynamicEntity extends BaseEntity {
-    public body: planck.Body;
-
     constructor(options: DynamicEntityOptions) {
         super(options);
-        this.body = options.body;
 
         // Construct a DynamicLight if need be
         if (options.lightOptions && options.edgesList) {
+            let initialLightPos = options.body?.getPosition();
+            if (!initialLightPos) {
+                initialLightPos = new planck.Vec2(options.sprite.x + 0.5, options.sprite.y + 0.5);
+            }
             this.light = new DynamicLight(
-                { x: this.body.getPosition().x, y: this.body.getPosition().y }, // TODO Maybe we want the light at some offset
+                initialLightPos,
                 options.edgesList,
                 options.lightOptions,
                 options.id

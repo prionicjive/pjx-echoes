@@ -13,7 +13,6 @@ import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
-import { EntityFactory } from './EntityFactory';
 import { EntityContainers } from './BaseEntity';
 import { DynamicEntity } from './DynamicEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';

@@ -1,15 +1,17 @@
 import * as PIXI from 'pixi.js';
 import { Light } from '../core/Light';
 import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
+import * as planck from 'planck';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
-    containerForParticleEffects: PIXI.Container;
+    containerForParticleEffects?: PIXI.Container;
 }
 
 export interface BaseEntityOptions {
     id: string;
     sprite: PIXI.Sprite;
+    body?: planck.Body;
     particleEffectOptions?: ParticleEffectOptions;
     particleEffectContainer?: PIXI.Container;
 }
@@ -17,12 +19,14 @@ export interface BaseEntityOptions {
 export class BaseEntity {
     public id: string;
     public sprite: PIXI.Sprite;
+    public body: planck.Body;
     public light?: Light; // Can be DynamicLight or StaticLight
     protected particleEffect?: ParticleEffect;
 
     constructor(options: BaseEntityOptions) {
         this.id = options.id;
         this.sprite = options.sprite;
+        this.body = options.body!;
 
         if (options.particleEffectOptions && options.particleEffectContainer) {
             this.particleEffect = new ParticleEffect(options.particleEffectOptions);

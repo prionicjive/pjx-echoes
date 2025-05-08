@@ -18,6 +18,7 @@ import { EntityFactory } from '../entities/EntityFactory';
 import { EntityUtils } from '../utils/EntityUtils';
 import { EntityType } from '../entities/types';
 import { RenderableGeometry } from './types';
+import { Fuel } from '../entities/Fuel';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -34,7 +35,7 @@ export class Level {
     private walls: Entity[];
     private finishTiles: Entity[];
     private torchTiles: Entity[];
-    private fuelTiles: Entity[];
+    private fuelEntities: Entity[];
     private lights: Light[];
     private edgesList: Segment[];
 
@@ -43,7 +44,7 @@ export class Level {
         this.walls = [];
         this.finishTiles = [];
         this.torchTiles = [];
-        this.fuelTiles = [];
+        this.fuelEntities = [];
         this.lights = [];
 
         this.edgesList = edgesList;
@@ -72,14 +73,8 @@ export class Level {
             world,
             {...LightsConfig.TorchLight}
         );
-        this.fuelTiles = this.createTilesByType(
-            Config.Fuel.type,
-            validSpaces, 
-            Config.FuelTileDensity,
-            containers.entitiesContainer, 
-            world,
-            {...LightsConfig.FuelLight}
-        );;
+
+        this.fuelEntities = this.createFuelEntities(validSpaces, containers.entitiesContainer, world);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -143,6 +138,33 @@ export class Level {
                     // Store wall entity for future reference
                     entitiesToReturn.push(wall);
                 }
+            }
+        }
+
+        return entitiesToReturn;
+    }
+
+    private createFuelEntities(validSpaces: string[], container: PIXI.Container, world: planck.World) {
+        const entitiesToReturn = [];
+        
+        // Randomly place fuel entities in open spaces for the player to reach
+        const numFuelEntities = Math.ceil(validSpaces.length * Config.FuelTileDensity);
+        for (let i = 0; i < numFuelEntities; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+
+            const entity = new Fuel({
+                world,
+                spawnPoint: { x: Number(x), y: Number(y) },
+                containers: { containerForEntity: container },
+                edgesList: this.edgesList
+            });
+
+            entitiesToReturn.push(entity);
+
+            // Add light if it exists
+            if (entity.light) {
+                this.lights.push(entity.light);
             }
         }
 
@@ -224,7 +246,7 @@ export class Level {
      * @returns {Entity[]} Array of fuel tile entities.
      */
     getFuelTiles(): Entity[] {
-        return this.fuelTiles;
+        return this.fuelEntities;
     }
 
     getLights(): Light[] {

@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { Config } from '../core/Config';
+import { Config } from '../config/Config';
 import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { LightUtils } from '../utils/LightUtils';
 import { CollisionUtils } from '../utils/CollisionUtils';

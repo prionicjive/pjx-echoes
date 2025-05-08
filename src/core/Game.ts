@@ -6,7 +6,7 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
-import { Config } from './Config.ts';
+import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
 
 export class Game {

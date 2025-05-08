@@ -1,3 +1,5 @@
+import { ParticleEffects } from "./ParticleEffects";
+
 // Centralized game configuration
 export const Config = {
     LevelDimensions: {
@@ -189,7 +191,6 @@ export const Config = {
         forceFactorPerSecond: 300.00, // Default as factor of constant force over time
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
-    ParticlesEffects: {}, // TODO Move particle effects config out of Dynamic Entities and to here
     Debug: {
         drawEdges: true,
         drawWalls: true,

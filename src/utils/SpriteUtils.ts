@@ -1,4 +1,4 @@
-import { Config } from "../core/Config";
+import { Config } from "../config/Config";
 import { Point } from "../utils/types";
 
 import * as PIXI from 'pixi.js';

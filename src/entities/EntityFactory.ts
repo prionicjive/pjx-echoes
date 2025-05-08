@@ -1,6 +1,6 @@
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { Config } from '../core/Config';
+import { Config } from '../config/Config';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Entity, EntityType } from './types';

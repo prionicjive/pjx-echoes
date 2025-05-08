@@ -1,4 +1,4 @@
-import { Config } from '../core/Config';
+import { Config } from '../config/Config';
 import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
@@ -6,33 +6,7 @@ import * as planck from 'planck';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
 import { Segment } from '../utils/types';
-import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { Color } from 'pixi.js';
-
-// TODO Make ParticleEffectOptions more configurable rather than
-// have it defined here.
-const particleEffectOptions: ParticleEffectOptions = {
-    texturePath: Config.Textures.Particles.circleSoft,
-    emitPerSecond: 10,
-    maxParticles: 100,
-    particleOptions: {
-        maxAge: 2,
-        startAlpha: 1,
-        endAlpha: 0,
-        startScaleX: 1,
-        startScaleY: 1,
-        endScaleX: 0.42,
-        endScaleY: 0.42,
-        width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-        height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-        startTint: new Color(0x991dFF),
-        endTint: new Color(0x0000ff), // TODO Just for test, should be configurable
-        startDirection: {x: 0, y: 0},
-        endDirection: {x: 0, y: 0},
-        startSpeed: 0,
-        endSpeed: 0
-    }
-};
+import { ParticleEffects } from '../config/ParticleEffects';
 
 export class Sentry extends DynamicEntity implements Entity {
     constructor(
@@ -55,7 +29,7 @@ export class Sentry extends DynamicEntity implements Entity {
             id: entity.id,
             sprite: entity.sprite,
             body: entity.body!,
-            particleEffectOptions,
+            particleEffectOptions: {...ParticleEffects.SentryTrail},
             particleContainer: containers.containerForParticles,
             lightOptions: {...Config.SentryLight},
             edgesList

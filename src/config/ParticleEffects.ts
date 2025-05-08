@@ -1,0 +1,51 @@
+import * as PIXI from 'pixi.js';
+import { ParticleEffectOptions } from '../particles/ParticleEffect';
+import { Config } from './Config';
+
+// Centralized particle effect configuration
+export const ParticleEffects: Record<string, ParticleEffectOptions> = {
+    PlayerTrail: {
+        texturePath: Config.Textures.Particles.ringSoft,
+        emitPerSecond: 30,
+        maxParticles: 250,
+        particleOptions: {
+            maxAge: 0.5,
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 1,
+            startScaleY: 1,
+            endScaleX: 0.42,
+            endScaleY: 0.42,
+            width: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(Config.Player.color),
+            endTint: new PIXI.Color(0xff13bb), // TODO Just for test, should be configurable
+            startDirection: {x: 0, y: 0},
+            endDirection: {x: 0, y: 0},
+            startSpeed: 0,
+            endSpeed: 0
+        }
+    },
+    SentryTrail: {
+        texturePath: Config.Textures.Particles.circleSoft,
+        emitPerSecond: 10,
+        maxParticles: 100,
+        particleOptions: {
+            maxAge: 2,
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 1,
+            startScaleY: 1,
+            endScaleX: 0.42,
+            endScaleY: 0.42,
+            width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(0x991dFF),
+            endTint: new PIXI.Color(0x0000ff), // TODO Just for test, should be configurable
+            startDirection: {x: 0, y: 0},
+            endDirection: {x: 0, y: 0},
+            startSpeed: 0,
+            endSpeed: 0
+        }
+    }
+};

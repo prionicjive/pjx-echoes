@@ -5,7 +5,7 @@ import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
 import { Light } from './Light.ts'; 
-import { Config } from './Config.ts'; 
+import { Config } from '../config/Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';

@@ -6,7 +6,7 @@
  * @module Level
  */
 
-import { Config } from './Config';
+import { Config } from '../config/Config';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Entity } from '../entities/types';
 import * as planck from 'planck';

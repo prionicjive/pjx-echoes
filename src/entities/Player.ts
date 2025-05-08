@@ -6,7 +6,7 @@
  * @module Player
  */
 
-import { Config } from '../core/Config';
+import { Config } from '../config/Config';
 import { Entity, EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point, Segment } from '../utils/types';
@@ -15,33 +15,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { EntityFactory } from './EntityFactory';
 import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
-import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { Color } from 'pixi.js';
-
-// TODO Make ParticleEffectOptions more configurable rather than
-// have it defined here.
-const particleEffectOptions: ParticleEffectOptions = {
-    texturePath: Config.Textures.Particles.ringSoft,
-    emitPerSecond: 30,
-    maxParticles: 250,
-    particleOptions: {
-        maxAge: 0.5,
-        startAlpha: 1,
-        endAlpha: 0,
-        startScaleX: 1,
-        startScaleY: 1,
-        endScaleX: 0.42,
-        endScaleY: 0.42,
-        width: Config.Player.radius * 2 * Config.PixelsPerMeter,
-        height: Config.Player.radius * 2 * Config.PixelsPerMeter,
-        startTint: new Color(Config.Player.color),
-        endTint: new Color(0xff13bb), // TODO Just for test, should be configurable
-        startDirection: {x: 0, y: 0},
-        endDirection: {x: 0, y: 0},
-        startSpeed: 0,
-        endSpeed: 0
-    }
-};
+import { ParticleEffects } from '../config/ParticleEffects';
 
 export class Player extends DynamicEntity implements Entity {
     constructor(
@@ -64,7 +38,7 @@ export class Player extends DynamicEntity implements Entity {
             id: entity.id,
             sprite: entity.sprite,
             body: entity.body!,
-            particleEffectOptions,
+            particleEffectOptions: {...ParticleEffects.PlayerTrail},
             particleContainer: containers.containerForParticles,
             lightOptions: {...Config.PlayerLight},
             edgesList

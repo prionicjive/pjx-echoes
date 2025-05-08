@@ -25,7 +25,7 @@ const particleEffectOptions: ParticleEffectOptions = {
         endScaleY: 0.42,
         width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
         height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-        startTint: new Color(Config.Sentry.color),
+        startTint: new Color(0x991dFF),
         endTint: new Color(0x0000ff), // TODO Just for test, should be configurable
         startDirection: {x: 0, y: 0},
         endDirection: {x: 0, y: 0},

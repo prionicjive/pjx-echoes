@@ -44,10 +44,10 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
-        lightRadiusIncrement: 1,
+        lightRadiusIncrement: 0.5,
         maxLightRadius: 20,
         lightGrowDuration: 0.75,
-        particleTrailMaxAgeIncrement: 1,
+        particleTrailMaxAgeIncrement: 0.5,
         particleTrailMaxAgeCap: 5,
     },
     Sentry: {

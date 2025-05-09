@@ -66,6 +66,11 @@ export class ParticleEffect {
         maxAge: this.template.maxAge
       });
     }
+
+    // Start everything off by emitting a single particle
+    // with the assumption that the emit per second really
+    // wants something from the get-go
+    this.accum = 1 / this.emitPerSecond;
   }
 
   setEffectPosition(x: number, y: number): void {

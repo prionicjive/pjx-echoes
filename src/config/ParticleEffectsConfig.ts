@@ -47,5 +47,27 @@ export const ParticleEffectsConfig: Record<string, ParticleEffectOptions> = {
             startSpeed: 0,
             endSpeed: 0
         }
+    },
+    TorchEffect: {
+        texturePath: Config.Textures.Particles.ringSoft,
+        emitPerSecond: 1,
+        maxParticles: 10,
+        particleOptions: {
+            maxAge: 5,
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 0.25,
+            startScaleY: 0.25,
+            endScaleX: 3,
+            endScaleY: 3,
+            width: Config.Torch.width * Config.PixelsPerMeter,
+            height: Config.Torch.height * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(Config.Torch.color),
+            endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
+            startDirection: {x: 0, y: 0},
+            endDirection: {x: 0, y: 0},
+            startSpeed: 0,
+            endSpeed: 0
+        }
     }
 };

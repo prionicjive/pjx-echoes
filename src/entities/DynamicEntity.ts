@@ -29,7 +29,7 @@ export class DynamicEntity extends BaseEntity {
     }
 
     update(deltaTime: number) {
-        // Update particle effect position based on body
+        // Update all the basic stuff
         super.update(deltaTime);
 
         // Update dynamic light position

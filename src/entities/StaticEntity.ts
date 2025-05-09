@@ -21,7 +21,7 @@ export class StaticEntity extends BaseEntity {
                 x: options.position.x + options.width / 2,
                 y: options.position.y + options.height / 2
             };
-            
+
             this.light = new StaticLight(
                 center,
                 options.edgesList,
@@ -31,5 +31,9 @@ export class StaticEntity extends BaseEntity {
         }
     }
 
-    // No need to override update unless we want animated static lights or particles
+    update(deltaTime: number) {
+        // TODO Do any custom updating
+        
+        super.update(deltaTime);
+    }
 }

@@ -37,14 +37,13 @@ export class BaseEntity {
 
     update(deltaTime: number) {
         if (this.particleEffect) {
-            // In case the sprite's position has changed
-            // TODO May need to support future reach that the effect isn't positioned with the sprite
             this.particleEffect.setEffectPosition(
                 this.sprite.x + this.sprite.width / 2,
                 this.sprite.y + this.sprite.height / 2
             );
             this.particleEffect.update(deltaTime);
         }
+
         // No light update here!
 
         // TODO Any other base updating functionality

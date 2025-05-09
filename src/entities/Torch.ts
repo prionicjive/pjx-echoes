@@ -8,6 +8,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntityUtils } from '../utils/EntityUtils';
 import * as PIXI from 'pixi.js';
 import { LightsConfig } from '../config/LightsConfig';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 
 export interface TorchOptions {
     world: planck.World, 
@@ -39,10 +40,19 @@ export class Torch extends StaticEntity {
             position: options.spawnPoint,
             width: Config.Torch.width,
             height: Config.Torch.height,
+            particleEffectOptions: { ...ParticleEffectsConfig.TorchEffect },
+            particleEffectContainer: options.containers.containerForParticleEffects,
         });
 
         // Add the sprite to the main entity container
         options.containers.containerForEntity.addChild(this.sprite);
+    }
+
+    update(deltaTime: number) {
+        // TODO Do any custom updating
+        
+        // Call the super to update any particle effects, among other things
+        super.update(deltaTime);
     }
 
     // Optionally, add any unique logic on pickup

@@ -69,6 +69,13 @@ export class Fuel extends StaticEntity {
         options.containers.containerForEntity.addChild(this.sprite);
     }
 
+    update(deltaTime: number) {
+        // TODO Do any custom updating
+        
+        // Call the super to update any particle effects, among other things
+        super.update(deltaTime);
+    }
+
     // Optionally, add any unique logic on pickup
     onPickup() {
         // TODO Fade out, play effect, etc.

@@ -36,8 +36,8 @@ export class Level {
     private edgesGeometry!: RenderableGeometry;
     private walls: Entity[];
     private finishTiles: Entity[];
-    private torchEntities: Entity[];
-    private fuelEntities: Entity[];
+    private torchEntities: Torch[];
+    private fuelEntities: Fuel[];
     private lights: Light[];
     private edgesList: Segment[];
 
@@ -280,9 +280,13 @@ export class Level {
 
     /**
      * Updates all entities in the level (e.g., for animation or effects).
-     * Currently a stub; expand as needed for future features.
      */
-    update() {
-        // Placeholder for future logic (e.g., animated tiles)
+    update(deltaTime: number) {
+        this.torchEntities.forEach((torch) => {
+            torch.update(deltaTime);
+        });
+        this.fuelEntities.forEach((fuel) => {
+            fuel.update(deltaTime);
+        });
     }
 }

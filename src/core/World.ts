@@ -534,10 +534,9 @@ export class World {
         this.sentries.forEach((sentry) => {
             sentry.update(deltaTime);
         });
-        // TODO Any other entities to update?    
 
-        // Update level (For dynamic entities or geometry)
-        this.level?.update();
+        // Update level (For dynamic entities, static entities with effect, dynamic geometry, etc)
+        this.level?.update(deltaTime);
 
         // Update camera
         this.updateCamera(deltaTime);

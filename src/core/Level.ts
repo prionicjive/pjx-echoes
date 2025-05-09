@@ -19,6 +19,7 @@ import { Finish } from '../entities/Finish';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
 import { EntityUserData } from '../entities/types';
+import { LightManager } from './LightManager';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -145,9 +146,9 @@ export class Level {
 
             entitiesToReturn.push(entity);
 
-            // Add light if it exists
+            // Add light (if it exists) to the LightManager
             if (entity.light) {
-                this.lights.push(entity.light);
+                LightManager.instance.addStaticLight(entity.light);
             }
         }
 
@@ -172,9 +173,9 @@ export class Level {
 
             entitiesToReturn.push(entity);
 
-            // Add light if it exists
+            // Add light (if it exists) to the LightManager
             if (entity.light) {
-                this.lights.push(entity.light);
+                LightManager.instance.addStaticLight(entity.light);
             }
         }
 
@@ -199,9 +200,9 @@ export class Level {
 
             entitiesToReturn.push(entity);
 
-            // Add light if it exists
+            // Add light (if it exists) to the LightManager
             if (entity.light) {
-                this.lights.push(entity.light);
+                LightManager.instance.addStaticLight(entity.light);
             }
         }
 

@@ -283,9 +283,6 @@ export class World {
             }
         }
 
-        // Store static lights in LightManager
-        LightManager.instance.addStaticLights(this.level.getLights());
-
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }

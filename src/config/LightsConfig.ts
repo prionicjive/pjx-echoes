@@ -65,7 +65,7 @@ export const LightsConfig: Record<string, LightOptions> = {
         oscillateColorDelay: 0,
         oscillateColorDelayVariance: 2,
     },
-    FuelLight: {
+    AntiLight: {
         numRays: 360,
         baseRadius: 5,
         radiusVariance: 2,

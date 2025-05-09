@@ -54,7 +54,7 @@ export class Player extends DynamicEntity {
                     | Config.Physics.Collision.categorySentry
                     | Config.Physics.Collision.categoryWall
                     | Config.Physics.Collision.categoryFinish
-                    | Config.Physics.Collision.categoryFuel
+                    | Config.Physics.Collision.categoryAnti
                     | Config.Physics.Collision.categoryTorch
             },
             linearDamping: Config.Physics.Player.linearDamping
@@ -272,7 +272,7 @@ export class Player extends DynamicEntity {
                     Config.Player.lightChangeDuration
                 );
                 break;
-            case Config.Fuel.type:
+            case Config.Anti.type:
                 // Shrink the light
                 this.light?.decreaseBaseRadius(
                     this.light.options.baseRadius - Config.Player.lightRadiusDecrement,

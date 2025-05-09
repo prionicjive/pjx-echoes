@@ -30,7 +30,7 @@ export const Config = {
             categoryWall: 0x0002,
             categoryEdge: 0x0004,
             categoryFinish: 0x0008,
-            categoryFuel: 0x0010,
+            categoryAnti: 0x0010,
             categoryTorch: 0x0020,
             categorySentry: 0x0040
         },
@@ -50,7 +50,7 @@ export const Config = {
         maxLightRadius: 20,
         minLightRadius: 2,
         lightChangeDuration: 0.75,
-        particleTrailMaxAgeIncrement: 0.25,
+        particleTrailMaxAgeIncrement: 0.42,
         particleTrailMaxAgeCap: 7.5,
     },
     Sentry: {
@@ -71,11 +71,11 @@ export const Config = {
         height: 1,
         color: 0xdfb503,  // Tint color for torches
     },
-    Fuel: {
-        type: "FUEL",
+    Anti: {
+        type: "Anti",
         width: 1,
         height: 1,
-        color: 0xff0888,  // Tint color for fuel
+        color: 0xff0888,  // Tint color for anti
     },
     Finish: {
         type: "FINISH",
@@ -94,7 +94,7 @@ export const Config = {
         wall: '/assets/textures/wall.png',
         torch: '/assets/textures/torch.png',
         finish: '/assets/textures/finish.png',
-        fuel: '/assets/textures/fuel.png',
+        anti: '/assets/textures/anti.png',
         block: '/assets/textures/block.png',
         Particles: {
             ring: '/assets/textures/particles/ring.png',
@@ -105,7 +105,7 @@ export const Config = {
     },
     FinishChance: 0.0001,
     TorchChance: 0.00087,
-    FuelChance: 0.00065,
+    AntiChance: 0.00065,
     SentryChance: 0.0025,
     Movement: {
         Gesture: {

@@ -11,36 +11,36 @@ import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { EntityUserData } from './types';
 
-export interface FuelOptions {
+export interface AntiOptions {
     world: planck.World, 
     edgesList: Segment[], 
     spawnPoint: Point,
     containers: EntityContainers
 }
 
-export class Fuel extends StaticEntity {
-    constructor(options: FuelOptions) {
+export class Anti extends StaticEntity {
+    constructor(options: AntiOptions) {
         // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Fuel.type);
+        const id = EntityUtils.generateRandomId(Config.Anti.type);
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.fuel),
+            texture: PIXI.Texture.from(Config.Textures.anti),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Fuel.width * Config.PixelsPerMeter,
-            height: Config.Fuel.height * Config.PixelsPerMeter,
-            color: Config.Fuel.color
+            width: Config.Anti.width * Config.PixelsPerMeter,
+            height: Config.Anti.height * Config.PixelsPerMeter,
+            color: Config.Anti.color
         });
 
         // Create static body
         const body = PhysicsUtils.createBody(options.world, {
             type: 'static',
             position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.Fuel.width, height: Config.Fuel.height },
+            box: { width: Config.Anti.width, height: Config.Anti.height },
             fixture: {
                 isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryFuel,
+                filterCategoryBits: Config.Physics.Collision.categoryAnti,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
         });
@@ -49,16 +49,16 @@ export class Fuel extends StaticEntity {
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.FuelLight },
+            lightOptions: { ...LightsConfig.AntiLight },
             edgesList: options.edgesList,
             position: options.spawnPoint,
-            width: Config.Fuel.width,
-            height: Config.Fuel.height,
+            width: Config.Anti.width,
+            height: Config.Anti.height,
         });
 
         // Set user data with a self-referencing data
         body.setUserData({
-            type: Config.Fuel.type,
+            type: Config.Anti.type,
             entity: this
         } as EntityUserData);
 

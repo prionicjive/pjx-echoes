@@ -100,6 +100,7 @@ export abstract class Light {
         this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
     }
 
+    // @ts-ignore
     public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
         this.options.baseRadius = minRadius !== undefined ? Math.max(newRadius, minRadius) : newRadius;
     }

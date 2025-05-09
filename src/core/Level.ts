@@ -14,7 +14,7 @@ import { Segment } from '../utils/types';
 import { Light } from './Light';
 import { EntityUtils } from '../utils/EntityUtils';
 import { RenderableGeometry } from './types';
-import { Fuel } from '../entities/Fuel';
+import { Anti } from '../entities/Anti';
 import { Finish } from '../entities/Finish';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
@@ -36,7 +36,7 @@ export class Level {
     private walls: Wall[];
     private finishTiles: Finish[];
     private torchEntities: Torch[];
-    private fuelEntities: Fuel[];
+    private antiEntities: Anti[];
     private lights: Light[];
     private edgesList: Segment[];
 
@@ -45,7 +45,7 @@ export class Level {
         this.walls = [];
         this.finishTiles = [];
         this.torchEntities = [];
-        this.fuelEntities = [];
+        this.antiEntities = [];
         this.lights = [];
 
         this.edgesList = edgesList;
@@ -60,7 +60,7 @@ export class Level {
         // Create the other various entities
         this.torchEntities = this.createTorchEntities(validSpaces, containers, world);
         this.finishTiles = this.createFinishEntities(validSpaces, containers, world);
-        this.fuelEntities = this.createFuelEntities(validSpaces, containers, world);
+        this.antiEntities = this.createAntiEntities(validSpaces, containers, world);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -154,16 +154,16 @@ export class Level {
         return entitiesToReturn;
     }
 
-    private createFuelEntities(validSpaces: string[], container: LevelContainers, world: planck.World) {
+    private createAntiEntities(validSpaces: string[], container: LevelContainers, world: planck.World) {
         const entitiesToReturn = [];
         
-        // Randomly place fuel entities in open spaces for the player to reach
-        const numFuelEntities = Math.ceil(validSpaces.length * Config.FuelChance);
-        for (let i = 0; i < numFuelEntities; i++) {
+        // Randomly place anti entities in open spaces for the player to reach
+        const numAntiEntities = Math.ceil(validSpaces.length * Config.AntiChance);
+        for (let i = 0; i < numAntiEntities; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
 
-            const entity = new Fuel({
+            const entity = new Anti({
                 world,
                 spawnPoint: { x: Number(x), y: Number(y) },
                 containers: { containerForEntity: container.entitiesContainer },
@@ -224,8 +224,8 @@ export class Level {
         return this.torchEntities;
     }
 
-    getFuelTiles(): Fuel[] {
-        return this.fuelEntities;
+    getAntiTiles(): Anti[] {
+        return this.antiEntities;
     }
 
     getLights(): Light[] {
@@ -239,8 +239,8 @@ export class Level {
         this.torchEntities.forEach((torch) => {
             torch.update(deltaTime);
         });
-        this.fuelEntities.forEach((fuel) => {
-            fuel.update(deltaTime);
+        this.antiEntities.forEach((anti) => {
+            anti.update(deltaTime);
         });
     }
 }

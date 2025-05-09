@@ -403,16 +403,16 @@ export class World {
             // TODO Handle a sentry hitting another sentry
             console.log("Sentry hit another sentry!");
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
-            (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
+            (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
+            (aData.type === Config.Anti.type && bData.type === Config.Player.type)
         ) {
-            // Pick up and remove fuel
-            console.log("Player picked up fuel!");
+            // Pick up and remove anti
+            console.log("Player picked up an anti!");
 
-            const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            if (fuelEntity.entity) {
-                this.player?.handlePickup(fuelEntity.type);
-                this.killStaticEntity(fuelEntity.entity);
+            const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
+            if (antiEntity.entity) {
+                this.player?.handlePickup(antiEntity.type);
+                this.killStaticEntity(antiEntity.entity);
             }
         }
     }

@@ -10,43 +10,43 @@ import { EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 
-export interface FuelOptions {
+export interface FinishOptions {
     world: planck.World, 
     edgesList: Segment[], 
     spawnPoint: Point,
     containers: EntityContainers
 }
 
-export class Fuel extends StaticEntity {
-    constructor(options: FuelOptions) {
+export class Finish extends StaticEntity {
+    constructor(options: FinishOptions) {
         // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Fuel.type);
+        const id = EntityUtils.generateRandomId(Config.Finish.type);
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.fuel),
+            texture: PIXI.Texture.from(Config.Textures.finish),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Fuel.width * Config.PixelsPerMeter,
-            height: Config.Fuel.height * Config.PixelsPerMeter,
-            color: Config.Fuel.color
+            width: Config.Finish.width * Config.PixelsPerMeter,
+            height: Config.Finish.height * Config.PixelsPerMeter,
+            color: Config.Finish.color
         });
 
         // Create static body
         const body = PhysicsUtils.createBody(options.world, {
             type: 'static',
             position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.Fuel.width, height: Config.Fuel.height },
+            box: { width: Config.Finish.width, height: Config.Finish.height },
             fixture: {
                 isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryFuel,
+                filterCategoryBits: Config.Physics.Collision.categoryFinish,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
         });
 
         // Set user data with a self-referencing body
         body.setUserData({
-            type: Config.Fuel.type,
+            type: Config.Finish.type,
             id,
             sprite,
             body
@@ -56,11 +56,11 @@ export class Fuel extends StaticEntity {
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.FuelLight },
+            lightOptions: { ...LightsConfig.FinishLight },
             edgesList: options.edgesList,
             position: options.spawnPoint,
-            width: Config.Fuel.width,
-            height: Config.Fuel.height,
+            width: Config.Finish.width,
+            height: Config.Finish.height,
         });
 
         // Add the sprite to the main entity container
@@ -72,10 +72,5 @@ export class Fuel extends StaticEntity {
         
         // Call the super to update any particle effects, among other things
         super.update(deltaTime);
-    }
-
-    // Optionally, add any unique logic on pickup
-    onPickup() {
-        // TODO Fade out, play effect, etc.
     }
 }

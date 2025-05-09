@@ -100,8 +100,8 @@ export const Config = {
             circleSoft: '/assets/textures/particles/circle_soft.png'
         }
     },
-    FinishTileChance: 0.0001,
-    TorchChance: 0.0007,
+    FinishChance: 0.0001,
+    TorchChance: 0.00087,
     FuelChance: 0.00065,
     SentryChance: 0.0025,
     Movement: {

@@ -11,12 +11,6 @@ import * as PIXI from 'pixi.js';
 // TODO Could be refactored
 export type EntityType = 'PLAYER' | 'SENTRY' | 'WALL' | 'FINISH' | 'TORCH' | 'FUEL';
 
-export interface Entity {
-    id: string;
-    sprite: PIXI.Sprite;
-    body: planck.Body | null;
-}
-
 export type EntityUserData = {
     type: EntityType;
     id: string;

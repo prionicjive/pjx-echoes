@@ -96,8 +96,12 @@ export abstract class Light {
     abstract setupTweens(): void;
 
     // @ts-ignore
-    public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+    public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
         this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
+    }
+
+    public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
+        this.options.baseRadius = minRadius !== undefined ? Math.max(newRadius, minRadius) : newRadius;
     }
     
     public update(pos: Point | null): void {
@@ -165,8 +169,8 @@ export abstract class Light {
 }
 
 export class DynamicLight extends Light {
-    // Tween for "growing" to a new base radius
-    private growTween?: gsap.core.Tween;   
+    // Tween for changing to a new base radius
+    private changeRadiusTween?: gsap.core.Tween;   
 
     constructor(pos: Point, collisionData: Segment[],options: LightOptions, entityId: string = "") {;
         super(pos, collisionData, options, entityId);
@@ -195,14 +199,28 @@ export class DynamicLight extends Light {
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
     }
 
-    public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
-        super.setBaseRadius(newRadius, maxRadius, duration);
+    public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+        super.increaseBaseRadius(newRadius, maxRadius, duration);
         
-        // Kill any previous grow tweens
-        if (this.growTween) this.growTween.kill();
+        // Kill any previous change tweens
+        if (this.changeRadiusTween) this.changeRadiusTween.kill();
 
         // Tween the baseRadius property
-        this.growTween = gsap.to(this.tweenables, {
+        this.changeRadiusTween = gsap.to(this.tweenables, {
+            radius: this.options.baseRadius,
+            duration,
+            ease: "power1.out"
+        });
+    }
+
+    public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
+        super.decreaseBaseRadius(newRadius, minRadius, duration);
+        
+        // Kill any previous change tweens
+        if (this.changeRadiusTween) this.changeRadiusTween.kill();
+
+        // Tween the baseRadius property
+        this.changeRadiusTween = gsap.to(this.tweenables, {
             radius: this.options.baseRadius,
             duration,
             ease: "power1.out"

@@ -3,7 +3,7 @@ import { LightOptions } from "../core/Light";
 export const LightsConfig: Record<string, LightOptions> = {
     PlayerLight: {
         numRays: 360,
-        baseRadius: 3,
+        baseRadius: 5,
         radiusVariance: 1,
         baseAlpha: 0.5,
         alphaVariance: 0.4,

@@ -55,6 +55,7 @@ export class Player extends DynamicEntity {
                     | Config.Physics.Collision.categoryWall
                     | Config.Physics.Collision.categoryFinish
                     | Config.Physics.Collision.categoryFuel
+                    | Config.Physics.Collision.categoryTorch
             },
             linearDamping: Config.Physics.Player.linearDamping
         });
@@ -265,28 +266,28 @@ export class Player extends DynamicEntity {
 
     handlePickup(type: EntityType) {
         switch (type) {
-            case Config.Fuel.type:
+            case Config.Torch.type:
                 // Grow the light
-                this.light?.setBaseRadius(
+                this.light?.increaseBaseRadius(
                     this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
                     Config.Player.maxLightRadius,
-                    Config.Player.lightGrowDuration
+                    Config.Player.lightChangeDuration
                 );
-
+                break;
+            case Config.Fuel.type:
+                // Shrink the light
+                this.light?.decreaseBaseRadius(
+                    this.light.options.baseRadius - Config.Player.lightRadiusDecrement,
+                    Config.Player.minLightRadius,
+                    Config.Player.lightChangeDuration
+                );
+                break;
+            case Config.Sentry.type:
                 // Increase the age of the particle trail
-                // TODO Better encapsulate
                 if(this.particleEffect) {
                     this.particleEffect.template.maxAge += Config.Player.particleTrailMaxAgeIncrement;
                     this.particleEffect.template.maxAge = Math.min(this.particleEffect.template.maxAge, Config.Player.particleTrailMaxAgeCap);
                 }
-                break;
-            case Config.Sentry.type:
-                // Grow the light
-                this.light?.setBaseRadius(
-                    this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
-                    Config.Player.maxLightRadius,
-                    Config.Player.lightGrowDuration
-                );
                 break;
             default:
                 break;

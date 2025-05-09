@@ -295,7 +295,7 @@ export class World {
         });
         this.sentries = [];
 
-        // Kill the lights
+        // TODO Kill the lights in a more robust fashion (Possibly trigger effects)
         // this.staticLights.forEach((light) => {
         //     light.destroy();
         // });
@@ -383,6 +383,17 @@ export class World {
             // Disable the contact to prevent the sentry from physically reacting with the player
             contact.setEnabled(false)
         } else if (
+            (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
+            (aData.type === Config.Torch.type && bData.type === Config.Player.type)
+        ) {
+            // Handle player hitting a torch
+            console.log("Player hit a torch!");
+
+            const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
+            this.player?.handlePickup(torchEntity.type);
+            // TODO Do we need to call Torch's onPickup()?
+            this.softlyKillStaticEntity(torchEntity);
+        }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {
             // TODO Handle a sentry hitting another sentry

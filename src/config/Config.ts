@@ -31,7 +31,8 @@ export const Config = {
             categoryEdge: 0x0004,
             categoryFinish: 0x0008,
             categoryFuel: 0x0010,
-            categorySentry: 0x0020
+            categoryTorch: 0x0020,
+            categorySentry: 0x0040
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
@@ -44,11 +45,13 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
-        lightRadiusIncrement: 0.5,
+        lightRadiusIncrement: 1,
+        lightRadiusDecrement: 1,
         maxLightRadius: 20,
-        lightGrowDuration: 0.75,
-        particleTrailMaxAgeIncrement: 0.5,
-        particleTrailMaxAgeCap: 5,
+        minLightRadius: 2,
+        lightChangeDuration: 0.75,
+        particleTrailMaxAgeIncrement: 0.25,
+        particleTrailMaxAgeCap: 7.5,
     },
     Sentry: {
         type: "SENTRY",

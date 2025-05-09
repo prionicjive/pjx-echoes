@@ -9,6 +9,7 @@ import { EntityUtils } from '../utils/EntityUtils';
 import * as PIXI from 'pixi.js';
 import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
 
 export interface TorchOptions {
     world: planck.World, 
@@ -32,9 +33,30 @@ export class Torch extends StaticEntity {
             color: Config.Torch.color
         });
 
+        // Create static body
+        const body = PhysicsUtils.createBody(options.world, {
+            type: 'static',
+            position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
+            box: { width: Config.Torch.width, height: Config.Torch.height },
+            fixture: {
+                isSensor: true,
+                filterCategoryBits: Config.Physics.Collision.categoryTorch,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+            }
+        });
+
+        // Set user data with a self-referencing body
+        body.setUserData({
+            type: Config.Torch.type,
+            id,
+            sprite,
+            body
+        });
+
         super({
             id,
             sprite,
+            body,
             lightOptions: { ...LightsConfig.TorchLight },
             edgesList: options.edgesList,
             position: options.spawnPoint,

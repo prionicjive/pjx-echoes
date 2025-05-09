@@ -32,10 +32,8 @@ export class Wall extends StaticEntity {
             position: options.spawnPoint,
             width: Config.Wall.width,
             height: Config.Wall.height,
+            containers: options.containers
         });
-
-        // Add the sprite to the main entity container
-        options.containers.containerForEntity.addChild(this.sprite);
     }
 
     // No special updating for now, but could be added in case there are animated tiles

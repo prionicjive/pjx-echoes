@@ -13,7 +13,7 @@ export interface BaseEntityOptions {
     sprite: PIXI.Sprite;
     body?: planck.Body;
     particleEffectOptions?: ParticleEffectOptions;
-    particleEffectContainer?: PIXI.Container;
+    containers: EntityContainers;
 }
 
 export class BaseEntity {
@@ -22,15 +22,21 @@ export class BaseEntity {
     public body: planck.Body;
     public light?: Light; // Can be DynamicLight or StaticLight
     public particleEffect?: ParticleEffect;
+    public containers: EntityContainers;
 
     constructor(options: BaseEntityOptions) {
         this.id = options.id;
         this.sprite = options.sprite;
         this.body = options.body!;
+        this.containers = options.containers;
 
-        if (options.particleEffectOptions && options.particleEffectContainer) {
+        // Add sprite to proper container
+        options.containers.containerForEntity.addChild(this.sprite);
+
+        // Set up particle effect (if needed)
+        if (options.particleEffectOptions && this.containers.containerForParticleEffects) {
             this.particleEffect = new ParticleEffect(options.particleEffectOptions);
-            options.particleEffectContainer.addChild(this.particleEffect.container);
+            this.containers.containerForParticleEffects.addChild(this.particleEffect.container);
         }
         // No light construction here!
     }
@@ -50,6 +56,7 @@ export class BaseEntity {
     }
 
     destroy() {
+        this.containers.containerForEntity.removeChild(this.sprite);
         this.light?.destroy();
         this.particleEffect?.destroy();
         // Clean up other resources if needed

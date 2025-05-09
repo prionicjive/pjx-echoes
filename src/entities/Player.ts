@@ -65,7 +65,7 @@ export class Player extends DynamicEntity {
             sprite,
             body,
             particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
-            particleEffectContainer: containers.containerForParticleEffects,
+            containers,
             lightOptions: { ...LightsConfig.PlayerLight },
             edgesList
         });
@@ -75,8 +75,6 @@ export class Player extends DynamicEntity {
             type: Config.Player.type,
             entity: this
         } as EntityUserData);
-
-        containers.containerForEntity.addChild(this.sprite);
     }
 
     handleInput(

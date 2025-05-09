@@ -54,6 +54,7 @@ export class Finish extends StaticEntity {
             position: options.spawnPoint,
             width: Config.Finish.width,
             height: Config.Finish.height,
+            containers: options.containers
         });
 
         // Set user data with a self-referencing data
@@ -61,9 +62,6 @@ export class Finish extends StaticEntity {
             type: Config.Finish.type,
             entity: this
         } as EntityUserData);
-
-        // Add the sprite to the main entity container
-        options.containers.containerForEntity.addChild(this.sprite);
     }
 
     update(deltaTime: number) {

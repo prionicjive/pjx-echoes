@@ -54,6 +54,7 @@ export class Anti extends StaticEntity {
             position: options.spawnPoint,
             width: Config.Anti.width,
             height: Config.Anti.height,
+            containers: options.containers
         });
 
         // Set user data with a self-referencing data
@@ -61,9 +62,6 @@ export class Anti extends StaticEntity {
             type: Config.Anti.type,
             entity: this
         } as EntityUserData);
-
-        // Add the sprite to the main entity container
-        options.containers.containerForEntity.addChild(this.sprite);
     }
 
     update(deltaTime: number) {

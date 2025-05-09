@@ -55,7 +55,7 @@ export class Sentry extends DynamicEntity {
             sprite,
             body,
             particleEffectOptions: { ...ParticleEffectsConfig.SentryTrail },
-            particleEffectContainer: containers.containerForParticleEffects,
+            containers,
             lightOptions: { ...LightsConfig.SentryLight },
             edgesList
         });
@@ -70,8 +70,6 @@ export class Sentry extends DynamicEntity {
         if(initialVelocity) {
             this.body.setLinearVelocity(initialVelocity);
         }
-
-        containers.containerForEntity.addChild(this.sprite);
     }
 
     /**

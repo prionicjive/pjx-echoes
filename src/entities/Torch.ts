@@ -56,7 +56,7 @@ export class Torch extends StaticEntity {
             width: Config.Torch.width,
             height: Config.Torch.height,
             particleEffectOptions: { ...ParticleEffectsConfig.TorchEffect },
-            particleEffectContainer: options.containers.containerForParticleEffects,
+            containers: options.containers,
         });
 
         // Set user data with a self-referencing data
@@ -64,9 +64,6 @@ export class Torch extends StaticEntity {
             type: Config.Torch.type,
             entity: this
         } as EntityUserData);
-
-        // Add the sprite to the main entity container
-        options.containers.containerForEntity.addChild(this.sprite);
     }
 
     update(deltaTime: number) {

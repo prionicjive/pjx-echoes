@@ -418,9 +418,6 @@ export class World {
     }
 
     private killSentryEntity(sentry: Sentry) {
-        // TODO Should the world do this? Should it be handled in the sentry class?
-        this.entitiesContainer.removeChild(sentry.sprite);
-
         // Call destory to clean up particle effect and light (Among other things)
         sentry.destroy();
 
@@ -444,9 +441,6 @@ export class World {
     }
 
     private killStaticEntity(staticEntity: StaticEntity) {
-        // TODO Entity might live in a different container
-        this.entitiesContainer.removeChild(staticEntity.sprite);
-
         // Call destory to clean up particle effect and light (Among other things)
         staticEntity.destroy();
 

@@ -10,6 +10,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as PIXI from 'pixi.js';
 import { EntityUtils } from '../utils/EntityUtils';
+import { EntityUserData } from './types';
 
 export class Sentry extends DynamicEntity {
     constructor(
@@ -49,14 +50,6 @@ export class Sentry extends DynamicEntity {
             }
         });
 
-        // Set user data with a self-referencing body
-        body.setUserData({
-            type: Config.Sentry.type,
-            id,
-            sprite,
-            body
-        });
-
         super({
             id,
             sprite,
@@ -66,6 +59,12 @@ export class Sentry extends DynamicEntity {
             lightOptions: { ...LightsConfig.SentryLight },
             edgesList
         });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Sentry.type,
+            entity: this
+        } as EntityUserData);
 
         // Set an initial velocity if provided
         if(initialVelocity) {

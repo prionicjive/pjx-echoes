@@ -10,6 +10,7 @@ import * as PIXI from 'pixi.js';
 import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { EntityUserData } from './types';
 
 export interface TorchOptions {
     world: planck.World, 
@@ -45,14 +46,6 @@ export class Torch extends StaticEntity {
             }
         });
 
-        // Set user data with a self-referencing body
-        body.setUserData({
-            type: Config.Torch.type,
-            id,
-            sprite,
-            body
-        });
-
         super({
             id,
             sprite,
@@ -65,6 +58,12 @@ export class Torch extends StaticEntity {
             particleEffectOptions: { ...ParticleEffectsConfig.TorchEffect },
             particleEffectContainer: options.containers.containerForParticleEffects,
         });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Torch.type,
+            entity: this
+        } as EntityUserData);
 
         // Add the sprite to the main entity container
         options.containers.containerForEntity.addChild(this.sprite);

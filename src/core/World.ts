@@ -12,6 +12,7 @@ import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { Sentry } from '../entities/Sentry.ts';
 import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
+import { StaticEntity } from '../entities/StaticEntity.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -376,9 +377,11 @@ export class World {
             // Handle player hitting a sentry
             console.log("Player hit a sentry!");
 
-            const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
-            this.player?.handlePickup(sentryEntity.type);
-            this.softlyKillSentryEntity(sentryEntity);
+            const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
+            if (sentryData.entity) {
+                this.player?.handlePickup(sentryData.type);
+                this.killSentryEntity(sentryData.entity);
+            }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
             contact.setEnabled(false)
@@ -390,9 +393,10 @@ export class World {
             console.log("Player hit a torch!");
 
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
-            this.player?.handlePickup(torchEntity.type);
-            // TODO Do we need to call Torch's onPickup()?
-            this.softlyKillStaticEntity(torchEntity);
+            if (torchEntity.entity) {
+                this.player?.handlePickup(torchEntity.type);
+                this.killStaticEntity(torchEntity.entity);
+            }
         }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {
@@ -406,77 +410,52 @@ export class World {
             console.log("Player picked up fuel!");
 
             const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.player?.handlePickup(fuelEntity.type);
-            // TODO Do we need to call Fuel's onPickup()?
-            this.softlyKillStaticEntity(fuelEntity);
+            if (fuelEntity.entity) {
+                this.player?.handlePickup(fuelEntity.type);
+                this.killStaticEntity(fuelEntity.entity);
+            }
         }
     }
 
-    private softlyKillSentryEntity(sentryEntity: EntityUserData) {
+    private killSentryEntity(sentry: Sentry) {
         // TODO Should the world do this? Should it be handled in the sentry class?
-        this.entitiesContainer.removeChild(sentryEntity.sprite);
+        this.entitiesContainer.removeChild(sentry.sprite);
 
-        // Remove body
-        if (sentryEntity.body) {
-            this.world?.destroyBody(sentryEntity.body);
-        }
+        // Call destory to clean up particle effect and light (Among other things)
+        sentry.destroy();
 
-        // Find the light
-        let index = this.dynamicLights.findIndex((light) => light.entityId === sentryEntity.id);
-
-        if (index !== -1) {
-            const light = this.dynamicLights[index]; // We'll handle removal after fade
-            light.fadeOutAndDestroy(() => {
-                const idx = this.dynamicLights.indexOf(light);
-                
-                // Actually remove from dynamic lights array after fade, if not already done
-                if (idx !== -1) {
-                    this.dynamicLights.splice(idx, 1);
-                }
-
-                // Light sprite and mask are destroyed in the fadeOut method
-            });
+        // Find the light and remove from dynamic lights array
+        if (sentry.light) {
+            const idx = this.dynamicLights.indexOf(sentry.light);
+            if (idx !== -1) {
+                this.dynamicLights.splice(idx, 1);
+            }
         }
 
         // Now destroy the sentry (With any particle emitter associated)
         // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
-        index = this.sentries.findIndex((sentry) => {
-            return sentry.id === sentryEntity.id;
-        });
-
+        const index = this.sentries.indexOf(sentry);
         if (index !== -1) {
-            const [sentry] = this.sentries.splice(index, 1);
-            sentry.destroy();
+            this.sentries.splice(index, 1);
         }
 
         // Lastly, flag the body of the sentry entity for destruction
-        this.bodiesToDestroy.push(sentryEntity.body);
+        this.bodiesToDestroy.push(sentry.body);
     }
 
-    private softlyKillStaticEntity(staticEntity: EntityUserData) {
+    private killStaticEntity(staticEntity: StaticEntity) {
         // TODO Entity might live in a different container
         this.entitiesContainer.removeChild(staticEntity.sprite);
 
-        // Remove body
-        if (staticEntity.body) {
-            this.world?.destroyBody(staticEntity.body);
-        }
+        // Call destory to clean up particle effect and light (Among other things)
+        staticEntity.destroy();
 
-        // Find the light
-        const index = this.staticLights.findIndex((light) => light.entityId === staticEntity.id);
-
-        if (index !== -1) {
-            const light = this.staticLights[index]; // We'll handle removal after fade
-            light.fadeOutAndDestroy(() => {
-                const idx = this.staticLights.indexOf(light);
-                
-                // Actually remove from static lights after fade, if not already done
-                if (idx !== -1) {
-                    this.staticLights.splice(idx, 1);
-                }
-
-                // Light sprite and mask are destroyed in the fadeOut method
-            });
+        // Find the light and remove from static lights array
+        if (staticEntity.light) {
+            const idx = this.staticLights.indexOf(staticEntity.light);
+            if (idx !== -1) {
+                this.staticLights.splice(idx, 1);
+            }
         }
 
         // TODO Do any other additional destruction on the entity or its subsystems

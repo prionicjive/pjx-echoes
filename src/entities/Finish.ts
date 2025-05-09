@@ -9,6 +9,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
+import { EntityUserData } from './types';
 
 export interface FinishOptions {
     world: planck.World, 
@@ -44,14 +45,6 @@ export class Finish extends StaticEntity {
             }
         });
 
-        // Set user data with a self-referencing body
-        body.setUserData({
-            type: Config.Finish.type,
-            id,
-            sprite,
-            body
-        });
-
         super({
             id,
             sprite,
@@ -62,6 +55,12 @@ export class Finish extends StaticEntity {
             width: Config.Finish.width,
             height: Config.Finish.height,
         });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Finish.type,
+            entity: this
+        } as EntityUserData);
 
         // Add the sprite to the main entity container
         options.containers.containerForEntity.addChild(this.sprite);

@@ -7,7 +7,7 @@
  */
 
 import { Config } from '../config/Config';
-import { EntityType } from './types';
+import { EntityType, EntityUserData } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point, Segment } from '../utils/types';
 import * as planck from 'planck';
@@ -60,14 +60,6 @@ export class Player extends DynamicEntity {
             linearDamping: Config.Physics.Player.linearDamping
         });
 
-        // Set user data with a self-referencing body
-        body.setUserData({
-            type: Config.Player.type,
-            id,
-            sprite,
-            body
-        });
-
         super({
             id,
             sprite,
@@ -77,6 +69,12 @@ export class Player extends DynamicEntity {
             lightOptions: { ...LightsConfig.PlayerLight },
             edgesList
         });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Player.type,
+            entity: this
+        } as EntityUserData);
 
         containers.containerForEntity.addChild(this.sprite);
     }

@@ -21,7 +21,7 @@ export class BaseEntity {
     public sprite: PIXI.Sprite;
     public body: planck.Body;
     public light?: Light; // Can be DynamicLight or StaticLight
-    protected particleEffect?: ParticleEffect;
+    public particleEffect?: ParticleEffect;
 
     constructor(options: BaseEntityOptions) {
         this.id = options.id;
@@ -50,6 +50,7 @@ export class BaseEntity {
     }
 
     destroy() {
+        this.light?.destroy();
         this.particleEffect?.destroy();
         // Clean up other resources if needed
     }

@@ -18,6 +18,7 @@ import { Fuel } from '../entities/Fuel';
 import { Finish } from '../entities/Finish';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
+import { EntityUserData } from '../entities/types';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -95,10 +96,7 @@ export class Level {
         // Set user data for the body in a self-referential way
         body.setUserData({ 
             type: Config.Edges.type,
-            id,
-            graphics: edgeGraphics,
-            body
-        });
+        } as EntityUserData);
 
         return { id, body, graphics: edgeGraphics }
     }

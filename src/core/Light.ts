@@ -148,24 +148,10 @@ export abstract class Light {
         this.collisionData = edges;
     }
 
-    public fadeOutAndDestroy(onComplete?: () => void) {
-    // Stop any alpha tween
-    if (this.alphaTween) this.alphaTween.kill();
-
-    this.alphaTween = gsap.to(this.tweenables, {
-        alpha: 0,
-        duration: 0.75, 
-        ease: 'power1.inOut',
-        onComplete: () => {
-            // Clean up visual resources
-            this.mask?.destroy();
-            this.sprite?.destroy();
-
-            // Optionally call the onComplete callback if provided
-            if (onComplete) onComplete();
-        }
-    });
-}
+    public destroy() {
+        this.mask?.destroy();
+        this.sprite?.destroy();
+    }
 }
 
 export class DynamicLight extends Light {

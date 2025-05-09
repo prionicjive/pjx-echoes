@@ -12,7 +12,9 @@ import * as PIXI from 'pixi.js';
 import { EntityUtils } from '../utils/EntityUtils';
 import { EntityUserData } from './types';
 
-export class Sentry extends DynamicEntity {
+import { LightOwner } from '../core/Light';
+
+export class Sentry extends DynamicEntity implements LightOwner {
     constructor(
         world: planck.World,
         edgesList: Segment[], 

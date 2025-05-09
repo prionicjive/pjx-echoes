@@ -45,8 +45,8 @@ export const Config = {
         type: "PLAYER",
         color: 0x32ddff,  // Tint color for the player sprite
         radius: 0.48,     // Physics radius of the player (in meters)
-        lightRadiusIncrement: 1,
-        lightRadiusDecrement: 1,
+        lightRadiusIncrement: 2,
+        lightRadiusDecrement: 2,
         maxLightRadius: 20,
         minLightRadius: 2,
         lightChangeDuration: 0.75,

@@ -9,7 +9,9 @@ export interface DynamicEntityOptions extends BaseEntityOptions {
     edgesList?: Segment[];
 }
 
-export class DynamicEntity extends BaseEntity {
+import { LightOwner } from '../core/Light';
+
+export class DynamicEntity extends BaseEntity implements LightOwner {
     constructor(options: DynamicEntityOptions) {
         super(options);
 
@@ -23,7 +25,8 @@ export class DynamicEntity extends BaseEntity {
                 initialLightPos,
                 options.edgesList,
                 options.lightOptions,
-                options.id
+                options.id,
+                this // Pass owner
             );
         }
     }
@@ -31,13 +34,10 @@ export class DynamicEntity extends BaseEntity {
     update(deltaTime: number) {
         // Update all the basic stuff
         super.update(deltaTime);
+    }
 
-        // Update dynamic light position
-        if (this.light) {
-            this.light.update({
-                x: this.body.getPosition().x,
-                y: this.body.getPosition().y
-            });
-        }
+    getLightPosition() {
+        const pos = this.body.getPosition();
+        return { x: pos.x, y: pos.y };
     }
 }

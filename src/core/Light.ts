@@ -27,7 +27,14 @@ export interface LightOptions {
     oscillateColorDelayVariance: number;
 }
 
-export abstract class Light {
+/**
+ * Base Light class. isFadingOut is true if the light is in the process of being faded out and destroyed.
+ */
+export class Light {
+    /**
+     * True if this light is currently fading out and should not be updated or rendered.
+     */
+    public isFadingOut: boolean = false;
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
     public pos: Point;
@@ -91,9 +98,9 @@ export abstract class Light {
         this.entityId = entityId;
 
         // TODO Any additional setup / initialization
-    }
+   };
 
-    abstract setupTweens(): void;
+   public setupTweens(): void { };
 
     // @ts-ignore
     public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
@@ -155,12 +162,25 @@ export abstract class Light {
     }
 }
 
+// Minimal interface for an owner that can provide a light position
+export interface LightOwner {
+    getLightPosition(): Point;
+}
+
 export class DynamicLight extends Light {
     // Tween for changing to a new base radius
-    private changeRadiusTween?: gsap.core.Tween;   
+    private changeRadiusTween?: gsap.core.Tween;
+    public owner?: LightOwner;
 
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions, entityId: string = "") {;
+    constructor(
+        pos: Point,
+        collisionData: Segment[],
+        options: LightOptions,
+        entityId: string = "",
+        owner?: LightOwner
+    ) {
         super(pos, collisionData, options, entityId);
+        if (owner) this.owner = owner;
         // TODO Any additional setup / initialization
     }
 
@@ -171,14 +191,16 @@ export class DynamicLight extends Light {
     }
 
     public update(pos: Point | null = null) {
-        super.update(pos);
+        // If owner is set, always query its position
+        const ownerPos = this.owner ? this.owner.getLightPosition() : pos;
+        super.update(ownerPos);
 
         const lightBounds = {
             minX: this.pos.x - this.radius,
             maxX: this.pos.x + this.radius,
             minY: this.pos.y - this.radius,
             maxY: this.pos.y + this.radius,
-          };
+        };
 
         // Build out the light points in world space (Meters)
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light

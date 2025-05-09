@@ -20,7 +20,10 @@ import { LightsConfig } from '../config/LightsConfig';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
 
-export class Player extends DynamicEntity {
+// Player.ts
+import { LightOwner } from '../core/Light';
+
+export class Player extends DynamicEntity implements LightOwner {
     constructor(
         world: planck.World, 
         edgesList: Segment[], 

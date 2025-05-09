@@ -57,7 +57,6 @@ export class BaseEntity {
 
     destroy() {
         this.containers.containerForEntity.removeChild(this.sprite);
-        this.light?.destroy();
         this.particleEffect?.destroy();
         // Clean up other resources if needed
     }

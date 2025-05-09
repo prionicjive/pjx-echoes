@@ -56,20 +56,17 @@ export class LightUtils {
     ) {
         for (const light of lights) {
             if (preUpdate) preUpdate(light);
-            LightUtils.updateAndRenderLight(light, cameraOffset, screenBounds, container);
+            LightUtils.renderLight(light, cameraOffset, screenBounds, container);
         }
     }
 
-    static updateAndRenderLight(
+    static renderLight(
         light: Light,
         cameraOffset: { x: number; y: number },
         screenBounds: { left: number; top: number; right: number; bottom: number },
         container: PIXI.Container
     ) {
         if (!light) return;
-    
-        // Update logic (if needed)
-        light.update(null); // or pass position if required
     
         if (LightUtils.isLightOnScreen(light, screenBounds.left, screenBounds.top, screenBounds.right, screenBounds.bottom)) {
             light.sprite.visible = true;

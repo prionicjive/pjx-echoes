@@ -4,7 +4,7 @@ import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
-import { Light } from './Light.ts'; 
+import { LightManager } from './LightManager';
 import { Config } from '../config/Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityUserData } from '../entities/types.ts'; 
@@ -45,9 +45,8 @@ export class World {
     // Scratch containers never added anywhere, used for temporary rendering
     private tempLightmapContainer!: PIXI.Container; // Not directly added to world
     
-    // Lights
-    private dynamicLights: Light[] = [];
-    private staticLights: Light[] = [];
+    // Lights are now managed by LightManager singleton
+    // Remove direct arrays; use LightManager for all light management.
 
     // Needed for lightmap rendering
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
@@ -256,8 +255,10 @@ export class World {
             }
         );
         
-        // Add player's dynamic light to the array if it exists
-        this.player?.light && this.dynamicLights.push(this.player.light);
+        // Add player's dynamic light to LightManager
+        if (this.player?.light) {
+            LightManager.instance.addDynamicLight(this.player.light);
+        }
 
         // Construct the sentries
         const maxSentries = Math.ceil(Config.SentryChance * openSpaces.length);
@@ -276,12 +277,14 @@ export class World {
             );
             this.sentries.push(sentry);
 
-            // Add sentry's dynamic light to the array if it exists
-            sentry.light && this.dynamicLights.push(sentry.light);
+            // Add sentry's dynamic light to LightManager
+            if (sentry.light) {
+                LightManager.instance.addDynamicLight(sentry.light);
+            }
         }
 
-        // Store  static light
-        this.staticLights = this.level.getLights();
+        // Store static lights in LightManager
+        LightManager.instance.addStaticLights(this.level.getLights());
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
@@ -296,16 +299,8 @@ export class World {
         });
         this.sentries = [];
 
-        // TODO Kill the lights in a more robust fashion (Possibly trigger effects)
-        // this.staticLights.forEach((light) => {
-        //     light.destroy();
-        // });
-        this.staticLights = [];
-
-        // this.dynamicLights.forEach((light) => {
-        //     light.destroy();
-        // });
-        this.dynamicLights = [];
+        // Remove lights from LightManager
+        LightManager.instance.clearLights();
     }
 
     private tearDownContainersInOrder() {
@@ -380,7 +375,7 @@ export class World {
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
                 this.player?.handlePickup(sentryData.type);
-                this.killSentryEntity(sentryData.entity);
+                this.killSentryEntity(sentryData.entity as Sentry);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -421,12 +416,9 @@ export class World {
         // Call destory to clean up particle effect and light (Among other things)
         sentry.destroy();
 
-        // Find the light and remove from dynamic lights array
+        // Remove light from LightManager
         if (sentry.light) {
-            const idx = this.dynamicLights.indexOf(sentry.light);
-            if (idx !== -1) {
-                this.dynamicLights.splice(idx, 1);
-            }
+            LightManager.instance.removeDynamicLight(sentry.light);
         }
 
         // Now destroy the sentry (With any particle emitter associated)
@@ -444,12 +436,9 @@ export class World {
         // Call destory to clean up particle effect and light (Among other things)
         staticEntity.destroy();
 
-        // Find the light and remove from static lights array
+        // Remove light from LightManager
         if (staticEntity.light) {
-            const idx = this.staticLights.indexOf(staticEntity.light);
-            if (idx !== -1) {
-                this.staticLights.splice(idx, 1);
-            }
+            LightManager.instance.removeStaticLight(staticEntity.light);
         }
 
         // TODO Do any other additional destruction on the entity or its subsystems
@@ -647,6 +636,9 @@ export class World {
     }
 
     private updateAndRenderLights() {
+        // Update all lights
+        LightManager.instance.update();
+
         const cameraOffset = {
             x: -this.worldContainer.x,
             y: -this.worldContainer.y
@@ -662,9 +654,15 @@ export class World {
         // Clear the lightmap container
         this.tempLightmapContainer.removeChildren();
 
-        // Render all lights to the lightmap container
-        LightUtils.renderLightsBatch(this.dynamicLights, cameraOffset, screenBounds, this.tempLightmapContainer);
-        LightUtils.renderLightsBatch(this.staticLights, cameraOffset, screenBounds, this.tempLightmapContainer);
+        // Render all lights to the lightmap container using LightManager
+        LightUtils.renderLightsBatch(
+            LightManager.instance.getDynamicLights(),
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
+        LightUtils.renderLightsBatch(
+            LightManager.instance.getStaticLights(),
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
 
        // Render all lights in the container to the render texture (lightmap)
        this.app.renderer.render({
@@ -677,8 +675,10 @@ export class World {
             target: this.lightmapTexture, 
             clear: false
         });
-    }
 
+        // Process any lights that finished fading out after all updates/renders
+        LightManager.instance.processPendingRemovals();
+    }
     
 
     // @ts-ignore

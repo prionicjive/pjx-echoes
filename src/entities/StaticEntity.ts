@@ -35,9 +35,13 @@ export class StaticEntity extends BaseEntity {
         }
     }
 
-    update(deltaTime: number) {
-        // TODO Do any custom updating
+    destroy() {
+        super.destroy();
         
-        super.update(deltaTime);
+        // In a perfect world, another layer would have remove the light but we do this to be safe
+        if (this.light) {
+            LightManager.instance.removeStaticLight(this.light);
+            this.light = undefined;
+        }
     }
 }

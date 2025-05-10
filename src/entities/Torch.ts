@@ -64,13 +64,17 @@ export class Torch extends StaticEntity {
             type: Config.Torch.type,
             entity: this
         } as EntityUserData);
+    
+        // Set the initial position of the particle effect
+        this.particleEffect?.setEffectPosition(
+            this.sprite.x + this.sprite.width / 2,
+            this.sprite.y + this.sprite.height / 2
+        );
     }
 
+    // @ts-ignore
     update(deltaTime: number) {
-        // TODO Do any custom updating
-        
-        // Call the super to update any particle effects, among other things
-        super.update(deltaTime);
+        // TODO Do any custom updating   
     }
 
     // Optionally, add any unique logic on pickup

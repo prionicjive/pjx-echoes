@@ -64,11 +64,9 @@ export class Anti extends StaticEntity {
         } as EntityUserData);
     }
 
+    // @ts-ignore
     update(deltaTime: number) {
         // TODO Do any custom updating
-        
-        // Call the super to update any particle effects, among other things
-        super.update(deltaTime);
     }
 
     // Optionally, add any unique logic on pickup

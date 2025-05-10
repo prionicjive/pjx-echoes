@@ -34,9 +34,14 @@ export class DynamicEntity extends BaseEntity implements LightOwner {
         }
     }
 
-    update(deltaTime: number) {
-        // Update all the basic stuff
-        super.update(deltaTime);
+    destroy() {
+        super.destroy();
+        
+        // In a perfect world, another layer would have remove the light but we do this to be safe
+        if (this.light) {
+            LightManager.instance.removeDynamicLight(this.light);
+            this.light = undefined;
+        }
     }
 
     getLightPosition() {

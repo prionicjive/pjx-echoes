@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { Light } from '../light/Light';
 import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 import * as planck from 'planck';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -16,7 +17,7 @@ export interface BaseEntityOptions {
     containers: EntityContainers;
 }
 
-export class BaseEntity {
+export abstract class BaseEntity {
     public id: string;
     public sprite: PIXI.Sprite;
     public body: planck.Body;
@@ -37,27 +38,22 @@ export class BaseEntity {
         if (options.particleEffectOptions && this.containers.containerForParticleEffects) {
             this.particleEffect = new ParticleEffect(options.particleEffectOptions);
             this.containers.containerForParticleEffects.addChild(this.particleEffect.container);
+
+            // Add to the manager
+            ParticleEffectManager.instance.addEffect(this.particleEffect);
         }
         // No light construction here!
     }
 
-    update(deltaTime: number) {
-        if (this.particleEffect) {
-            this.particleEffect.setEffectPosition(
-                this.sprite.x + this.sprite.width / 2,
-                this.sprite.y + this.sprite.height / 2
-            );
-            this.particleEffect.update(deltaTime);
-        }
-
-        // No light update here!
-
-        // TODO Any other base updating functionality
-    }
-
     destroy() {
         this.containers.containerForEntity.removeChild(this.sprite);
-        this.particleEffect?.destroy();
+        
+        // In a perfect world, another layer would have remove the effects but we do this to be safe
+        if (this.particleEffect) {
+            ParticleEffectManager.instance.removeEffect(this.particleEffect);
+            this.particleEffect = undefined;
+        }
+        
         // Clean up other resources if needed
     }
 }

@@ -13,6 +13,7 @@ import { LightUtils } from '../utils/LightUtils.ts';
 import { Sentry } from '../entities/Sentry.ts';
 import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
 import { StaticEntity } from '../entities/StaticEntity.ts';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -172,6 +173,12 @@ export class World {
         
         // Empty the various PIXI containers in order
         this.tearDownContainersInOrder();
+
+        // Remove all lights
+        LightManager.instance.removeAllLights();
+
+        // Remove all effects
+        ParticleEffectManager.instance.removeAllEffects();
         
         // Remove all bodies / fixtures from Planck world
         let body = this.world?.getBodyList();
@@ -295,9 +302,6 @@ export class World {
             sentry.destroy();
         });
         this.sentries = [];
-
-        // Remove lights from LightManager
-        LightManager.instance.removeAllLights();
     }
 
     private tearDownContainersInOrder() {
@@ -507,6 +511,9 @@ export class World {
 
         // Update level (For dynamic entities, static entities with effect, dynamic geometry, etc)
         this.level?.update(deltaTime);
+
+        // Update particle effects
+        ParticleEffectManager.instance.update(deltaTime);
 
         // Update camera
         this.updateCamera(deltaTime);

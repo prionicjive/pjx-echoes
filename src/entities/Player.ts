@@ -253,14 +253,18 @@ export class Player extends DynamicEntity implements LightOwner {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
+    // @ts-ignore
     update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Call the super to update any particle effects, among other things
-        super.update(deltaTime);
+        // Set the initial position of the particle effect
+        this.particleEffect?.setEffectPosition(
+            this.sprite.x + this.sprite.width / 2,
+            this.sprite.y + this.sprite.height / 2
+        );
     }
 
     handlePickup(type: EntityType) {

@@ -19,7 +19,6 @@ import { Finish } from '../entities/Finish';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
 import { EntityUserData } from '../entities/types';
-import { LightManager } from '../light/LightManager';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;

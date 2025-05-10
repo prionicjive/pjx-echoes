@@ -21,7 +21,7 @@ import { EntityType, EntityUserData } from '../entities/types';
 import { BaseEntity } from '../entities/BaseEntity';
 import { Player } from '../entities/Player';
 
-type LevelContainers = {
+export type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
     preEntitiesContainer: PIXI.Container;
     entitiesContainer: PIXI.Container;

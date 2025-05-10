@@ -6,25 +6,21 @@ import { Level } from './Level.ts';
 import { Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager.ts';
 import { Config } from '../config/Config.ts'; 
-import { MapUtils } from '../utils/MapUtils.ts'; 
 import { EntityType, EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { BaseEntity } from '../entities/BaseEntity.ts';
+import { LevelUtils } from '../utils/LevelUtils.ts';
 
 export class World {
     private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-    private rawLevelMap: number[][] = []; // TODO Better place to put this?
-
+  
     // Input related
     private inputManager: InputManager;
     
-    // TODO Is this the better way to do edge detection?
-    private mergedEdges: Segment[] = [];
-
     // The player
     private player: Player | null = null;
 
@@ -44,9 +40,6 @@ export class World {
 
     // Scratch containers never added anywhere, used for temporary rendering
     private tempLightmapContainer!: PIXI.Container; // Not directly added to world
-    
-    // Lights are now managed by LightManager singleton
-    // Remove direct arrays; use LightManager for all light management.
 
     // Needed for lightmap rendering
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
@@ -208,43 +201,12 @@ export class World {
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
-        // Regenerate level and place player and finish tiles
-        // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
-        //     Config.LevelDimensions.width, 
-        //     Config.LevelDimensions.height,
-        //     Config.MapGeneration.CellularAutomata.wallChance,
-        //     Config.MapGeneration.CellularAutomata.smoothingSteps
-        // );
-
-        const { map: levelMap, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
-            Config.LevelDimensions.width,
-            Config.LevelDimensions.height,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.percentOpen,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.maxWalkers,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.walkerLifetime,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.smoothingSteps
-        );
-
-        // Useful for look up information
-        this.rawLevelMap = levelMap;
-
-        // Use text renderer for debug purposes
-        // MapGenerator.renderMap(this.rawLevelMap); 
-
-        // Get the reduced "merged" edges from the tilemap
-        this.mergedEdges = MapUtils.createMergedEdgesFromTilemap(this.rawLevelMap);
-
-        // Construct the level and finish tiles (among other entities and lights)
-        this.level = new Level(
-            this.world, {
-                levelGeometryContainer: this.levelGeometryContainer,
-                preEntitiesContainer: this.preEntitiesContainer,
-                entitiesContainer: this.entitiesContainer
-            }, 
-            this.rawLevelMap, 
-            openSpaces,
-            this.mergedEdges
-        );
+        // Create a random level
+        this.level = LevelUtils.createRandomLevel(this.world, {
+            levelGeometryContainer: this.levelGeometryContainer,
+            preEntitiesContainer: this.preEntitiesContainer,
+            entitiesContainer: this.entitiesContainer
+        });
         
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();

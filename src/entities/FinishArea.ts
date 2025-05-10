@@ -2,7 +2,6 @@ import * as PIXI from 'pixi.js';
 import { StaticEntity } from './StaticEntity';
 import { Config } from '../config/Config';
 import { LightsConfig } from '../config/LightsConfig';
-import { Segment } from '../utils/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
@@ -10,12 +9,13 @@ import { EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { EntityUserData } from './types';
+import { LevelContext } from '../level/LevelContext';
 
 export interface FinishAreaOptions {
     world: planck.World, 
-    edgesList: Segment[], 
     spawnPoint: Point,
-    containers: EntityContainers
+    containers: EntityContainers,
+    levelContext: LevelContext
 }
 
 export class FinishArea extends StaticEntity {
@@ -50,7 +50,7 @@ export class FinishArea extends StaticEntity {
             sprite,
             body,
             lightOptions: { ...LightsConfig.FinishAreaLight },
-            edgesList: options.edgesList,
+            levelContext: options.levelContext,
             position: options.spawnPoint,
             width: Config.FinishArea.width,
             height: Config.FinishArea.height,

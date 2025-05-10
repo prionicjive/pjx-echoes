@@ -1,7 +1,7 @@
 import { Config } from "../config/Config";
-import { Level } from "../core/Level";
+import { Level } from "../level/Level";
 import { MapUtils } from "./MapUtils";
-import { LevelContainers } from "../core/Level";
+import { LevelContainers } from "../level/Level";
 import * as planck from 'planck';
 
 export class LevelUtils {

@@ -1,5 +1,4 @@
 import * as planck from 'planck';
-import { Segment } from '../utils/types';
 import { Point } from '../utils/types';
 import { EntityContainers } from './BaseEntity';
 import { StaticEntity } from './StaticEntity';
@@ -11,10 +10,11 @@ import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { EntityUserData } from './types';
+import { LevelContext } from '../level/LevelContext';
 
 export interface TorchOptions {
     world: planck.World, 
-    edgesList: Segment[], 
+    levelContext: LevelContext, 
     spawnPoint: Point,
     containers: EntityContainers
 }
@@ -51,12 +51,12 @@ export class Torch extends StaticEntity {
             sprite,
             body,
             lightOptions: { ...LightsConfig.TorchLight },
-            edgesList: options.edgesList,
             position: options.spawnPoint,
             width: Config.Torch.width,
             height: Config.Torch.height,
             particleEffectOptions: { ...ParticleEffectsConfig.TorchEffect },
             containers: options.containers,
+            levelContext: options.levelContext
         });
 
         // Set user data with a self-referencing data

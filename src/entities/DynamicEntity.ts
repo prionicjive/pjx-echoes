@@ -2,13 +2,13 @@
 import * as planck from 'planck';
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { DynamicLight, LightOptions } from '../light/Light';
-import { Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager';
 import { LightOwner } from '../light/Light';
+import { LevelContext } from '../level/LevelContext';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;
-    edgesList?: Segment[];
+    levelContext: LevelContext;
 }
 
 export class DynamicEntity extends BaseEntity implements LightOwner {
@@ -16,14 +16,14 @@ export class DynamicEntity extends BaseEntity implements LightOwner {
         super(options);
 
         // Construct a DynamicLight if need be
-        if (options.lightOptions && options.edgesList) {
+        if (options.lightOptions && options.levelContext) {
             let initialLightPos = options.body?.getPosition();
             if (!initialLightPos) {
                 initialLightPos = new planck.Vec2(options.sprite.x + 0.5, options.sprite.y + 0.5);
             }
             this.light = new DynamicLight(
                 initialLightPos,
-                options.edgesList,
+                options.levelContext.getEdgesList(),
                 options.lightOptions,
                 options.id,
                 this // Pass owner

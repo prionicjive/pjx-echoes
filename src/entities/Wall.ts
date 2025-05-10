@@ -5,10 +5,12 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
+import { LevelContext } from '../level/LevelContext';
 
 export interface WallOptions { 
     spawnPoint: Point,
-    containers: EntityContainers
+    containers: EntityContainers,
+    levelContext: LevelContext
 }
 
 export class Wall extends StaticEntity {
@@ -28,11 +30,12 @@ export class Wall extends StaticEntity {
 
         super({
             id,
-            sprite,
+            sprite, 
             position: options.spawnPoint,
             width: Config.Wall.width,
             height: Config.Wall.height,
-            containers: options.containers
+            containers: options.containers,
+            levelContext: options.levelContext
         });
     }
 

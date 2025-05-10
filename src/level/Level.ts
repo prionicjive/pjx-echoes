@@ -20,6 +20,7 @@ import { Sentry } from '../entities/Sentry';
 import { EntityType, EntityUserData } from '../entities/types';
 import { BaseEntity } from '../entities/BaseEntity';
 import { Player } from '../entities/Player';
+import { LevelContext } from './LevelContext';
 
 export type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -32,13 +33,14 @@ export type LevelContainers = {
  * including walls and finish tiles. Handles conversion from map data to
  * physics and rendering objects.
  */
-export class Level {
+export class Level implements LevelContext {
     private player: Player | null;
     private walls: Wall[];
     private finishAreas: FinishArea[];
     private torchEntities: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
+    private edgesList: Segment[];
 
     constructor(
         world: planck.World, 
@@ -47,6 +49,9 @@ export class Level {
         validSpaces: string[], 
         edgesList: Segment[]
     ) {
+        // Store the edges list for later use
+        this.edgesList = edgesList;
+
         // Store references to the various level entities
         this.player = null;
         this.walls = [];
@@ -56,30 +61,30 @@ export class Level {
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(world, containers.levelGeometryContainer, edgesList);
+        this.createLevelEdges(world, containers.levelGeometryContainer);
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
             this.walls = this.createWalls(levelMap, containers.levelGeometryContainer);
         }
 
         // Create the player
-        this.player = this.createPlayer(validSpaces, containers, world, edgesList);        
+        this.player = this.createPlayer(validSpaces, containers, world);        
         
         // Create the other various entities
-        this.torchEntities = this.createTorchEntities(validSpaces, containers, world, edgesList);
-        this.finishAreas = this.createFinishEntities(validSpaces, containers, world, edgesList);
-        this.antiEntities = this.createAntiEntities(validSpaces, containers, world, edgesList);
-        this.sentries = this.createSentries(validSpaces, containers, world, edgesList);
+        this.torchEntities = this.createTorchEntities(validSpaces, containers, world);
+        this.finishAreas = this.createFinishEntities(validSpaces, containers, world);
+        this.antiEntities = this.createAntiEntities(validSpaces, containers, world);
+        this.sentries = this.createSentries(validSpaces, containers, world);
     }
 
-    private createLevelEdges(world: planck.World, container: PIXI.Container, edgesList: Segment[]) {
+    private createLevelEdges(world: planck.World, container: PIXI.Container) {
         let edgeGraphics: PIXI.Graphics | null = null;
         
         if (Config.Debug.drawEdges) {
             // Also, while iterating, draw the edges of the walls
             edgeGraphics = new PIXI.Graphics();
             
-            for (const edge of edgesList){
+            for (const edge of this.edgesList){
                 edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
                 edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
                 edgeGraphics.stroke({width:Config.Edges.thickness, color: Config.Edges.color});
@@ -93,7 +98,7 @@ export class Level {
         const id = EntityUtils.generateRandomId(Config.Edges.type);
 
         const body = PhysicsUtils.createLevelEdgesBody(world, { 
-            edges: edgesList, 
+            edges: this.edgesList, 
             edgeFixture: {
                 restitution: Config.Physics.Wall.restitution,
                 friction: 0,
@@ -121,7 +126,8 @@ export class Level {
                         spawnPoint: { x: Number(x), y: Number(y) },
                         containers: { 
                             containerForEntity: container,
-                        }
+                        },
+                        levelContext: this
                     });
 
                     // Store wall entity for future reference
@@ -137,17 +143,17 @@ export class Level {
     private createPlayer(
         validSpaces: string[],
         containers: LevelContainers,
-        world: planck.World,
-        edgesList: Segment[]
+        world: planck.World
     ) {
-        const entity = new Player(
+        const entity = new Player({
             world,
-            edgesList,
-            this.findRandomValidPoint(validSpaces), { 
+            spawnPoint: this.findRandomValidPoint(validSpaces), 
+            containers: {
                 containerForEntity: containers.entitiesContainer,
                 containerForParticleEffects: containers.preEntitiesContainer 
-            }
-        );
+            },
+            levelContext: this
+        });
 
         return entity;
     }
@@ -155,8 +161,7 @@ export class Level {
     private createTorchEntities(
         validSpaces: string[], 
         containers: LevelContainers, 
-        world: planck.World,
-        edgesList: Segment[]
+        world: planck.World
     ) {
         const entitiesToReturn = [];
         
@@ -170,7 +175,7 @@ export class Level {
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer 
                 },
-                edgesList: edgesList
+                levelContext: this
             });
 
             entitiesToReturn.push(entity);
@@ -182,8 +187,7 @@ export class Level {
     private createAntiEntities(
         validSpaces: string[], 
         containers: LevelContainers, 
-        world: planck.World,
-        edgesList: Segment[]
+        world: planck.World
     ) {
         const entitiesToReturn = [];
         
@@ -194,7 +198,7 @@ export class Level {
                 world,
                 spawnPoint: this.findRandomValidPoint(validSpaces),
                 containers: { containerForEntity: containers.entitiesContainer },
-                edgesList: edgesList
+                levelContext: this
             });
 
             entitiesToReturn.push(entity);
@@ -206,8 +210,7 @@ export class Level {
     private createFinishEntities(
         validSpaces: string[], 
         containers: LevelContainers, 
-        world: planck.World,
-        edgesList: Segment[]
+        world: planck.World
     ) {
         const entitiesToReturn = [];
         
@@ -218,7 +221,7 @@ export class Level {
                 world,
                 spawnPoint: this.findRandomValidPoint(validSpaces),
                 containers: { containerForEntity: containers.entitiesContainer },
-                edgesList: edgesList
+                levelContext: this
             });
 
             entitiesToReturn.push(entity);
@@ -231,7 +234,6 @@ export class Level {
         validSpaces: string[], 
         containers: LevelContainers, 
         world: planck.World,
-        edgesList: Segment[]
     ) {
         const entitiesToReturn = [];
         
@@ -240,15 +242,16 @@ export class Level {
         for (let i = 0; i < numSentries; i++) {
             // Pick a random open space
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
-            const sentry = new Sentry(
-                world, 
-                edgesList, 
-                this.findRandomValidPoint(validSpaces), {
+            const sentry = new Sentry({
+                world,  
+                spawnPoint: this.findRandomValidPoint(validSpaces), 
+                containers: {
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer,
                 },
-                initialVelocity
-            );
+                initialVelocity,
+                levelContext: this
+            });
 
             entitiesToReturn.push(sentry);
         }
@@ -332,6 +335,10 @@ export class Level {
 
     getPlayer(): Player {
         return this.player!;
+    }
+
+    getEdgesList(): Segment[] {
+        return this.edgesList;
     }
 
     private findRandomValidPoint(validSpaces: string[]): Point {

@@ -1,12 +1,12 @@
 /* StaticEntity.ts */
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { StaticLight, LightOptions } from '../light/Light';
-import { Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager';
+import { LevelContext } from '../level/LevelContext';
 
 export interface StaticEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;
-    edgesList?: Segment[];
+    levelContext: LevelContext;
     position: { x: number, y: number };
     width: number;
     height: number;
@@ -17,7 +17,7 @@ export class StaticEntity extends BaseEntity {
         super(options);
 
         // Construct a static light if options provided
-        if (options.lightOptions && options.edgesList) {
+        if (options.lightOptions && options.levelContext) {
             const center = {
                 x: options.position.x + options.width / 2,
                 y: options.position.y + options.height / 2
@@ -25,7 +25,7 @@ export class StaticEntity extends BaseEntity {
 
             this.light = new StaticLight(
                 center,
-                options.edgesList,
+                options.levelContext.getEdgesList(),
                 options.lightOptions,
                 options.id
             );

@@ -9,7 +9,7 @@
 import { Config } from '../config/Config';
 import { EntityType, EntityUserData } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { Point, Segment } from '../utils/types';
+import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
@@ -19,34 +19,35 @@ import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
-
-// Player.ts
 import { LightOwner } from '../light/Light';
+import { LevelContext } from '../level/LevelContext';
+
+export interface PlayerOptions {
+    world: planck.World, 
+    spawnPoint: Point,
+    containers: EntityContainers,
+    levelContext: LevelContext
+}
 
 export class Player extends DynamicEntity implements LightOwner {
-    constructor(
-        world: planck.World, 
-        edgesList: Segment[], 
-        spawnPoint: Point,
-        containers: EntityContainers
-    ) {
+    constructor(options: PlayerOptions) {
         // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Sentry.type);
+        const id = EntityUtils.generateRandomId(Config.Player.type);
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.sentry),
-            x: spawnPoint.x * Config.PixelsPerMeter,
-            y: spawnPoint.y * Config.PixelsPerMeter,
+            texture: PIXI.Texture.from(Config.Textures.player),
+            x: options.spawnPoint.x * Config.PixelsPerMeter,
+            y: options.spawnPoint.y * Config.PixelsPerMeter,
             width: Config.Player.radius * 2 * Config.PixelsPerMeter,
             height: Config.Player.radius * 2 * Config.PixelsPerMeter,
             color: Config.Player.color
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(world, {
+        const body = PhysicsUtils.createBody(options.world, {
             type: 'dynamic',
-            position: new planck.Vec2(spawnPoint.x + Config.Player.radius, spawnPoint.y + Config.Player.radius),
+            position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius),
             circle: { radius: Config.Player.radius },
             fixture: {
                 friction: 0,
@@ -68,9 +69,9 @@ export class Player extends DynamicEntity implements LightOwner {
             sprite,
             body,
             particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
-            containers,
+            containers: options.containers,
             lightOptions: { ...LightsConfig.PlayerLight },
-            edgesList
+            levelContext: options.levelContext
         });
 
         // Set user data with a self-referencing data

@@ -21,7 +21,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
 
 // Player.ts
-import { LightOwner } from '../core/Light';
+import { LightOwner } from '../light/Light';
 
 export class Player extends DynamicEntity implements LightOwner {
     constructor(

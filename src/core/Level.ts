@@ -11,7 +11,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
-import { Light } from './Light';
+import { Light } from '../light/Light';
 import { EntityUtils } from '../utils/EntityUtils';
 import { RenderableGeometry } from './types';
 import { Anti } from '../entities/Anti';
@@ -19,7 +19,7 @@ import { Finish } from '../entities/Finish';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
 import { EntityUserData } from '../entities/types';
-import { LightManager } from './LightManager';
+import { LightManager } from '../light/LightManager';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;

@@ -1,4 +1,4 @@
-import { LightOptions } from "../core/Light";
+import { LightOptions } from "../light/Light";
 
 export const LightsConfig: Record<string, LightOptions> = {
     PlayerLight: {

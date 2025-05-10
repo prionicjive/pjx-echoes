@@ -1,8 +1,8 @@
 /* StaticEntity.ts */
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
-import { StaticLight, LightOptions } from '../core/Light';
+import { StaticLight, LightOptions } from '../light/Light';
 import { Segment } from '../utils/types';
-import { LightManager } from '../core/LightManager';
+import { LightManager } from '../light/LightManager';
 
 export interface StaticEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;

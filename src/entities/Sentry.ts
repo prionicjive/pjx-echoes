@@ -12,7 +12,7 @@ import * as PIXI from 'pixi.js';
 import { EntityUtils } from '../utils/EntityUtils';
 import { EntityUserData } from './types';
 
-import { LightOwner } from '../core/Light';
+import { LightOwner } from '../light/Light';
 
 export class Sentry extends DynamicEntity implements LightOwner {
     constructor(

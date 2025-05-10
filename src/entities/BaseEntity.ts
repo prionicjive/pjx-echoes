@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { Light } from '../core/Light';
+import { Light } from '../light/Light';
 import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 import * as planck from 'planck';
 

@@ -1,10 +1,10 @@
 /* DynamicEntity.ts */
 import * as planck from 'planck';
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
-import { DynamicLight, LightOptions } from '../core/Light';
+import { DynamicLight, LightOptions } from '../light/Light';
 import { Segment } from '../utils/types';
-import { LightManager } from '../core/LightManager';
-import { LightOwner } from '../core/Light';
+import { LightManager } from '../light/LightManager';
+import { LightOwner } from '../light/Light';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;

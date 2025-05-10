@@ -19,6 +19,7 @@ import { Wall } from '../entities/Wall';
 import { Sentry } from '../entities/Sentry';
 import { EntityType, EntityUserData } from '../entities/types';
 import { BaseEntity } from '../entities/BaseEntity';
+import { Player } from '../entities/Player';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -32,12 +33,12 @@ type LevelContainers = {
  * physics and rendering objects.
  */
 export class Level {
+    private player: Player | null;
     private walls: Wall[];
     private finishAreas: FinishArea[];
     private torchEntities: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
-    private playerSpawnPoint: Point;
 
     constructor(
         world: planck.World, 
@@ -47,6 +48,7 @@ export class Level {
         edgesList: Segment[]
     ) {
         // Store references to the various level entities
+        this.player = null;
         this.walls = [];
         this.finishAreas = [];
         this.torchEntities = [];
@@ -55,20 +57,19 @@ export class Level {
 
         // Create the edges collision data and (optionally) render it
         this.createLevelEdges(world, containers.levelGeometryContainer, edgesList);
-
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
             this.walls = this.createWalls(levelMap, containers.levelGeometryContainer);
         }
+
+        // Create the player
+        this.player = this.createPlayer(validSpaces, containers, world, edgesList);        
         
         // Create the other various entities
         this.torchEntities = this.createTorchEntities(validSpaces, containers, world, edgesList);
         this.finishAreas = this.createFinishEntities(validSpaces, containers, world, edgesList);
         this.antiEntities = this.createAntiEntities(validSpaces, containers, world, edgesList);
         this.sentries = this.createSentries(validSpaces, containers, world, edgesList);
-    
-        // Lastly, generate a random spawn point for the player
-        this.playerSpawnPoint = this.findRandomValidPoint(validSpaces);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container, edgesList: Segment[]) {
@@ -132,6 +133,25 @@ export class Level {
         return entitiesToReturn;
     }
 
+
+    private createPlayer(
+        validSpaces: string[],
+        containers: LevelContainers,
+        world: planck.World,
+        edgesList: Segment[]
+    ) {
+        const entity = new Player(
+            world,
+            edgesList,
+            this.findRandomValidPoint(validSpaces), { 
+                containerForEntity: containers.entitiesContainer,
+                containerForParticleEffects: containers.preEntitiesContainer 
+            }
+        );
+
+        return entity;
+    }
+
     private createTorchEntities(
         validSpaces: string[], 
         containers: LevelContainers, 
@@ -143,12 +163,9 @@ export class Level {
         // Randomly place torch entities in open spaces for the player to reach
         const numTorchEntities = Math.ceil(validSpaces.length * Config.TorchChance);
         for (let i = 0; i < numTorchEntities; i++) {
-            // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-
             const entity = new Torch({
                 world,
-                spawnPoint: { x: Number(x), y: Number(y) },
+                spawnPoint: this.findRandomValidPoint(validSpaces),
                 containers: { 
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer 
@@ -173,12 +190,9 @@ export class Level {
         // Randomly place anti entities in open spaces for the player to reach
         const numAntiEntities = Math.ceil(validSpaces.length * Config.AntiChance);
         for (let i = 0; i < numAntiEntities; i++) {
-            // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-
             const entity = new Anti({
                 world,
-                spawnPoint: { x: Number(x), y: Number(y) },
+                spawnPoint: this.findRandomValidPoint(validSpaces),
                 containers: { containerForEntity: containers.entitiesContainer },
                 edgesList: edgesList
             });
@@ -200,12 +214,9 @@ export class Level {
         // Randomly place finish entities in open spaces for the player to reach
         const numFinishEntities = Math.ceil(validSpaces.length * Config.FinishAreaChance);
         for (let i = 0; i < numFinishEntities; i++) {
-            // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
-
             const entity = new FinishArea({
                 world,
-                spawnPoint: { x: Number(x), y: Number(y) },
+                spawnPoint: this.findRandomValidPoint(validSpaces),
                 containers: { containerForEntity: containers.entitiesContainer },
                 edgesList: edgesList
             });
@@ -228,12 +239,11 @@ export class Level {
         const numSentries = Math.ceil(validSpaces.length * Config.SentryChance);
         for (let i = 0; i < numSentries; i++) {
             // Pick a random open space
-            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
             const sentry = new Sentry(
                 world, 
                 edgesList, 
-                {x: Number(x), y: Number(y)}, {
+                this.findRandomValidPoint(validSpaces), {
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer,
                 },
@@ -252,6 +262,7 @@ export class Level {
     update(deltaTime: number) {
         // Combine all entities into a single array
         const allEntities = [
+            this.player!,
             ...this.walls, 
             ...this.torchEntities, 
             ...this.antiEntities, 
@@ -291,6 +302,8 @@ export class Level {
 
     destroy() {
         // Destroy all entities
+        this.player?.destroy();
+
         this.walls.forEach((wall) => {
             wall.destroy();
         });
@@ -317,8 +330,8 @@ export class Level {
         this.sentries = [];
     }
 
-    getPlayerSpawnPoint(): Point {
-        return this.playerSpawnPoint;
+    getPlayer(): Player {
+        return this.player!;
     }
 
     private findRandomValidPoint(validSpaces: string[]): Point {

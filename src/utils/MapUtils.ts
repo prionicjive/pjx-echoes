@@ -522,4 +522,10 @@ export class MapUtils {
       
         return edgeSegments;
     }
+
+    static createMergedEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
+        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(tileMap, tileSize);
+        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(tileMap, tileSize);
+        return [...horizontalEdges, ...verticalEdges];
+    }
 }

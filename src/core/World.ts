@@ -3,7 +3,7 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
-import { Point, Segment } from '../utils/types';
+import { Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager.ts';
 import { Config } from '../config/Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
@@ -228,13 +228,11 @@ export class World {
         // Useful for look up information
         this.rawLevelMap = levelMap;
 
-        // TODO Is this the better way to do edge detection?
-        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap);
-        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap)
-        this.mergedEdges = [...horizontalEdges, ...verticalEdges];
-
         // Use text renderer for debug purposes
         // MapGenerator.renderMap(this.rawLevelMap); 
+
+        // Get the reduced "merged" edges from the tilemap
+        this.mergedEdges = MapUtils.createMergedEdgesFromTilemap(this.rawLevelMap);
 
         // Construct the level and finish tiles (among other entities and lights)
         this.level = new Level(
@@ -247,30 +245,16 @@ export class World {
             openSpaces,
             this.mergedEdges
         );
-
-    
-        // Get the player spawn point from the level
-        const spawnPoint: Point = this.level.getPlayerSpawnPoint();
         
-        // Construct a player at a given location
-        this.player = new Player(
-            this.world, 
-            this.mergedEdges, 
-            spawnPoint, {
-                containerForEntity: this.entitiesContainer,
-                containerForParticleEffects: this.preEntitiesContainer,
-            }
-        );
+        // Get the player - our "first class" entity
+        this.player = this.level.getPlayer();
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }
 
     private tearDownEntities() {
-        // Destroy the player
-        this.player?.destroy();
-        
-        // Destroy the level (and all entities within)
+         // Destroy the level (and all entities within, including the player)
         this.level?.destroy();
     }
 
@@ -446,10 +430,8 @@ export class World {
         // Step the physics
         this.world?.step(deltaTime);
     
-        // Update player
-        this.player?.update(deltaTime);
-    
-        // Update level (For dynamic entities, static entities with effect, dynamic geometry, etc)
+        // Update level 
+        // (For player, dynamic entities, static entities with effect, dynamic geometry, etc)
         this.level?.update(deltaTime);
 
         // Update particle effects

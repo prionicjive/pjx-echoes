@@ -16,7 +16,9 @@ import { Anti } from '../entities/Anti';
 import { FinishArea } from '../entities/FinishArea';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
-import { EntityUserData } from '../entities/types';
+import { Sentry } from '../entities/Sentry';
+import { EntityType, EntityUserData } from '../entities/types';
+import { BaseEntity } from '../entities/BaseEntity';
 
 type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -34,6 +36,7 @@ export class Level {
     private finishAreas: FinishArea[];
     private torchEntities: Torch[];
     private antiEntities: Anti[];
+    private sentries: Sentry[];
 
     constructor(
         world: planck.World, 
@@ -47,6 +50,7 @@ export class Level {
         this.finishAreas = [];
         this.torchEntities = [];
         this.antiEntities = [];
+        this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
         this.createLevelEdges(world, containers.levelGeometryContainer, edgesList);
@@ -60,6 +64,7 @@ export class Level {
         this.torchEntities = this.createTorchEntities(validSpaces, containers, world, edgesList);
         this.finishAreas = this.createFinishEntities(validSpaces, containers, world, edgesList);
         this.antiEntities = this.createAntiEntities(validSpaces, containers, world, edgesList);
+        this.sentries = this.createSentries(validSpaces, containers, world, edgesList);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container, edgesList: Segment[]) {
@@ -207,17 +212,77 @@ export class Level {
         return entitiesToReturn;
     }
 
+    private createSentries(
+        validSpaces: string[], 
+        containers: LevelContainers, 
+        world: planck.World,
+        edgesList: Segment[]
+    ) {
+        const entitiesToReturn = [];
+        
+        // Randomly place sentry entities in open spaces for the player to reach
+        const numSentries = Math.ceil(validSpaces.length * Config.SentryChance);
+        for (let i = 0; i < numSentries; i++) {
+            // Pick a random open space
+            const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
+            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
+            const sentry = new Sentry(
+                world, 
+                edgesList, 
+                {x: Number(x), y: Number(y)}, {
+                    containerForEntity: containers.entitiesContainer,
+                    containerForParticleEffects: containers.preEntitiesContainer,
+                },
+                initialVelocity
+            );
+
+            entitiesToReturn.push(sentry);
+        }
+
+        return entitiesToReturn;
+    }
+
     /**
      * Updates all entities in the level (e.g., for animation or effects).
      */
     update(deltaTime: number) {
         // Combine all entities into a single array
-        const allEntities = [...this.walls, ...this.torchEntities, ...this.antiEntities, ...this.finishAreas];
+        const allEntities = [
+            ...this.walls, 
+            ...this.torchEntities, 
+            ...this.antiEntities, 
+            ...this.finishAreas,
+            ...this.sentries
+        ];
         
         // Update each entity
         allEntities.forEach((entity) => {
             entity.update(deltaTime);
         });
+    }
+
+    gentlyRemoveEntity(type: EntityType, entity: BaseEntity) {
+        // Gently remove the entity
+        entity.gentlyRemove();
+
+        // Now, remove the entity from the correct array
+        switch (type) {
+            case Config.Wall.type:
+                this.walls.splice(this.walls.indexOf(entity as Wall), 1);
+                break;
+            case Config.Torch.type:
+                this.torchEntities.splice(this.torchEntities.indexOf(entity as Torch), 1);
+                break;
+            case Config.Anti.type:
+                this.antiEntities.splice(this.antiEntities.indexOf(entity as Anti), 1);
+                break;
+            case Config.FinishArea.type:
+                this.finishAreas.splice(this.finishAreas.indexOf(entity as FinishArea), 1);
+                break;
+            case Config.Sentry.type:
+                this.sentries.splice(this.sentries.indexOf(entity as Sentry), 1);
+                break;
+        }
     }
 
     destroy() {
@@ -241,5 +306,10 @@ export class Level {
             finishArea.destroy();
         });
         this.finishAreas = [];
+
+        this.sentries.forEach((sentry) => {
+            sentry.destroy();
+        });
+        this.sentries = [];
     }
 }

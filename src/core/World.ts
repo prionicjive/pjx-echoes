@@ -7,19 +7,16 @@ import { Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager.ts';
 import { Config } from '../config/Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
-import { EntityUserData } from '../entities/types.ts'; 
+import { EntityType, EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
-import { Sentry } from '../entities/Sentry.ts';
-import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
-import { StaticEntity } from '../entities/StaticEntity.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
+import { BaseEntity } from '../entities/BaseEntity.ts';
 
 export class World {
     private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-    private level: Level | null = null;
     private rawLevelMap: number[][] = []; // TODO Better place to put this?
 
     // Input related
@@ -28,9 +25,11 @@ export class World {
     // TODO Is this the better way to do edge detection?
     private mergedEdges: Segment[] = [];
 
-    // Entities
+    // The player
     private player: Player | null = null;
-    private sentries: Sentry[] = [];
+
+    // The level (with all its entities)
+    private level: Level | null = null;
 
     // PIXI Containers different rendering objects / layers
     private worldContainer!: PIXI.Container; // Added to stage directly
@@ -250,6 +249,7 @@ export class World {
         );
 
         // Find a random valid starting spot for player
+        // TODO Maybe just access this from the level (As some exposed variable) rather than have openSpaces
         const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
         
         // Construct a player at a given location
@@ -261,43 +261,15 @@ export class World {
                 containerForParticleEffects: this.preEntitiesContainer,
             }
         );
-        
-        // Add player's dynamic light to LightManager
-        if (this.player?.light) {
-            LightManager.instance.addDynamicLight(this.player.light);
-        }
-
-        // Construct the sentries
-        const maxSentries = Math.ceil(Config.SentryChance * openSpaces.length);
-        for (let i = 0; i < maxSentries; i++) {
-            // Find random valid start point
-            const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
-            const sentry = new Sentry(
-                this.world, 
-                this.mergedEdges, 
-                {x: Number(spawnX), y: Number(spawnY)}, {
-                    containerForEntity: this.entitiesContainer,
-                    containerForParticleEffects: this.preEntitiesContainer,
-                },
-                initialVelocity
-            );
-            this.sentries.push(sentry);
-        }
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }
 
     private tearDownEntities() {
+        // Destroy the player
         this.player?.destroy();
         
-        // Destroy the sentries
-        this.sentries.forEach((sentry) => {
-            sentry.destroy();
-        });
-        this.sentries = [];
-
         // Destroy the level (and all entities within)
         this.level?.destroy();
     }
@@ -373,8 +345,8 @@ export class World {
 
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
-                this.player?.handlePickup(sentryData.type);
-                this.killSentryEntity(sentryData.entity as Sentry);
+                this.player?.onPickup(sentryData.type);
+                this.level?.gentlyRemoveEntity(sentryData.type, sentryData.entity);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -388,8 +360,8 @@ export class World {
 
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
-                this.player?.handlePickup(torchEntity.type);
-                this.killStaticEntity(torchEntity.entity);
+                this.player?.onPickup(torchEntity.type);
+                this.gentlyRemoveEntity(torchEntity.type,torchEntity.entity);
             }
         }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
@@ -405,34 +377,20 @@ export class World {
 
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
-                this.player?.handlePickup(antiEntity.type);
-                this.killStaticEntity(antiEntity.entity);
+                this.player?.onPickup(antiEntity.type);
+                this.level?.gentlyRemoveEntity(antiEntity.type, antiEntity.entity);
             }
         }
     }
 
-    private killSentryEntity(sentry: Sentry) {
-        // Kill the sentry (Remove sprite and gently remove light and effect)
-        sentry.gentlyRemove();
-
-        // Now destroy the sentry (With any particle emitter associated)
-        // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
-        const index = this.sentries.indexOf(sentry);
-        if (index !== -1) {
-            this.sentries.splice(index, 1);
-        }
-
-        // Lastly, flag the body of the sentry entity for destruction
-        this.bodiesToDestroy.push(sentry.body);
-    }
-
-    private killStaticEntity(staticEntity: StaticEntity) {
-        staticEntity.gentlyRemove();
+    private gentlyRemoveEntity(type: EntityType, entity: BaseEntity) {
+        // Gently remove the entity from the level
+        this.level?.gentlyRemoveEntity(type, entity);
 
         // TODO Do any other additional destruction on the entity or its subsystems
 
         // Lastly, flag the body of the entity for destruction
-        this.bodiesToDestroy.push(staticEntity.body);
+        this.bodiesToDestroy.push(entity.body);
     }
 
     /**
@@ -491,11 +449,6 @@ export class World {
         // Update player
         this.player?.update(deltaTime);
     
-        // Update sentries
-        this.sentries.forEach((sentry) => {
-            sentry.update(deltaTime);
-        });
-
         // Update level (For dynamic entities, static entities with effect, dynamic geometry, etc)
         this.level?.update(deltaTime);
 

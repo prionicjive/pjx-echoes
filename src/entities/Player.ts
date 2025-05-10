@@ -267,7 +267,7 @@ export class Player extends DynamicEntity implements LightOwner {
         );
     }
 
-    handlePickup(type: EntityType) {
+    onPickup(type: EntityType) {
         switch (type) {
             case Config.Torch.type:
                 // Grow the light

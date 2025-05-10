@@ -10,7 +10,7 @@ import { Config } from '../config/Config';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { Segment } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Anti } from '../entities/Anti';
 import { FinishArea } from '../entities/FinishArea';
@@ -37,6 +37,7 @@ export class Level {
     private torchEntities: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
+    private playerSpawnPoint: Point;
 
     constructor(
         world: planck.World, 
@@ -65,6 +66,9 @@ export class Level {
         this.finishAreas = this.createFinishEntities(validSpaces, containers, world, edgesList);
         this.antiEntities = this.createAntiEntities(validSpaces, containers, world, edgesList);
         this.sentries = this.createSentries(validSpaces, containers, world, edgesList);
+    
+        // Lastly, generate a random spawn point for the player
+        this.playerSpawnPoint = this.findRandomValidPoint(validSpaces);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container, edgesList: Segment[]) {
@@ -311,5 +315,15 @@ export class Level {
             sentry.destroy();
         });
         this.sentries = [];
+    }
+
+    getPlayerSpawnPoint(): Point {
+        return this.playerSpawnPoint;
+    }
+
+    private findRandomValidPoint(validSpaces: string[]): Point {
+        const randomIndex = Math.floor(Math.random() * validSpaces.length);
+        const [validX, validY]: string[] = validSpaces[randomIndex].split(",");
+        return { x: Number(validX), y: Number(validY) };
     }
 }

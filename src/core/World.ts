@@ -3,7 +3,7 @@ import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from '../entities/Player.ts';
 import { Level } from './Level.ts';
-import { Segment } from '../utils/types';
+import { Point, Segment } from '../utils/types';
 import { LightManager } from '../light/LightManager.ts';
 import { Config } from '../config/Config.ts'; 
 import { MapUtils } from '../utils/MapUtils.ts'; 
@@ -248,15 +248,15 @@ export class World {
             this.mergedEdges
         );
 
-        // Find a random valid starting spot for player
-        // TODO Maybe just access this from the level (As some exposed variable) rather than have openSpaces
-        const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
+    
+        // Get the player spawn point from the level
+        const spawnPoint: Point = this.level.getPlayerSpawnPoint();
         
         // Construct a player at a given location
         this.player = new Player(
             this.world, 
             this.mergedEdges, 
-            {x: Number(startX), y: Number(startY)}, {
+            spawnPoint, {
                 containerForEntity: this.entitiesContainer,
                 containerForParticleEffects: this.preEntitiesContainer,
             }

@@ -5,6 +5,7 @@ export const Config = {
             width: 96,       // Width of the generated level (in grid units)
             height: 96
         },
+        minDistanceBetweenPlayerSpawnAndExit: 48,
     }, 
     MapGeneration: {
         CellularAutomata: {

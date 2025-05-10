@@ -2,6 +2,7 @@
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { StaticLight, LightOptions } from '../core/Light';
 import { Segment } from '../utils/types';
+import { LightManager } from '../core/LightManager';
 
 export interface StaticEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;
@@ -28,6 +29,9 @@ export class StaticEntity extends BaseEntity {
                 options.lightOptions,
                 options.id
             );
+
+            // Add light to the LightManager
+            LightManager.instance.addStaticLight(this.light);
         }
     }
 

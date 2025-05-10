@@ -297,7 +297,7 @@ export class World {
         this.sentries = [];
 
         // Remove lights from LightManager
-        LightManager.instance.clearLights();
+        LightManager.instance.removeAllLights();
     }
 
     private tearDownContainersInOrder() {
@@ -415,7 +415,7 @@ export class World {
 
         // Remove light from LightManager
         if (sentry.light) {
-            LightManager.instance.removeDynamicLight(sentry.light);
+            LightManager.instance.gentlyRemoveDynamicLight(sentry.light);
         }
 
         // Now destroy the sentry (With any particle emitter associated)
@@ -435,7 +435,7 @@ export class World {
 
         // Remove light from LightManager
         if (staticEntity.light) {
-            LightManager.instance.removeStaticLight(staticEntity.light);
+            LightManager.instance.gentlyRemoveStaticLight(staticEntity.light);
         }
 
         // TODO Do any other additional destruction on the entity or its subsystems

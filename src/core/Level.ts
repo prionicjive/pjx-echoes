@@ -145,11 +145,6 @@ export class Level {
             });
 
             entitiesToReturn.push(entity);
-
-            // Add light (if it exists) to the LightManager
-            if (entity.light) {
-                LightManager.instance.addStaticLight(entity.light);
-            }
         }
 
         return entitiesToReturn;
@@ -172,11 +167,6 @@ export class Level {
             });
 
             entitiesToReturn.push(entity);
-
-            // Add light (if it exists) to the LightManager
-            if (entity.light) {
-                LightManager.instance.addStaticLight(entity.light);
-            }
         }
 
         return entitiesToReturn;
@@ -199,11 +189,6 @@ export class Level {
             });
 
             entitiesToReturn.push(entity);
-
-            // Add light (if it exists) to the LightManager
-            if (entity.light) {
-                LightManager.instance.addStaticLight(entity.light);
-            }
         }
 
         return entitiesToReturn;

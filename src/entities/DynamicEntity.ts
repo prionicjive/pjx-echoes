@@ -3,13 +3,13 @@ import * as planck from 'planck';
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { DynamicLight, LightOptions } from '../core/Light';
 import { Segment } from '../utils/types';
+import { LightManager } from '../core/LightManager';
+import { LightOwner } from '../core/Light';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
     lightOptions?: LightOptions;
     edgesList?: Segment[];
 }
-
-import { LightOwner } from '../core/Light';
 
 export class DynamicEntity extends BaseEntity implements LightOwner {
     constructor(options: DynamicEntityOptions) {
@@ -28,6 +28,9 @@ export class DynamicEntity extends BaseEntity implements LightOwner {
                 options.id,
                 this // Pass owner
             );
+            
+            // Add light to the LightManager
+            LightManager.instance.addDynamicLight(this.light);
         }
     }
 

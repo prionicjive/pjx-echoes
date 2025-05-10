@@ -51,20 +51,38 @@ export class LightManager {
     /**
      * Remove a dynamic light by reference or ID, with a fade-out tween.
      */
-    removeDynamicLight(lightOrId: Light | LightId) {
+    gentlyRemoveDynamicLight(lightOrId: Light | LightId) {
         const light = typeof lightOrId === 'string' ? this.dynamicLights.get(lightOrId) : lightOrId;
         if (light) {
             this.fadeOutAndRemoveLight(light);
         }
     }
 
+    removeDynamicLight(lightOrId: Light | LightId) {
+        const light = typeof lightOrId === 'string' ? this.dynamicLights.get(lightOrId) : lightOrId;
+        if (light) {
+            // Destroy and remove right away
+            light.destroy();
+            this.dynamicLights.delete(light.entityId);
+        }
+    }
+
     /**
      * Remove a static light by reference or ID, with a fade-out tween.
      */
-    removeStaticLight(lightOrId: Light | LightId) {
+    gentlyRemoveStaticLight(lightOrId: Light | LightId) {
         const light = typeof lightOrId === 'string' ? this.staticLights.get(lightOrId) : lightOrId;
         if (light) {
             this.fadeOutAndRemoveLight(light);
+        }
+    }
+
+    removeStaticLight(lightOrId: Light | LightId) {
+        const light = typeof lightOrId === 'string' ? this.staticLights.get(lightOrId) : lightOrId;
+        if (light) {
+            // Destroy and remove right away
+            light.destroy();
+            this.staticLights.delete(light.entityId);
         }
     }
 
@@ -104,17 +122,17 @@ export class LightManager {
     }
 
     /**
-     * Remove any light (static or dynamic) by ID.
+     * Destroy then remove all static and dynamic lights.
      */
-    removeLight(id: LightId) {
-        this.staticLights.delete(id);
-        this.dynamicLights.delete(id);
-    }
+    removeAllLights() {
+        for (const light of this.staticLights.values()) {
+            light.destroy();
+        }
 
-    /**
-     * Clear all static and dynamic lights.
-     */
-    clearLights() {
+        for (const light of this.staticLights.values()) {
+            light.destroy();
+        }
+        
         this.staticLights.clear();
         this.dynamicLights.clear();
     }

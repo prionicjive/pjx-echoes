@@ -35,7 +35,7 @@ export const LightsConfig: Record<string, LightOptions> = {
         oscillateColorDelay: 0,
         oscillateColorDelayVariance: 2,
     },
-    FinishLight: {
+    FinishAreaLight: {
         numRays: 360,
         baseRadius: 10,
         radiusVariance: 5,

@@ -11,11 +11,9 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Segment } from '../utils/types';
-import { Light } from '../light/Light';
 import { EntityUtils } from '../utils/EntityUtils';
-import { RenderableGeometry } from './types';
 import { Anti } from '../entities/Anti';
-import { Finish } from '../entities/Finish';
+import { FinishArea } from '../entities/FinishArea';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
 import { EntityUserData } from '../entities/types';
@@ -32,25 +30,26 @@ type LevelContainers = {
  * physics and rendering objects.
  */
 export class Level {
-    private edgesGeometry!: RenderableGeometry;
     private walls: Wall[];
-    private finishTiles: Finish[];
+    private finishAreas: FinishArea[];
     private torchEntities: Torch[];
     private antiEntities: Anti[];
-    private lights: Light[];
-    private edgesList: Segment[];
 
-    constructor(world: planck.World, containers: LevelContainers, levelMap: number[][], validSpaces: string[], edgesList: Segment[]) {
+    constructor(
+        world: planck.World, 
+        containers: LevelContainers, 
+        levelMap: number[][], 
+        validSpaces: string[], 
+        edgesList: Segment[]
+    ) {
         // Store references to the various level entities
         this.walls = [];
-        this.finishTiles = [];
+        this.finishAreas = [];
         this.torchEntities = [];
         this.antiEntities = [];
-        this.lights = [];
 
-        this.edgesList = edgesList;
         // Create the edges collision data and (optionally) render it
-        this.edgesGeometry = this.createLevelEdges(world, containers.levelGeometryContainer);
+        this.createLevelEdges(world, containers.levelGeometryContainer, edgesList);
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
@@ -58,19 +57,19 @@ export class Level {
         }
         
         // Create the other various entities
-        this.torchEntities = this.createTorchEntities(validSpaces, containers, world);
-        this.finishTiles = this.createFinishEntities(validSpaces, containers, world);
-        this.antiEntities = this.createAntiEntities(validSpaces, containers, world);
+        this.torchEntities = this.createTorchEntities(validSpaces, containers, world, edgesList);
+        this.finishAreas = this.createFinishEntities(validSpaces, containers, world, edgesList);
+        this.antiEntities = this.createAntiEntities(validSpaces, containers, world, edgesList);
     }
 
-    private createLevelEdges(world: planck.World, container: PIXI.Container) {
+    private createLevelEdges(world: planck.World, container: PIXI.Container, edgesList: Segment[]) {
         let edgeGraphics: PIXI.Graphics | null = null;
         
         if (Config.Debug.drawEdges) {
             // Also, while iterating, draw the edges of the walls
             edgeGraphics = new PIXI.Graphics();
             
-            for (const edge of this.edgesList){
+            for (const edge of edgesList){
                 edgeGraphics.moveTo(edge.a.x * Config.PixelsPerMeter, edge.a.y * Config.PixelsPerMeter);
                 edgeGraphics.lineTo(edge.b.x * Config.PixelsPerMeter, edge.b.y * Config.PixelsPerMeter);
                 edgeGraphics.stroke({width:Config.Edges.thickness, color: Config.Edges.color});
@@ -84,7 +83,7 @@ export class Level {
         const id = EntityUtils.generateRandomId(Config.Edges.type);
 
         const body = PhysicsUtils.createLevelEdgesBody(world, { 
-            edges: this.edgesList, 
+            edges: edgesList, 
             edgeFixture: {
                 restitution: Config.Physics.Wall.restitution,
                 friction: 0,
@@ -124,7 +123,12 @@ export class Level {
         return entitiesToReturn;
     }
 
-    private createTorchEntities(validSpaces: string[], containers: LevelContainers, world: planck.World) {
+    private createTorchEntities(
+        validSpaces: string[], 
+        containers: LevelContainers, 
+        world: planck.World,
+        edgesList: Segment[]
+    ) {
         const entitiesToReturn = [];
         
         // Randomly place torch entities in open spaces for the player to reach
@@ -140,7 +144,7 @@ export class Level {
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer 
                 },
-                edgesList: this.edgesList
+                edgesList: edgesList
             });
 
             entitiesToReturn.push(entity);
@@ -149,7 +153,12 @@ export class Level {
         return entitiesToReturn;
     }
 
-    private createAntiEntities(validSpaces: string[], container: LevelContainers, world: planck.World) {
+    private createAntiEntities(
+        validSpaces: string[], 
+        containers: LevelContainers, 
+        world: planck.World,
+        edgesList: Segment[]
+    ) {
         const entitiesToReturn = [];
         
         // Randomly place anti entities in open spaces for the player to reach
@@ -161,8 +170,8 @@ export class Level {
             const entity = new Anti({
                 world,
                 spawnPoint: { x: Number(x), y: Number(y) },
-                containers: { containerForEntity: container.entitiesContainer },
-                edgesList: this.edgesList
+                containers: { containerForEntity: containers.entitiesContainer },
+                edgesList: edgesList
             });
 
             entitiesToReturn.push(entity);
@@ -171,61 +180,43 @@ export class Level {
         return entitiesToReturn;
     }
 
-    private createFinishEntities(validSpaces: string[], container: LevelContainers, world: planck.World) {
+    private createFinishEntities(
+        validSpaces: string[], 
+        containers: LevelContainers, 
+        world: planck.World,
+        edgesList: Segment[]
+    ) {
         const entitiesToReturn = [];
         
         // Randomly place finish entities in open spaces for the player to reach
-        const numFinishEntities = Math.ceil(validSpaces.length * Config.FinishChance);
+        const numFinishEntities = Math.ceil(validSpaces.length * Config.FinishAreaChance);
         for (let i = 0; i < numFinishEntities; i++) {
             // Pick a random open space
             const [x, y] = validSpaces[Math.floor(Math.random() * validSpaces.length)].split(",");
 
-            const entity = new Finish({
+            const entity = new FinishArea({
                 world,
                 spawnPoint: { x: Number(x), y: Number(y) },
-                containers: { containerForEntity: container.entitiesContainer },
-                edgesList: this.edgesList
+                containers: { containerForEntity: containers.entitiesContainer },
+                edgesList: edgesList
             });
 
             entitiesToReturn.push(entity);
         }
 
         return entitiesToReturn;
-    }
-
-    getEdgesGeometry(): RenderableGeometry {
-        return this.edgesGeometry;
-    }
-
-    getWalls(): Wall[] {
-        return this.walls;
-    }
-
-    getFinishTiles(): Finish[] {
-        return this.finishTiles;
-    }
-
-    getTorchTiles(): Torch[] {
-        return this.torchEntities;
-    }
-
-    getAntiTiles(): Anti[] {
-        return this.antiEntities;
-    }
-
-    getLights(): Light[] {
-        return this.lights;
     }
 
     /**
      * Updates all entities in the level (e.g., for animation or effects).
      */
     update(deltaTime: number) {
-        this.torchEntities.forEach((torch) => {
-            torch.update(deltaTime);
-        });
-        this.antiEntities.forEach((anti) => {
-            anti.update(deltaTime);
+        // Combine all entities into a single array
+        const allEntities = [...this.walls, ...this.torchEntities, ...this.antiEntities, ...this.finishAreas];
+        
+        // Update each entity
+        allEntities.forEach((entity) => {
+            entity.update(deltaTime);
         });
     }
 }

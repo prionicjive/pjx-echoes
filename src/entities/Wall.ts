@@ -36,5 +36,8 @@ export class Wall extends StaticEntity {
         });
     }
 
-    // No special updating for now, but could be added in case there are animated tiles
+    // @ts-ignore
+    update(deltaTime: number) {
+        // TODO Do any custom updating
+    }
 }

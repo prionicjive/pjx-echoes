@@ -353,8 +353,8 @@ export class World {
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
-            (aData.type === Config.Player.type && bData.type === Config.Finish.type) ||
-            (aData.type === Config.Finish.type && bData.type === Config.Player.type)
+            (aData.type === Config.Player.type && bData.type === Config.FinishArea.type) ||
+            (aData.type === Config.FinishArea.type && bData.type === Config.Player.type)
         ) {
             console.log("Player reached finish tile!");
 

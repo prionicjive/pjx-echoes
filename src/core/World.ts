@@ -169,7 +169,7 @@ export class World {
 
     private tearDownWorld() {
         // Tear down dynamic entities
-        this.tearDownDynamicEntities();
+        this.tearDownEntities();
         
         // Empty the various PIXI containers in order
         this.tearDownContainersInOrder();
@@ -283,18 +283,13 @@ export class World {
                 initialVelocity
             );
             this.sentries.push(sentry);
-
-            // Add sentry's dynamic light to LightManager
-            if (sentry.light) {
-                LightManager.instance.addDynamicLight(sentry.light);
-            }
         }
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }
 
-    private tearDownDynamicEntities() {
+    private tearDownEntities() {
         this.player?.destroy();
         
         // Destroy the sentries
@@ -302,6 +297,9 @@ export class World {
             sentry.destroy();
         });
         this.sentries = [];
+
+        // Destroy the level (and all entities within)
+        this.level?.destroy();
     }
 
     private tearDownContainersInOrder() {
@@ -414,18 +412,8 @@ export class World {
     }
 
     private killSentryEntity(sentry: Sentry) {
-        // Call destory to clean up particle effect and light (Among other things)
-        sentry.destroy();
-
-        // Remove light from LightManager
-        if (sentry.light) {
-            LightManager.instance.gentlyRemoveDynamicLight(sentry.light);
-        }
-
-        // Gently remove particle by having it stop emitting before destroying
-        if (sentry.particleEffect) {
-            ParticleEffectManager.instance.gentlyRemoveEffect(sentry.particleEffect);
-        }
+        // Kill the sentry (Remove sprite and gently remove light and effect)
+        sentry.gentlyRemove();
 
         // Now destroy the sentry (With any particle emitter associated)
         // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
@@ -439,18 +427,7 @@ export class World {
     }
 
     private killStaticEntity(staticEntity: StaticEntity) {
-        // Call destory to clean up particle effect and light (Among other things)
-        staticEntity.destroy();
-
-        // Remove light from LightManager
-        if (staticEntity.light) {
-            LightManager.instance.gentlyRemoveStaticLight(staticEntity.light);
-        }
-
-        // Gently remove particle by having it stop emitting before destroying
-        if (staticEntity.particleEffect) {
-            ParticleEffectManager.instance.gentlyRemoveEffect(staticEntity.particleEffect);
-        }
+        staticEntity.gentlyRemove();
 
         // TODO Do any other additional destruction on the entity or its subsystems
 

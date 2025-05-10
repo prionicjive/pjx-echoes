@@ -13,6 +13,8 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { EntityUserData } from './types';
 
 import { LightOwner } from '../light/Light';
+import { LightManager } from '../light/LightManager';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 
 export class Sentry extends DynamicEntity implements LightOwner {
     constructor(
@@ -96,5 +98,20 @@ export class Sentry extends DynamicEntity implements LightOwner {
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2
         );
+    }
+
+    kill() {
+        // Remove the sprite
+        this.destroy();
+
+        // Fade out light before removing it
+        if (this.light) {
+            LightManager.instance.gentlyRemoveDynamicLight(this.light);
+        }
+
+        // Gently remove particle by having it stop emitting before destroying
+        if (this.particleEffect) {
+            ParticleEffectManager.instance.gentlyRemoveEffect(this.particleEffect);
+        }
     }
 }

@@ -3,6 +3,7 @@ import { Light } from '../light/Light';
 import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 import * as planck from 'planck';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
+import { LightManager } from '../light/LightManager';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -49,5 +50,19 @@ export abstract class BaseEntity {
         this.containers.containerForEntity.removeChild(this.sprite);
     
         // Clean up other resources if needed
+    }
+
+    gentlyRemove() {
+        this.destroy();
+
+        // Remove light from LightManager
+        if (this.light) {
+            LightManager.instance.gentlyRemoveStaticLight(this.light);
+        }
+
+        // Gently remove particle by having it stop emitting before destroying
+        if (this.particleEffect) {
+            ParticleEffectManager.instance.gentlyRemoveEffect(this.particleEffect);
+        }
     }
 }

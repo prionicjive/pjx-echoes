@@ -219,4 +219,27 @@ export class Level {
             entity.update(deltaTime);
         });
     }
+
+    destroy() {
+        // Destroy all entities
+        this.walls.forEach((wall) => {
+            wall.destroy();
+        });
+        this.walls = [];
+
+        this.torchEntities.forEach((torch) => {
+            torch.destroy();
+        });
+        this.torchEntities = [];
+
+        this.antiEntities.forEach((anti) => {
+            anti.destroy();
+        });
+        this.antiEntities = [];
+
+        this.finishAreas.forEach((finishArea) => {
+            finishArea.destroy();
+        });
+        this.finishAreas = [];
+    }
 }

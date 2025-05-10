@@ -47,13 +47,7 @@ export abstract class BaseEntity {
 
     destroy() {
         this.containers.containerForEntity.removeChild(this.sprite);
-        
-        // In a perfect world, another layer would have remove the effects but we do this to be safe
-        if (this.particleEffect) {
-            ParticleEffectManager.instance.removeEffect(this.particleEffect);
-            this.particleEffect = undefined;
-        }
-        
+    
         // Clean up other resources if needed
     }
 }

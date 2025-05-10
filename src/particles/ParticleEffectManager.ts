@@ -48,26 +48,20 @@ export class ParticleEffectManager {
     }
 
     /**
-     * Gently remove an effect: stop emission, wait for all particles to die, then destroy and remove.
-     * Assumes ParticleEffect has stopEmission() and an 'onEmpty' event/callback for when all particles are gone.
+     * Gently remove an effect - stop emission, wait for all particles to die, then destroy and remove..
      */
-    // gentlyRemoveEffect(effect: ParticleEffect) {
-    //     if (!this.effects.has(effect)) return;
-    //     effect.stopEmission?.();
+    gentlyRemoveEffect(effect: ParticleEffect) {
+        if (!this.effects.has(effect)) return;
+        
+        // Tell the effect to stop emitting new particles
+        effect.stopEmission();
 
-    //     // Listen for when all particles are dead
-    //     if (typeof effect.onEmpty === 'function') {
-    //         effect.onEmpty(() => {
-    //             effect.destroy();
-    //             this.effects.delete(effect);
-    //         });
-    //     } else if (effect.once) { // PIXI or EventEmitter style
-    //         effect.once('empty', () => {
-    //             effect.destroy();
-    //             this.effects.delete(effect);
-    //         });
-    //     }
-    // }
+        // Listen for when all particles are dead
+        effect.onEmpty(() => {
+            effect.destroy();
+            this.effects.delete(effect);
+        });
+    }
 
     update(deltaTime: number) {
         for (const effect of this.effects) {

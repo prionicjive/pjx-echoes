@@ -42,6 +42,9 @@ export class ParticleEffect {
   private particles: Particle[] = [];
   private maxParticles: number;
   private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
+  private numAliveParticles: number = 0;
+  private emissionStopped: boolean = false;
+  private emptyCallback?: () => void;
 
   constructor(options: ParticleEffectOptions) {
     this.container = new Container();
@@ -82,9 +85,12 @@ export class ParticleEffect {
     this.accum += dt;
     const emitInterval = 1 / this.emitPerSecond;
 
-    while (this.accum >= emitInterval) {
-      this.accum -= emitInterval;
-      this._emitOne();
+    // Keep emitting particles until told not to
+    if (!this.emissionStopped) {
+      while (this.accum >= emitInterval) {
+        this.accum -= emitInterval;
+        this._emitOne();
+      }
     }
 
     for (const particle of this.particles) {
@@ -95,6 +101,7 @@ export class ParticleEffect {
 
       if (t >= 1) {
         particle.alive = false;
+        this.numAliveParticles--;
         particle.sprite.visible = false;
         continue;
       }
@@ -118,6 +125,11 @@ export class ParticleEffect {
       s.height = this.template.height * scaleY;
       s.tint = this.lerpColor(this.template.startTint, this.template.endTint, t);
     }
+
+    // If the emission has stopped and all particles are dead, call the callback
+    if (!this.emissionStopped && this.numAliveParticles === 0 && this.emptyCallback) {
+      this.emptyCallback();
+    }
   }
 
   destroy() {
@@ -127,12 +139,29 @@ export class ParticleEffect {
     // Do any other cleanup needed
   }
 
+  /**
+   * Set a callback to be called when all particles are dead.
+   * @param callback The callback to be called when all particles are dead.
+   */
+  onEmpty(callback: () => void): void {
+    this.emptyCallback = callback;
+  }
+
+  /**
+   * Stop emission of new particles.
+   */
+  stopEmission(): void {
+    this.emissionStopped = true;
+    this.emitPerSecond = 0;
+  }
+
   private _emitOne(): void {
     const particle = this.particles.find(p => !p.alive);
     if (!particle) return;
 
     // Reset living related things
     particle.alive = true;
+    this.numAliveParticles++;
     particle.age = 0;
     particle.maxAge = this.template.maxAge;
 
@@ -151,7 +180,7 @@ export class ParticleEffect {
     return a + (b - a) * t;
   }
 
-private lerpColor(a: Color, b: Color, t: number): Color {
+  private lerpColor(a: Color, b: Color, t: number): Color {
     // Get RGB values as [0, 1]
     const [ar, ag, ab] = a.toRgbArray();
     const [br, bg, bb] = b.toRgbArray();
@@ -163,5 +192,5 @@ private lerpColor(a: Color, b: Color, t: number): Color {
 
     // Create new Color from lerped RGB
     return new Color([r, g, b_]);
-}
+  }
 }

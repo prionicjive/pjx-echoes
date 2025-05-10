@@ -422,6 +422,11 @@ export class World {
             LightManager.instance.gentlyRemoveDynamicLight(sentry.light);
         }
 
+        // Gently remove particle by having it stop emitting before destroying
+        if (sentry.particleEffect) {
+            ParticleEffectManager.instance.gentlyRemoveEffect(sentry.particleEffect);
+        }
+
         // Now destroy the sentry (With any particle emitter associated)
         // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
         const index = this.sentries.indexOf(sentry);
@@ -440,6 +445,11 @@ export class World {
         // Remove light from LightManager
         if (staticEntity.light) {
             LightManager.instance.gentlyRemoveStaticLight(staticEntity.light);
+        }
+
+        // Gently remove particle by having it stop emitting before destroying
+        if (staticEntity.particleEffect) {
+            ParticleEffectManager.instance.gentlyRemoveEffect(staticEntity.particleEffect);
         }
 
         // TODO Do any other additional destruction on the entity or its subsystems

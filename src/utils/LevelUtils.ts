@@ -15,8 +15,8 @@ export class LevelUtils {
         // );
 
         const { map, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
-            Config.LevelDimensions.width,
-            Config.LevelDimensions.height,
+            Config.RandomLevel.Dimensions.width,
+            Config.RandomLevel.Dimensions.height,
             Config.MapGeneration.DrunkardsWalkWithSmoothing.percentOpen,
             Config.MapGeneration.DrunkardsWalkWithSmoothing.maxWalkers,
             Config.MapGeneration.DrunkardsWalkWithSmoothing.walkerLifetime,

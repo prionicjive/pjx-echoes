@@ -1,9 +1,12 @@
 // Centralized game configuration
 export const Config = {
-    LevelDimensions: {
-        width: 96,       // Width of the generated level (in grid units)
-        height: 96
-    },
+    RandomLevel: {
+        Dimensions: {
+            width: 96,       // Width of the generated level (in grid units)
+            height: 96
+        },
+        minDistanceBetweenPlayerSpawnAndExit: 48,
+    }, 
     MapGeneration: {
         CellularAutomata: {
             wallChance: 0.45, // Chance that any given space is a wall

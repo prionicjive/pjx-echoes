@@ -75,8 +75,8 @@ export class World {
 
         // TODO Handle additional setup if needed
 
-        // Lastly, reset / reinitialize the world
-        this.reset();
+        // Lastly, initialize the world
+        this.init();
     }
 
     private initializeContainers() {
@@ -141,6 +141,10 @@ export class World {
         this.app.stage.filters = [this.crtFilter];
     }
 
+    private init() {
+        // Basically, set up a new world!
+        this.setUpWorld();
+    }
     /**
      * Resets the game state: clears containers, destroys physics bodies,
      * and generates a fresh level and player.
@@ -153,7 +157,7 @@ export class World {
         this.tearDownWorld();
 
         // ------------------------
-        // NOW, it's time to add things / reinitialize the world
+        // NOW, it's time to add things and set up a new world
         // ------------------------
         this.setUpWorld();
     }
@@ -172,20 +176,18 @@ export class World {
         ParticleEffectManager.instance.removeAllEffects();
         
         // Remove all bodies / fixtures from Planck world
-        let body = this.world?.getBodyList();
+        let body = this.world!.getBodyList();
         let counter = 0;
         while (body) {
             const nextBody = body.getNext();
-            this.world?.destroyBody(body);
+            this.world!.destroyBody(body);
             counter++;
             body = nextBody;
         }
         this.bodiesToDestroy = [];
 
         // Remove any listeners
-        if (this.world) {
-            this.world.off('begin-contact', this.onBeginContact.bind(this));
-        }
+        this.world!.off('begin-contact', this.onBeginContact.bind(this));
     }
 
     private setUpWorld() {
@@ -216,7 +218,7 @@ export class World {
 
     private tearDownEntities() {
          // Destroy the level (and all entities within, including the player)
-        this.level?.destroy();
+        this.level!.destroy();
     }
 
     private tearDownContainersInOrder() {
@@ -290,8 +292,8 @@ export class World {
 
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
-                this.player?.onPickup(sentryData.type);
-                this.level?.gentlyRemoveEntity(sentryData.type, sentryData.entity);
+                this.player!.onPickup(sentryData.type);
+                this.gentlyRemoveEntity(sentryData.type, sentryData.entity);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -305,7 +307,7 @@ export class World {
 
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
-                this.player?.onPickup(torchEntity.type);
+                this.player!.onPickup(torchEntity.type);
                 this.gentlyRemoveEntity(torchEntity.type,torchEntity.entity);
             }
         }else if (
@@ -322,15 +324,15 @@ export class World {
 
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
-                this.player?.onPickup(antiEntity.type);
-                this.level?.gentlyRemoveEntity(antiEntity.type, antiEntity.entity);
+                this.player!.onPickup(antiEntity.type);
+                this.gentlyRemoveEntity(antiEntity.type, antiEntity.entity);
             }
         }
     }
 
     private gentlyRemoveEntity(type: EntityType, entity: BaseEntity) {
         // Gently remove the entity from the level
-        this.level?.gentlyRemoveEntity(type, entity);
+        this.level!.gentlyRemoveEntity(type, entity);
 
         // TODO Do any other additional destruction on the entity or its subsystems
 
@@ -346,8 +348,8 @@ export class World {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
         if (!this.player || !this.worldContainer) return;
 
-        const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
-        const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
@@ -361,7 +363,7 @@ export class World {
             this.worldContainer.x += (targetX - this.worldContainer.x);
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
          }
 
         if (levelHeightInPixels <= screenHeight) {
@@ -373,7 +375,7 @@ export class World {
             this.worldContainer.y += (targetY - this.worldContainer.y);
 
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
         }
     }
 
@@ -389,11 +391,11 @@ export class World {
         this.updateFromInput(deltaTime);
 
         // Step the physics
-        this.world?.step(deltaTime);
+        this.world!.step(deltaTime);
     
         // Update level 
         // (For player, dynamic entities, static entities with effect, dynamic geometry, etc)
-        this.level?.update(deltaTime);
+        this.level!.update(deltaTime);
 
         // Update particle effects
         ParticleEffectManager.instance.update(deltaTime);
@@ -411,7 +413,7 @@ export class World {
     private processBodiesToDestroy() {
         this.bodiesToDestroy.forEach(body => {
             if (body) {
-                this.world?.destroyBody(body);
+                this.world!.destroyBody(body);
             }
         });
         this.bodiesToDestroy = [];
@@ -451,8 +453,8 @@ export class World {
         // Smooth camera follow
         if (!this.player || !this.player.sprite || !this.worldContainer) return;
 
-        const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
-        const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
@@ -482,7 +484,7 @@ export class World {
             this.worldContainer.x -= moveX * Config.Camera.lerpFactor * deltaTime;
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
         }
 
         // Center on y-axis if level is shorter than screen
@@ -511,7 +513,7 @@ export class World {
             this.worldContainer.y -= moveY * Config.Camera.lerpFactor * deltaTime;
             
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
         }
    
         // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)

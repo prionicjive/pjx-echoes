@@ -4,7 +4,7 @@ export interface LevelSkeleton {
     dimensions: { width: number; height: number };
     playerSpawnPosition: Point;
     wallPositions: Point[];
-    finishAreaPositions: Point[];
+    exitPositions: Point[];
     torchPositions: Point[];
     antiPositions: Point[];
     sentryPositions: Point[];   

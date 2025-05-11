@@ -11,35 +11,35 @@ import * as planck from 'planck';
 import { EntityUserData } from './types';
 import { LevelContext } from '../level/LevelContext';
 
-export interface FinishAreaOptions {
+export interface ExitOptions {
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext
 }
 
-export class FinishArea extends StaticEntity {
-    constructor(options: FinishAreaOptions) {
+export class Exit extends StaticEntity {
+    constructor(options: ExitOptions) {
         // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.FinishArea.type);
+        const id = EntityUtils.generateRandomId(Config.Exit.type);
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.finishArea),
+            texture: PIXI.Texture.from(Config.Textures.exit),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.FinishArea.width * Config.PixelsPerMeter,
-            height: Config.FinishArea.height * Config.PixelsPerMeter,
-            color: Config.FinishArea.color
+            width: Config.Exit.width * Config.PixelsPerMeter,
+            height: Config.Exit.height * Config.PixelsPerMeter,
+            color: Config.Exit.color
         });
 
         // Create static body
         const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
             type: 'static',
             position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.FinishArea.width, height: Config.FinishArea.height },
+            box: { width: Config.Exit.width, height: Config.Exit.height },
             fixture: {
                 isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryFinishArea,
+                filterCategoryBits: Config.Physics.Collision.categoryExit,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
         });
@@ -48,17 +48,17 @@ export class FinishArea extends StaticEntity {
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.FinishAreaLight },
+            lightOptions: { ...LightsConfig.ExitLight },
             levelContext: options.levelContext,
             position: options.spawnPoint,
-            width: Config.FinishArea.width,
-            height: Config.FinishArea.height,
+            width: Config.Exit.width,
+            height: Config.Exit.height,
             containers: options.containers
         });
 
         // Set user data with a self-referencing data
         body.setUserData({
-            type: Config.FinishArea.type,
+            type: Config.Exit.type,
             entity: this
         } as EntityUserData);
     }

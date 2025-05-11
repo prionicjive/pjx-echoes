@@ -56,7 +56,7 @@ export class Player extends DynamicEntity implements LightOwner {
                 filterMaskBits: Config.Physics.Collision.categoryEdge
                     | Config.Physics.Collision.categorySentry
                     | Config.Physics.Collision.categoryWall
-                    | Config.Physics.Collision.categoryFinishArea
+                    | Config.Physics.Collision.categoryExit
                     | Config.Physics.Collision.categoryAnti
                     | Config.Physics.Collision.categoryTorch
             },

@@ -1,6 +1,6 @@
 // Level.ts
 /**
- * Handles procedural level generation, wall and finish tile creation, and rendering.
+ * Handles procedural level generation, wall and exit tile creation, and rendering.
  * Converts a numeric map into physics bodies and sprites for gameplay.
  *
  * @module Level
@@ -13,7 +13,7 @@ import * as PIXI from 'pixi.js';
 import { Point, Segment } from '../utils/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Anti } from '../entities/Anti';
-import { FinishArea } from '../entities/FinishArea';
+import { Exit } from '../entities/Exit';
 import { Torch } from '../entities/Torch';
 import { Wall } from '../entities/Wall';
 import { Sentry } from '../entities/Sentry';
@@ -38,13 +38,13 @@ export type LevelContainers = {
 
 /**
  * The Level class generates and manages all static entities for a level,
- * including walls and finish tiles. Handles conversion from map data to
+ * including walls and exit tiles. Handles conversion from map data to
  * physics and rendering objects.
  */
 export class Level implements LevelContext {
     private player: Player | null;
     private walls: Wall[];
-    private finishAreas: FinishArea[];
+    private exits: Exit[];
     private torches: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
@@ -65,7 +65,7 @@ export class Level implements LevelContext {
         // Store references to the various level entities
         this.player = null;
         this.walls = [];
-        this.finishAreas = [];
+        this.exits = [];
         this.torches = [];
         this.antiEntities = [];
         this.sentries = [];
@@ -88,8 +88,8 @@ export class Level implements LevelContext {
         );        
         
         // Create the other various entities
-        this.finishAreas = this.createFinishAreas(
-            [...options.entitiesOptions.finishAreaPositions], 
+        this.exits = this.createExits(
+            [...options.entitiesOptions.exitPositions], 
             options.containers
         );
 
@@ -180,23 +180,23 @@ export class Level implements LevelContext {
         return entity;
     }
 
-    private createFinishAreas(
+    private createExits(
         positions: Point[], 
         containers: LevelContainers
-    ): FinishArea[] {
-        const finishAreas: FinishArea[] = [];
+    ): Exit[] {
+        const exits: Exit[] = [];
         
         for (const position of positions) {
-            const entity = new FinishArea({
+            const entity = new Exit({
                 spawnPoint: {...position},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
             });
 
-            finishAreas.push(entity);
+            exits.push(entity);
         }
 
-        return finishAreas;
+        return exits;
     }
 
     private createTorches(
@@ -274,7 +274,7 @@ export class Level implements LevelContext {
             ...this.walls, 
             ...this.torches, 
             ...this.antiEntities, 
-            ...this.finishAreas,
+            ...this.exits,
             ...this.sentries
         ];
         
@@ -299,8 +299,8 @@ export class Level implements LevelContext {
             case Config.Anti.type:
                 this.antiEntities.splice(this.antiEntities.indexOf(entity as Anti), 1);
                 break;
-            case Config.FinishArea.type:
-                this.finishAreas.splice(this.finishAreas.indexOf(entity as FinishArea), 1);
+            case Config.Exit.type:
+                this.exits.splice(this.exits.indexOf(entity as Exit), 1);
                 break;
             case Config.Sentry.type:
                 this.sentries.splice(this.sentries.indexOf(entity as Sentry), 1);
@@ -327,10 +327,10 @@ export class Level implements LevelContext {
         });
         this.antiEntities = [];
 
-        this.finishAreas.forEach((finishArea) => {
-            finishArea.destroy();
+        this.exits.forEach((exit) => {
+            exit.destroy();
         });
-        this.finishAreas = [];
+        this.exits = [];
 
         this.sentries.forEach((sentry) => {
             sentry.destroy();

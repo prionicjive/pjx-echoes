@@ -8,7 +8,7 @@ import { LevelSkeleton } from "../level/LevelSkeleton";
 
 export class LevelUtils {
     static createRandomLevel(world: planck.World, containers: LevelContainers) {
-        // Regenerate level and place player and finish tiles
+        // Regenerate level and place player and exit tiles
         // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
         //     Config.LevelDimensions.width, 
         //     Config.LevelDimensions.height,
@@ -52,7 +52,7 @@ export class LevelUtils {
 
         const wallPositions = gatherWallPositions(map);
         const playerSpawnPosition = createPlayerSpawnPosition(openSpaces);
-        const finishAreaPositions = createFinishAreaPositions(openSpaces, playerSpawnPosition);
+        const exitPositions = createExitPositions(openSpaces, playerSpawnPosition);
         const torchPositions = createTorchPositions(openSpaces);
         const antiPositions = createAntiPositions(openSpaces);
         const sentryPositions = createSentryPositions(openSpaces);
@@ -61,7 +61,7 @@ export class LevelUtils {
             dimensions,
             wallPositions,
             playerSpawnPosition,
-            finishAreaPositions,
+            exitPositions,
             torchPositions,
             antiPositions,
             sentryPositions 
@@ -86,24 +86,24 @@ export class LevelUtils {
             return LevelUtils.spliceRandomValidPoint(validSpaces);
         }
 
-        function createFinishAreaPositions(validSpaces: string[], playerSpawnPoint: Point): Point[] {
-            const finishAreaPositions: Point[] = [];
+        function createExitPositions(validSpaces: string[], playerSpawnPoint: Point): Point[] {
+            const exitPositions: Point[] = [];
             
-            // Randomly place finish areas in open spaces for the player to reach
-            const numFinishAreas = Math.ceil(validSpaces.length * Config.FinishAreaChance);
-            for (let i = 0; i < numFinishAreas; i++) {
+            // Randomly place exits in open spaces for the player to reach
+            const numExits = Math.ceil(validSpaces.length * Config.ExitChance);
+            for (let i = 0; i < numExits; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {
                     break;
                 }
-                finishAreaPositions.push(LevelUtils.spliceRandomValidPointWithMinDistance(
+                exitPositions.push(LevelUtils.spliceRandomValidPointWithMinDistance(
                     validSpaces, 
                     playerSpawnPoint, 
                     Config.RandomLevel.minDistanceBetweenPlayerSpawnAndExit
                 ));
             }
             
-            return finishAreaPositions;
+            return exitPositions;
         }
 
         function createTorchPositions(validSpaces: string[]): Point[] {

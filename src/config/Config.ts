@@ -32,7 +32,7 @@ export const Config = {
             categoryPlayer: 0x0001, // Bitmasks for Planck.js collision filtering
             categoryWall: 0x0002,
             categoryEdge: 0x0004,
-            categoryFinishArea: 0x0008,
+            categoryExit: 0x0008,
             categoryAnti: 0x0010,
             categoryTorch: 0x0020,
             categorySentry: 0x0040
@@ -80,11 +80,11 @@ export const Config = {
         height: 1,
         color: 0xff0888,  // Tint color for anti
     },
-    FinishArea: {
+    Exit: {
         type: "FINISH_AREA",
         width: 1,
         height: 1,
-        color: 0x2ddf03,  // Tint color for finish areas
+        color: 0x2ddf03,  // Tint color for exits
     },
     Edges: {
         type: "EDGES",
@@ -96,7 +96,7 @@ export const Config = {
         sentry: '/assets/textures/sentry.png',
         wall: '/assets/textures/wall.png',
         torch: '/assets/textures/torch.png',
-        finishArea: '/assets/textures/finishArea.png',
+        exit: '/assets/textures/exit.png',
         anti: '/assets/textures/anti.png',
         block: '/assets/textures/block.png',
         Particles: {
@@ -106,7 +106,7 @@ export const Config = {
             circleSoft: '/assets/textures/particles/circle_soft.png'
         }
     },
-    FinishAreaChance: 0.0001,
+    ExitChance: 0.0001,
     TorchChance: 0.00087,
     AntiChance: 0.00065,
     SentryChance: 0.0025,

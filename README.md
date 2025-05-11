@@ -7,7 +7,7 @@ An exploration game rooted in navigating the unknown and unseen.
 ## Features
 - Map / maze generation with rooms / caves, utilizing Drunkard's Walk algorithm (modified with Cellular Automata)
 - Player impulse movement via Planck physics
-- Generation of a new map / maze upon reaching a finish tile
+- Generation of a new map / maze upon reaching a exit tile
 - Soft follow camera when world is larger than single screen, with dead zone
 - Dynamic lighting system with raycasted light occlusion and support for mutliple lights
 - Edge calculation for light raycasting and level rendering

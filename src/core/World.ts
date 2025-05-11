@@ -261,7 +261,7 @@ export class World {
     }
     
     /**
-     * Handles collision events from Planck.js, such as the player reaching a finish tile
+     * Handles collision events from Planck.js, such as the player reaching a exit tile
      * or interacting with walls.
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
@@ -270,10 +270,10 @@ export class World {
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
-            (aData.type === Config.Player.type && bData.type === Config.FinishArea.type) ||
-            (aData.type === Config.FinishArea.type && bData.type === Config.Player.type)
+            (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
+            (aData.type === Config.Exit.type && bData.type === Config.Player.type)
         ) {
-            console.log("Player reached finish tile!");
+            console.log("Player reached exit tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
@@ -565,7 +565,7 @@ export class World {
             clear: false
         });
 
-        // Process any lights that finished fading out after all updates/renders
+        // Process any lights that exited fading out after all updates/renders
         LightManager.instance.processPendingRemovals();
     }
     

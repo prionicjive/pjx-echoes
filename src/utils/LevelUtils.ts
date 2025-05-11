@@ -1,13 +1,19 @@
-import { Config } from "../config/Config";
 import { Level } from "../level/Level";
 import { MapUtils } from "./MapUtils";
 import { LevelContainers } from "../level/Level";
 import * as planck from 'planck';
 import { Point } from "../utils/types";
 import { LevelSkeleton } from "../level/LevelSkeleton";
+import { ProGenLevelOptions } from "../config/ProcGenLevelsConfig";
+import { DrunkardsWalkWithSmoothingOptions, MapGenerationType } from "../config/ProcGenLevelsConfig";
+import { CellularAutomataOptions } from "../config/ProcGenLevelsConfig";
 
 export class LevelUtils {
-    static createRandomLevel(world: planck.World, containers: LevelContainers) {
+    static createProcGenLevel(
+        world: planck.World, 
+        containers: LevelContainers,
+        levelOptions: ProGenLevelOptions
+    ) {
         // Regenerate level and place player and exit tiles
         // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
         //     Config.LevelDimensions.width, 
@@ -16,20 +22,37 @@ export class LevelUtils {
         //     Config.MapGeneration.CellularAutomata.smoothingSteps
         // );
 
-        const { map, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
-            Config.RandomLevel.Dimensions.width,
-            Config.RandomLevel.Dimensions.height,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.percentOpen,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.maxWalkers,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.walkerLifetime,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.smoothingSteps
-        );
+        let map: number[][] = [];
+        let openSpaces: string[] = [];
+        
+        switch (levelOptions.mapGeneration.type as MapGenerationType) {
+            case "DrunkardsWalkWithSmoothing":
+                const drunkardsWalkOptions = levelOptions.mapGeneration.options as DrunkardsWalkWithSmoothingOptions;
+                ({ map, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
+                    levelOptions.dimensions.width,
+                    levelOptions.dimensions.height,
+                    drunkardsWalkOptions.percentOpen,
+                    drunkardsWalkOptions.maxWalkers,
+                    drunkardsWalkOptions.walkerLifetime,
+                    drunkardsWalkOptions.smoothingSteps
+                ));
+            break;
+            case "CellularAutomata":
+                const cellularAutomataOptions = levelOptions.mapGeneration.options as CellularAutomataOptions;
+                ({ map, openSpaces } = MapUtils.generateFromCellularAutomata(
+                    levelOptions.dimensions.width,
+                    levelOptions.dimensions.height,
+                    cellularAutomataOptions.wallChance,
+                    cellularAutomataOptions.smoothingSteps
+                ));
+            break;
+        }
 
         // Get the reduced "merged" edges from the tilemap
         const edgesList = MapUtils.createMergedEdgesFromTilemap(map);
         
         // Get the entities options
-        const entitiesOptions = LevelUtils.createLevelSkeletonFromRandomMap(map, openSpaces);
+        const entitiesOptions = LevelUtils.createLevelSkeletonFromProcGenMap(map, openSpaces, levelOptions);
 
         // Construct the level with all entities, including player
         return new Level({
@@ -44,7 +67,11 @@ export class LevelUtils {
         });
     }
     
-    static createLevelSkeletonFromRandomMap(map: number[][], openSpaces: string[]): LevelSkeleton {
+    static createLevelSkeletonFromProcGenMap(
+        map: number[][], 
+        openSpaces: string[],
+        levelOptions: ProGenLevelOptions
+    ): LevelSkeleton {
         const dimensions = {
             width: map[0].length,
             height: map.length
@@ -90,7 +117,7 @@ export class LevelUtils {
             const exitPositions: Point[] = [];
             
             // Randomly place exits in open spaces for the player to reach
-            const numExits = Math.ceil(validSpaces.length * Config.ExitChance);
+            const numExits = Math.ceil(validSpaces.length * levelOptions.exitChance);
             for (let i = 0; i < numExits; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {
@@ -99,7 +126,7 @@ export class LevelUtils {
                 exitPositions.push(LevelUtils.spliceRandomValidPointWithMinDistance(
                     validSpaces, 
                     playerSpawnPoint, 
-                    Config.RandomLevel.minDistanceBetweenPlayerSpawnAndExit
+                    levelOptions.minDistanceBetweenPlayerSpawnAndExit
                 ));
             }
             
@@ -110,7 +137,7 @@ export class LevelUtils {
             const torchPositions: Point[] = [];
             
             // Randomly place torches in open spaces for the player to reach
-            const numTorches = Math.ceil(validSpaces.length * Config.TorchChance);
+            const numTorches = Math.ceil(validSpaces.length * levelOptions.torchChance);
             for (let i = 0; i < numTorches; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {
@@ -127,7 +154,7 @@ export class LevelUtils {
             const antiPositions: Point[] = [];
             
             // Randomly place antis in open spaces for the player to reach
-            const numAntis = Math.ceil(validSpaces.length * Config.AntiChance);
+            const numAntis = Math.ceil(validSpaces.length * levelOptions.antiChance);
             for (let i = 0; i < numAntis; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {
@@ -144,7 +171,7 @@ export class LevelUtils {
             const sentryPositions: Point[] = [];
             
             // Randomly place sentries in open spaces for the player to reach
-            const numSentries = Math.ceil(validSpaces.length * Config.SentryChance);
+            const numSentries = Math.ceil(validSpaces.length * levelOptions.sentryChance);
             for (let i = 0; i < numSentries; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {

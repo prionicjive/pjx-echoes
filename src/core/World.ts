@@ -11,6 +11,7 @@ import { LightUtils } from '../utils/LightUtils.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { BaseEntity } from '../entities/BaseEntity.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
+import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -202,12 +203,15 @@ export class World {
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
-        // Create a random level
-        this.level = LevelUtils.createRandomLevel(this.world, {
-            levelGeometryContainer: this.levelGeometryContainer,
-            preEntitiesContainer: this.preEntitiesContainer,
-            entitiesContainer: this.entitiesContainer
-        });
+        // Create a proceduarally generated level
+        this.level = LevelUtils.createProcGenLevel(
+            this.world, {
+                levelGeometryContainer: this.levelGeometryContainer,
+                preEntitiesContainer: this.preEntitiesContainer,
+                entitiesContainer: this.entitiesContainer
+            },
+            ProGenLevelsConfig.Standard // ProGenLevelsConfig.Simple
+        );
         
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();

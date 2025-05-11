@@ -1,24 +1,5 @@
 // Centralized game configuration
 export const Config = {
-    RandomLevel: {
-        Dimensions: {
-            width: 96,       // Width of the generated level (in grid units)
-            height: 96
-        },
-        minDistanceBetweenPlayerSpawnAndExit: 48,
-    }, 
-    MapGeneration: {
-        CellularAutomata: {
-            wallChance: 0.45, // Chance that any given space is a wall
-            smoothingSteps: 4 // How many times to smooth the map
-        },
-        DrunkardsWalkWithSmoothing: {
-            percentOpen: 0.55, // Try 0.10–0.18 for lots of small caves
-            maxWalkers: 18, // Try 10-20 walkers
-            walkerLifetime: 70, // Try 30-80
-            smoothingSteps: 2 // Try 1-3
-        }
-    },
     PixelsPerMeter: 16, // How many pixels represent one physics meter
     Camera: {
         lerpFactor: 1.5, // Smoothing factor for camera movement (0 = slow, 1 = instant)
@@ -75,13 +56,13 @@ export const Config = {
         color: 0xdfb503,  // Tint color for torches
     },
     Anti: {
-        type: "Anti",
+        type: "ANTI",
         width: 1,
         height: 1,
         color: 0xff0888,  // Tint color for anti
     },
     Exit: {
-        type: "FINISH_AREA",
+        type: "EXIT",
         width: 1,
         height: 1,
         color: 0x2ddf03,  // Tint color for exits
@@ -106,10 +87,6 @@ export const Config = {
             circleSoft: '/assets/textures/particles/circle_soft.png'
         }
     },
-    ExitChance: 0.0001,
-    TorchChance: 0.00087,
-    AntiChance: 0.00065,
-    SentryChance: 0.0025,
     Movement: {
         Gesture: {
             swipeSpeedScaleExponent: 0.95,

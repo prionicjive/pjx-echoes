@@ -21,6 +21,14 @@ import { EntityType, EntityUserData } from '../entities/types';
 import { BaseEntity } from '../entities/BaseEntity';
 import { Player } from '../entities/Player';
 import { LevelContext } from './LevelContext';
+import { LevelSkeleton } from './LevelSkeleton';
+
+export interface LevelOptions {
+    world: planck.World;
+    containers: LevelContainers;
+    edgesList: Segment[];
+    entitiesOptions: LevelSkeleton;
+}
 
 export type LevelContainers = {
     levelGeometryContainer: PIXI.Container;
@@ -35,7 +43,6 @@ export type LevelContainers = {
  */
 export class Level implements LevelContext {
     private player: Player | null;
-    private playerSpawnPoint!: Point;
     private walls: Wall[];
     private finishAreas: FinishArea[];
     private torches: Torch[];
@@ -45,20 +52,13 @@ export class Level implements LevelContext {
     private dimensions: { width: number; height: number };
 
     constructor(
-        world: planck.World, 
-        containers: LevelContainers, 
-        levelMap: number[][], 
-        validSpaces: string[], 
-        edgesList: Segment[]
+        options: LevelOptions
     ) {
         // Store the edges list for later use
-        this.edgesList = edgesList;
+        this.edgesList = options.edgesList;
 
         // Store the dimensions of the level
-        this.dimensions = {
-            width: levelMap[0].length,
-            height: levelMap.length
-        };
+        this.dimensions = {...options.entitiesOptions.dimensions};
 
         // Store references to the various level entities
         this.player = null;
@@ -69,20 +69,33 @@ export class Level implements LevelContext {
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(world, containers.levelGeometryContainer);
+        this.createLevelEdges( options.world, options.containers.levelGeometryContainer);
+
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
-            this.walls = this.createWalls(levelMap, containers.levelGeometryContainer);
+            this.walls = this.createWalls(
+                [...options.entitiesOptions.wallPositions],
+                options.containers.levelGeometryContainer
+            );
         }
 
         // Create the player
-        this.player = this.createPlayer(validSpaces, containers, world);        
+        this.player = this.createPlayer(
+            {...options.entitiesOptions.playerSpawnPosition},
+            options.containers,
+            options.world
+        );        
         
         // Create the other various entities
-        this.finishAreas = this.createFinishAreas(validSpaces, containers, world);
-        this.torches = this.createTorches(validSpaces, containers, world);
-        this.antiEntities = this.createAntiEntities(validSpaces, containers, world);
-        this.sentries = this.createSentries(validSpaces, containers, world);
+        this.finishAreas = this.createFinishAreas(
+            [...options.entitiesOptions.finishAreaPositions], 
+            options.containers, 
+            options.world
+        );
+
+        this.torches = this.createTorches([...options.entitiesOptions.torchPositions], options.containers, options.world);
+        this.antiEntities = this.createAntiEntities([...options.entitiesOptions.antiPositions], options.containers, options.world);
+        this.sentries = this.createSentries([...options.entitiesOptions.sentryPositions], options.containers, options.world);
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -123,42 +136,32 @@ export class Level implements LevelContext {
         return { id, body, graphics: edgeGraphics }
     }
 
-    private createWalls(levelMap: number[][], container: PIXI.Container) {
-        const entitiesToReturn = [];
-    
-        // Add walls from the map (1 = wall)
-        for (let y = 0; y < levelMap.length; y++) {
-            for (let x = 0; x < levelMap[y].length; x++) {
-                if (levelMap[y][x] === 1) {
-                    const entity = new Wall({
-                        spawnPoint: { x: Number(x), y: Number(y) },
-                        containers: { 
-                            containerForEntity: container,
-                        },
-                        levelContext: this
-                    });
+    private createWalls(positions: Point[], container: PIXI.Container): Wall[] {
+        const walls: Wall[] = [];
+        
+        for (const position of positions) {
+            const entity = new Wall({
+                spawnPoint: {...position},
+                containers: { 
+                    containerForEntity: container,
+                },
+                levelContext: this
+            });
 
-                    // Store wall entity for future reference
-                    entitiesToReturn.push(entity);
-                }
-            }
+            walls.push(entity);
         }
 
-        return entitiesToReturn;
+        return walls;
     }
 
     private createPlayer(
-        validSpaces: string[],
+        spawnPoint: Point,
         containers: LevelContainers,
         world: planck.World
-    ) {
-        // ASSUME that there is a valid space for the player since it's the first entity to be placed
-        const spawnPoint = this.spliceRandomValidPoint(validSpaces);
-        this.playerSpawnPoint = spawnPoint;
-
+    ): Player {
         const entity = new Player({
             world,
-            spawnPoint: this.playerSpawnPoint, 
+            spawnPoint: {...spawnPoint}, 
             containers: {
                 containerForEntity: containers.entitiesContainer,
                 containerForParticleEffects: containers.preEntitiesContainer 
@@ -170,111 +173,80 @@ export class Level implements LevelContext {
     }
 
     private createFinishAreas(
-        validSpaces: string[], 
+        positions: Point[], 
         containers: LevelContainers, 
         world: planck.World
-    ) {
-        const finishAreasToReturn = [];
+    ): FinishArea[] {
+        const finishAreas: FinishArea[] = [];
         
-        // Randomly place finish areas in open spaces for the player to reach
-        const numFinishAreas = Math.ceil(validSpaces.length * Config.FinishAreaChance);
-        for (let i = 0; i < numFinishAreas; i++) {
-            // Check to see if there are any valid spaces left
-            if (validSpaces.length === 0) {
-                break;
-            }
-
+        for (const position of positions) {
             const entity = new FinishArea({
                 world,
-                spawnPoint: this.spliceRandomValidPointWithMinDistance(validSpaces, this.playerSpawnPoint!, Config.RandomLevel.minDistanceBetweenPlayerSpawnAndExit),
+                spawnPoint: {...position},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
             });
 
-            finishAreasToReturn.push(entity);
+            finishAreas.push(entity);
         }
 
-        return finishAreasToReturn;
+        return finishAreas;
     }
 
     private createTorches(
-        validSpaces: string[], 
+        positions: Point[], 
         containers: LevelContainers, 
         world: planck.World
-    ) {
-        const torchesToReturn = [];
+    ): Torch[] {
+        const torches: Torch[] = [];
         
-        // Randomly place torches in open spaces for the player to reach
-        const numTorches = Math.ceil(validSpaces.length * Config.TorchChance);
-        for (let i = 0; i < numTorches; i++) {
-            // Check to see if there are any valid spaces left
-            if (validSpaces.length === 0) {
-                break;
-            }
-            
+        for (const position of positions) {
             const entity = new Torch({
                 world,
-                spawnPoint: this.spliceRandomValidPoint(validSpaces),
-                containers: { 
-                    containerForEntity: containers.entitiesContainer,
-                    containerForParticleEffects: containers.preEntitiesContainer 
-                },
-                levelContext: this
-            });
-
-            torchesToReturn.push(entity);
-        }
-
-        return torchesToReturn;
-    }
-
-    private createAntiEntities(
-        validSpaces: string[], 
-        containers: LevelContainers, 
-        world: planck.World
-    ) {
-        const antiEntitiesToReturn = [];
-        
-        // Randomly place anti entities in open spaces for the player to reach
-        const numAntiEntities = Math.ceil(validSpaces.length * Config.AntiChance);
-        for (let i = 0; i < numAntiEntities; i++) {
-            // Check to see if there are any valid spaces left
-            if (validSpaces.length === 0) {
-                break;
-            }
-            
-            const anti = new Anti({
-                world,
-                spawnPoint: this.spliceRandomValidPoint(validSpaces),
+                spawnPoint: {...position},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
             });
 
-            antiEntitiesToReturn.push(anti);
+            torches.push(entity);
         }
 
-        return antiEntitiesToReturn;
+        return torches;
+    }
+
+    private createAntiEntities(
+        positions: Point[], 
+        containers: LevelContainers, 
+        world: planck.World
+    ) {
+        const antiEntities: Anti[] = [];
+        
+        for (const position of positions) {
+            const anti = new Anti({
+                world,
+                spawnPoint: {...position},
+                containers: { containerForEntity: containers.entitiesContainer },
+                levelContext: this
+            });
+
+            antiEntities.push(anti);
+        }
+
+        return antiEntities;
     }
 
     private createSentries(
-        validSpaces: string[], 
+        positions: Point[], 
         containers: LevelContainers, 
         world: planck.World,
     ) {
-        const sentriesToReturn = [];
+        const sentries: Sentry[] = [];
         
-        // Randomly place sentry entities in open spaces for the player to reach
-        const numSentries = Math.ceil(validSpaces.length * Config.SentryChance);
-        for (let i = 0; i < numSentries; i++) {
-            // Check to see if there are any valid spaces left
-            if (validSpaces.length === 0) {
-                break;
-            }
-            
+        for (const position of positions) {
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
             const sentry = new Sentry({
                 world,  
-                spawnPoint: this.spliceRandomValidPoint(validSpaces), 
+                spawnPoint: {...position}, 
                 containers: {
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer,
@@ -283,10 +255,10 @@ export class Level implements LevelContext {
                 levelContext: this
             });
 
-            sentriesToReturn.push(sentry);
+            sentries.push(sentry);
         }
 
-        return sentriesToReturn;
+        return sentries;
     }
 
     /**
@@ -381,40 +353,5 @@ export class Level implements LevelContext {
 
     getEdgesList(): Segment[] {
         return this.edgesList;
-    }
-
-    private spliceRandomValidPoint(validSpaces: string[]): Point {
-        // Splice a valid space from the array
-        const randomIndex = Math.floor(Math.random() * validSpaces.length);
-        const validSpace = validSpaces.splice(randomIndex, 1)[0];
-        const [validX, validY]: string[] = validSpace.split(",");
-        return { x: Number(validX), y: Number(validY) };
-    }
-
-    private spliceRandomValidPointWithMinDistance(
-        validSpaces: string[],
-        startPoint: Point,
-        minDistance: number
-    ): Point{
-        // Filter validSpaces by min distance
-        const farSpaces = validSpaces.filter((space) => {
-            const [x, y] = space.split(',').map(Number);
-            const dx = x - startPoint.x;
-            const dy = y - startPoint.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            return dist >= minDistance;
-        });
-    
-        // No far spaces could be found, just use any valid space
-        const pool = farSpaces.length > 0 ? farSpaces : validSpaces;
-
-        // Randomly choose a space from the pool
-        const validSpace = pool[Math.floor(Math.random() * pool.length)];
-        const [x, y] = validSpace.split(',').map(Number);
-
-        // Splice the valid space from the valid spaces array before returning
-        validSpaces.splice(validSpaces.indexOf(validSpace), 1);
-
-        return { x, y };
     }
 }

@@ -12,7 +12,6 @@ import { EntityUserData } from './types';
 import { LevelContext } from '../level/LevelContext';
 
 export interface AntiOptions {
-    world: planck.World, 
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext
@@ -34,7 +33,7 @@ export class Anti extends StaticEntity {
         });
 
         // Create static body
-        const body = PhysicsUtils.createBody(options.world, {
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
             type: 'static',
             position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
             box: { width: Config.Anti.width, height: Config.Anti.height },

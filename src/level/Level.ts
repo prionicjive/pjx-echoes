@@ -24,7 +24,7 @@ import { LevelContext } from './LevelContext';
 import { LevelSkeleton } from './LevelSkeleton';
 
 export interface LevelOptions {
-    world: planck.World;
+    physicsWorld: planck.World;
     containers: LevelContainers;
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
@@ -50,12 +50,14 @@ export class Level implements LevelContext {
     private sentries: Sentry[];
     private edgesList: Segment[];
     private dimensions: { width: number; height: number };
+    private physicsWorld: planck.World;
 
     constructor(
         options: LevelOptions
     ) {
-        // Store the edges list for later use
+        // Store LevelContext related things
         this.edgesList = options.edgesList;
+        this.physicsWorld = options.physicsWorld;
 
         // Store the dimensions of the level
         this.dimensions = {...options.entitiesOptions.dimensions};
@@ -69,7 +71,7 @@ export class Level implements LevelContext {
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges( options.world, options.containers.levelGeometryContainer);
+        this.createLevelEdges(options.physicsWorld, options.containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.drawWalls) {
@@ -82,20 +84,28 @@ export class Level implements LevelContext {
         // Create the player
         this.player = this.createPlayer(
             {...options.entitiesOptions.playerSpawnPosition},
-            options.containers,
-            options.world
+            options.containers
         );        
         
         // Create the other various entities
         this.finishAreas = this.createFinishAreas(
             [...options.entitiesOptions.finishAreaPositions], 
-            options.containers, 
-            options.world
+            options.containers
         );
 
-        this.torches = this.createTorches([...options.entitiesOptions.torchPositions], options.containers, options.world);
-        this.antiEntities = this.createAntiEntities([...options.entitiesOptions.antiPositions], options.containers, options.world);
-        this.sentries = this.createSentries([...options.entitiesOptions.sentryPositions], options.containers, options.world);
+        this.torches = this.createTorches(
+            [...options.entitiesOptions.torchPositions], 
+            options.containers);
+
+        this.antiEntities = this.createAntiEntities(
+            [...options.entitiesOptions.antiPositions], 
+            options.containers
+        );
+        
+        this.sentries = this.createSentries(
+            [...options.entitiesOptions.sentryPositions], 
+            options.containers
+        );
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -156,11 +166,9 @@ export class Level implements LevelContext {
 
     private createPlayer(
         spawnPoint: Point,
-        containers: LevelContainers,
-        world: planck.World
+        containers: LevelContainers
     ): Player {
         const entity = new Player({
-            world,
             spawnPoint: {...spawnPoint}, 
             containers: {
                 containerForEntity: containers.entitiesContainer,
@@ -174,14 +182,12 @@ export class Level implements LevelContext {
 
     private createFinishAreas(
         positions: Point[], 
-        containers: LevelContainers, 
-        world: planck.World
+        containers: LevelContainers
     ): FinishArea[] {
         const finishAreas: FinishArea[] = [];
         
         for (const position of positions) {
             const entity = new FinishArea({
-                world,
                 spawnPoint: {...position},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
@@ -196,15 +202,16 @@ export class Level implements LevelContext {
     private createTorches(
         positions: Point[], 
         containers: LevelContainers, 
-        world: planck.World
     ): Torch[] {
         const torches: Torch[] = [];
         
         for (const position of positions) {
             const entity = new Torch({
-                world,
                 spawnPoint: {...position},
-                containers: { containerForEntity: containers.entitiesContainer },
+                containers: { 
+                    containerForEntity: containers.entitiesContainer,
+                    containerForParticleEffects: containers.preEntitiesContainer
+                },
                 levelContext: this
             });
 
@@ -217,13 +224,11 @@ export class Level implements LevelContext {
     private createAntiEntities(
         positions: Point[], 
         containers: LevelContainers, 
-        world: planck.World
     ) {
         const antiEntities: Anti[] = [];
         
         for (const position of positions) {
             const anti = new Anti({
-                world,
                 spawnPoint: {...position},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
@@ -238,14 +243,12 @@ export class Level implements LevelContext {
     private createSentries(
         positions: Point[], 
         containers: LevelContainers, 
-        world: planck.World,
     ) {
         const sentries: Sentry[] = [];
         
         for (const position of positions) {
             const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Sentry.maxSpeed);
             const sentry = new Sentry({
-                world,  
                 spawnPoint: {...position}, 
                 containers: {
                     containerForEntity: containers.entitiesContainer,
@@ -353,5 +356,9 @@ export class Level implements LevelContext {
 
     getEdgesList(): Segment[] {
         return this.edgesList;
+    }
+    
+    getPhysicsWorld(): planck.World {
+        return this.physicsWorld;
     }
 }

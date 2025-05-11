@@ -12,8 +12,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { EntityUserData } from './types';
 import { LevelContext } from '../level/LevelContext';
 
-export interface TorchOptions {
-    world: planck.World, 
+export interface TorchOptions { 
     levelContext: LevelContext, 
     spawnPoint: Point,
     containers: EntityContainers
@@ -35,7 +34,7 @@ export class Torch extends StaticEntity {
         });
 
         // Create static body
-        const body = PhysicsUtils.createBody(options.world, {
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
             type: 'static',
             position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
             box: { width: Config.Torch.width, height: Config.Torch.height },

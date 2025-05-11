@@ -33,7 +33,7 @@ export class LevelUtils {
 
         // Construct the level with all entities, including player
         return new Level({
-            world, 
+            physicsWorld: world, 
             containers: {
                 levelGeometryContainer: containers.levelGeometryContainer,
                 preEntitiesContainer: containers.preEntitiesContainer,

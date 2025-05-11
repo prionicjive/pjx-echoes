@@ -22,8 +22,7 @@ import * as PIXI from 'pixi.js';
 import { LightOwner } from '../light/Light';
 import { LevelContext } from '../level/LevelContext';
 
-export interface PlayerOptions {
-    world: planck.World, 
+export interface PlayerOptions { 
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext
@@ -45,7 +44,7 @@ export class Player extends DynamicEntity implements LightOwner {
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(options.world, {
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
             type: 'dynamic',
             position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius),
             circle: { radius: Config.Player.radius },

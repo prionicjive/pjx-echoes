@@ -13,8 +13,7 @@ import { EntityUserData } from './types';
 import { LightOwner } from '../light/Light';
 import { LevelContext } from '../level/LevelContext';
 
-export interface SentryOptions {
-    world: planck.World, 
+export interface SentryOptions { 
     spawnPoint: Point,
     containers: EntityContainers, 
     initialVelocity?: planck.Vec2,
@@ -37,7 +36,7 @@ export class Sentry extends DynamicEntity implements LightOwner {
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(options.world, {
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
             type: 'dynamic',
             position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius),
             circle: { radius: Config.Sentry.radius },

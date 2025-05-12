@@ -34,10 +34,6 @@ export class DynamicEntity extends BaseEntity implements LightOwner {
         }
     }
 
-    destroy() {
-        super.destroy();
-    }
-
     getLightPosition() {
         const pos = this.body.getPosition();
         return { x: pos.x, y: pos.y };

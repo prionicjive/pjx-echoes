@@ -297,7 +297,7 @@ export class World {
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
                 this.player!.onPickup(sentryData.type);
-                this.gentlyRemoveEntity(sentryData.type, sentryData.entity);
+                this.gentlyDestroyEntity(sentryData.type, sentryData.entity);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -312,7 +312,7 @@ export class World {
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
                 this.player!.onPickup(torchEntity.type);
-                this.gentlyRemoveEntity(torchEntity.type,torchEntity.entity);
+                this.gentlyDestroyEntity(torchEntity.type,torchEntity.entity);
             }
         }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
@@ -329,14 +329,14 @@ export class World {
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
                 this.player!.onPickup(antiEntity.type);
-                this.gentlyRemoveEntity(antiEntity.type, antiEntity.entity);
+                this.gentlyDestroyEntity(antiEntity.type, antiEntity.entity);
             }
         }
     }
 
-    private gentlyRemoveEntity(type: EntityType, entity: BaseEntity) {
-        // Gently remove the entity from the level
-        this.level!.gentlyRemoveEntity(type, entity);
+    private gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
+        // Gently destroy the entity from the level
+        this.level!.gentlyDestroyEntity(type, entity);
 
         // TODO Do any other additional destruction on the entity or its subsystems
 

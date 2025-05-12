@@ -34,8 +34,4 @@ export class StaticEntity extends BaseEntity {
             LightManager.instance.addStaticLight(this.light);
         }
     }
-
-    destroy() {
-        super.destroy();
-    }
 }

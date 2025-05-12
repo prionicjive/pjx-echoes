@@ -284,10 +284,21 @@ export class Level implements LevelContext {
         });
     }
 
-    gentlyRemoveEntity(type: EntityType, entity: BaseEntity) {
+    gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
         // Gently remove the entity
-        entity.gentlyRemove();
+        entity.gentlyDestroy();
 
+        this.removeEntity(type, entity);
+    }
+
+    destroyEntity(type: EntityType, entity: BaseEntity) {
+        // Instantly remove the entity
+        entity.destroy();
+
+        this.removeEntity(type, entity);
+    }
+
+    private removeEntity(type: EntityType, entity: BaseEntity) {
         // Now, remove the entity from the correct array
         switch (type) {
             case Config.Wall.type:

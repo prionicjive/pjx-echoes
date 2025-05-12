@@ -47,15 +47,35 @@ export abstract class BaseEntity {
     }
 
     destroy() {
+        // Instantly remove the sprite from the container
         this.containers.containerForEntity.removeChild(this.sprite);
-    
-        // Clean up other resources if needed
+
+        // Destroy the body
+        if (this.body && this.body.getWorld()) {
+            this.body.getWorld().destroyBody(this.body);
+        }
+
+        // Immediately remove light from LightManager
+        if (this.light) {
+            LightManager.instance.removeStaticLight(this.light);
+        }
+
+        // Immediately remove particle by having it stop emitting before destroying
+        if (this.particleEffect) {
+            ParticleEffectManager.instance.removeEffect(this.particleEffect);
+        }
     }
 
-    gentlyRemove() {
-        this.destroy();
+    gentlyDestroy() {
+        // Instantly remove the sprite from the container
+        this.containers.containerForEntity.removeChild(this.sprite);
 
-        // Remove light from LightManager
+        // Gently destroy the body
+        if (this.body && this.body.getWorld()) {
+            this.body.getWorld().destroyBody(this.body);
+        }
+
+        // Gently remove light from LightManager
         if (this.light) {
             LightManager.instance.gentlyRemoveStaticLight(this.light);
         }

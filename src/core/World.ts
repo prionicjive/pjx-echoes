@@ -5,11 +5,11 @@ import { Player } from '../entities/Player.ts';
 import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
 import { Config } from '../config/Config.ts'; 
-import { EntityType, EntityUserData } from '../entities/types.ts'; 
+import { EntityType } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
-import { BaseEntity } from '../entities/BaseEntity.ts';
+import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
 import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
 
@@ -210,11 +210,15 @@ export class World {
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            ProGenLevelsConfig.Standard // ProGenLevelsConfig.Simple
+            ProGenLevelsConfig.Simple
         );
         
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();
+
+        // Play torch radiance effect
+        ParticleEffectManager.instance.removeAllEffects();
+        ParticleEffectManager.instance.playEffect(this.preEntitiesContainer, "Explosion", {x: this.player.sprite.x, y: this.player.sprite.y}, 10);
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      

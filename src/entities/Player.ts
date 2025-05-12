@@ -260,8 +260,8 @@ export class Player extends DynamicEntity implements LightOwner {
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Set the initial position of the particle effect
-        this.particleEffect?.setEffectPosition(
+        // Update position of the particle effect
+        this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2
         );

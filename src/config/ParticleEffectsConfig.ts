@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Config } from './Config';
+import { ParticleEffectType } from '../particles/types';
 
 // Centralized particle effect configuration
-export const ParticleEffectsConfig: Record<string, ParticleEffectOptions> = {
+export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {
     PlayerTrail: {
         texturePath: Config.Textures.Particles.ringSoft,
         emitPerSecond: 30,
@@ -48,7 +49,7 @@ export const ParticleEffectsConfig: Record<string, ParticleEffectOptions> = {
             endSpeed: 0
         }
     },
-    TorchEffect: {
+    TorchRadiance: {
         texturePath: Config.Textures.Particles.ringSoft,
         emitPerSecond: 1,
         maxParticles: 10,
@@ -68,6 +69,29 @@ export const ParticleEffectsConfig: Record<string, ParticleEffectOptions> = {
             endDirection: {x: 0, y: 0},
             startSpeed: 0,
             endSpeed: 0
+        }
+    },
+    Explosion: {
+        texturePath: Config.Textures.Particles.circleSoft,
+        emitPerSecond: 10,
+        maxParticles: 500,
+        duration: 30,
+        particleOptions: {
+            maxAge: 5.5,
+            startAlpha: 1,
+            endAlpha: 1,
+            startScaleX: 10,
+            startScaleY: 10,
+            endScaleX: 10,
+            endScaleY: 10,
+            width: Config.Torch.width * Config.PixelsPerMeter,
+            height: Config.Torch.height * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(Config.Torch.color),
+            endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
+            startDirection: {x: 1, y: 0},
+            endDirection: {x: 0, y: 1},
+            startSpeed: 20,
+            endSpeed: 20
         }
     }
 };

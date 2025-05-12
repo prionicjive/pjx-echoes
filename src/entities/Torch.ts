@@ -9,7 +9,7 @@ import * as PIXI from 'pixi.js';
 import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { EntityUserData } from './types';
+import { EntityUserData } from './BaseEntity';
 import { LevelContext } from '../level/LevelContext';
 
 export interface TorchOptions { 
@@ -53,7 +53,7 @@ export class Torch extends StaticEntity {
             position: options.spawnPoint,
             width: Config.Torch.width,
             height: Config.Torch.height,
-            particleEffectOptions: { ...ParticleEffectsConfig.TorchEffect },
+            particleEffectOptions: { ...ParticleEffectsConfig.TorchRadiance },
             containers: options.containers,
             levelContext: options.levelContext
         });
@@ -65,7 +65,7 @@ export class Torch extends StaticEntity {
         } as EntityUserData);
     
         // Set the initial position of the particle effect
-        this.particleEffect?.setEffectPosition(
+        this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2
         );

@@ -1,9 +1,11 @@
 import { Container, Sprite, Color } from 'pixi.js';
+import { Point } from '../utils/types';
 
 export interface ParticleEffectOptions {
     texturePath: string;
     maxParticles?: number;
     emitPerSecond?: number;
+    duration?: number;
     particleOptions: ParticleOptions;
 }
 
@@ -35,13 +37,15 @@ interface Particle {
 }
 
 export class ParticleEffect {
+  private duration?: number;
+  private timeElapsed: number = 0;
   private emitPerSecond: number;
   private accum: number = 0;
   public container: Container;
   public template: ParticleOptions;
   private particles: Particle[] = [];
   private maxParticles: number;
-  private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
+  private position: Point = { x: 0, y: 0 }; // TODO Make a Point?
   private numAliveParticles: number = 0;
   private emissionStopped: boolean = false;
   private emptyCallback?: () => void;
@@ -50,6 +54,7 @@ export class ParticleEffect {
     this.container = new Container();
     this.maxParticles = options.maxParticles ?? 100;
     this.emitPerSecond = options.emitPerSecond ?? 30;
+    this.duration = options.duration;
     this.template = {...options.particleOptions};
 
     for (let i = 0; i < this.maxParticles; i++) {
@@ -76,12 +81,20 @@ export class ParticleEffect {
     this.accum = 1 / this.emitPerSecond;
   }
 
-  setEffectPosition(x: number, y: number): void {
-    this.emitPosition.x = x;
-    this.emitPosition.y = y;
+  setPosition(x: number, y: number): void {
+    this.position.x = x;
+    this.position.y = y;
   }
 
   update(dt: number): void {
+    // If there is a finite duration to be had, see if we've crossed that threshold and stop emission if need be
+    if (this.duration !== undefined) {
+      this.timeElapsed += dt;
+      if (this.timeElapsed >= this.duration) {
+        this.stopEmission();
+      }
+    }
+
     this.accum += dt;
     const emitInterval = 1 / this.emitPerSecond;
 
@@ -127,7 +140,7 @@ export class ParticleEffect {
     }
 
     // If the emission has stopped and all particles are dead, call the callback
-    if (!this.emissionStopped && this.numAliveParticles === 0 && this.emptyCallback) {
+    if (this.emissionStopped && this.numAliveParticles === 0 && this.emptyCallback) {
       this.emptyCallback();
     }
   }
@@ -170,7 +183,7 @@ export class ParticleEffect {
     const s = particle.sprite;
     s.visible = true;
     s.alpha = this.template.startAlpha;
-    s.position.set(this.emitPosition.x, this.emitPosition.y);
+    s.position.set(this.position.x, this.position.y);
     s.width = this.template.width * this.template.startScaleX;
     s.height = this.template.height * this.template.startScaleY;
     s.tint = this.template.startTint.toNumber();

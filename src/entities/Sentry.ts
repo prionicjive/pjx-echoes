@@ -74,7 +74,7 @@ export class Sentry extends DynamicEntity implements LightOwner {
         }
 
         // Set the initial position of the particle effect
-        this.particleEffect?.setEffectPosition(
+        this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2
         );
@@ -92,7 +92,7 @@ export class Sentry extends DynamicEntity implements LightOwner {
         this.sprite.rotation = this.body.getAngle();
 
         // Update the particle effect position
-        this.particleEffect?.setEffectPosition(
+        this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2
         );

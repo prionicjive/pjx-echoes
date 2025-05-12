@@ -4,6 +4,7 @@ import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffe
 import * as planck from 'planck';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { LightManager } from '../light/LightManager';
+import { EntityType } from './types';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -16,6 +17,12 @@ export interface BaseEntityOptions {
     body?: planck.Body;
     particleEffectOptions?: ParticleEffectOptions;
     containers: EntityContainers;
+}
+
+export interface EntityUserData {
+    type: EntityType;
+    entity?: BaseEntity;
+    body?: planck.Body;
 }
 
 export abstract class BaseEntity {

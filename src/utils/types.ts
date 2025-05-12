@@ -1,9 +1,9 @@
-export interface Point {
+export type Point = {
     x: number;
     y: number;
 }
 
-export interface Segment { 
+export type Segment = { 
     a: Point; 
     b: Point;
 } 

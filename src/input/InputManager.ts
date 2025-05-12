@@ -1,13 +1,14 @@
 import { SwipeGesture } from "./SwipeGesture";
+import { Point } from "../utils/types";
 
-export type PointerState = {
-    screen: { x: number, y: number },
-    world: { x: number, y: number },
+export interface PointerState {
+    screen: Point,
+    world: Point,
     isDown: boolean,
     justReleased: boolean,
 };
 
-export type SwipeState = {
+export interface SwipeState {
     velocityX: number,
     velocityY: number,
     detected: boolean,

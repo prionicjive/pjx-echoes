@@ -30,7 +30,7 @@ export interface LevelOptions {
     entitiesOptions: LevelSkeleton;
 }
 
-export type LevelContainers = {
+export interface LevelContainers {
     levelGeometryContainer: PIXI.Container;
     preEntitiesContainer: PIXI.Container;
     entitiesContainer: PIXI.Container;

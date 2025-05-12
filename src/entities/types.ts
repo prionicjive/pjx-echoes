@@ -1,10 +1,9 @@
 import * as planck from 'planck';
 import { BaseEntity } from './BaseEntity';
 
-// TODO Could be refactored
 export type EntityType = 'PLAYER' | 'SENTRY' | 'WALL' | 'FINISH_AREA' | 'TORCH' | 'Anti';
 
-export type EntityUserData = {
+export interface EntityUserData {
     type: EntityType;
     entity?: BaseEntity;
     body?: planck.Body;

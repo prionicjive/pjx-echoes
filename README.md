@@ -7,7 +7,7 @@ An exploration game rooted in navigating the unknown and unseen.
 ## Features
 - Map / maze generation with rooms / caves, utilizing Drunkard's Walk algorithm (modified with Cellular Automata)
 - Player impulse movement via Planck physics
-- Generation of a new map / maze upon reaching a finish tile
+- Generation of a new map / maze upon reaching a exit tile
 - Soft follow camera when world is larger than single screen, with dead zone
 - Dynamic lighting system with raycasted light occlusion and support for mutliple lights
 - Edge calculation for light raycasting and level rendering
@@ -48,6 +48,12 @@ npm run dev
 
 Then open the URL shown in your terminal (usually http://localhost:5173) in your browser.
 
+To allow access from other devices on the same network (Such as wanting to play on a phone):
+
+```sh
+npm run dev -- --host
+```
+
 ### Building for Production
 
 ```sh
@@ -62,17 +68,16 @@ npm run build
 - `assets/` – Sprites and textures
 - `index.html` – Entry point for the app
 
-## TODO
+## TODOs
 
-### Graphical Polish
-- Post processing bloom / glow shader and crt shader (From pixi-filters)
-- Post processing glitch shaders, for when colliding with wall
-- Particle trail effect for player
-- UI / HUD / Menus
-
-### Map Maze improvement
-- Loading maze from file, possibly Tiled Map
-- Consider other map / maze generation algorithms
+- More entity types and interactions
+- Gates, switches and keys
+- Loading maze from file (Ex. Tiled Map)
+- LIDAR for Player
+- Music
+- Cordova support
+- Spatial partitioning
+- Minimalistic UI
 
 ## Contributing
 

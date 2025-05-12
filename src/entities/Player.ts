@@ -6,71 +6,78 @@
  * @module Player
  */
 
-import { Config } from '../core/Config';
-import { Entity, EntityType } from './types';
+import { Config } from '../config/Config';
+import { EntityType, EntityUserData } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { Point, Segment } from '../utils/types';
+import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
-import { EntityFactory } from './EntityFactory';
-import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
-import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { Color } from 'pixi.js';
+import { EntityContainers } from './BaseEntity';
+import { DynamicEntity } from './DynamicEntity';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
+import { LightsConfig } from '../config/LightsConfig';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import * as PIXI from 'pixi.js';
+import { LightOwner } from '../light/Light';
+import { LevelContext } from '../level/LevelContext';
 
-// TODO Make ParticleEffectOptions more configurable rather than
-// have it defined here.
-const particleEffectOptions: ParticleEffectOptions = {
-    texturePath: Config.Textures.Particles.ringSoft,
-    emitPerSecond: 30,
-    maxParticles: 250,
-    particleOptions: {
-        maxAge: 0.5,
-        startAlpha: 1,
-        endAlpha: 0,
-        startScaleX: 1,
-        startScaleY: 1,
-        endScaleX: 0.42,
-        endScaleY: 0.42,
-        width: Config.Player.radius * 2 * Config.PixelsPerMeter,
-        height: Config.Player.radius * 2 * Config.PixelsPerMeter,
-        startTint: new Color(Config.Player.color),
-        endTint: new Color(0xff13bb), // TODO Just for test, should be configurable
-        startDirection: {x: 0, y: 0},
-        endDirection: {x: 0, y: 0},
-        startSpeed: 0,
-        endSpeed: 0
-    }
-};
+export interface PlayerOptions { 
+    spawnPoint: Point,
+    containers: EntityContainers,
+    levelContext: LevelContext
+}
 
-export class Player extends DynamicEntity implements Entity {
-    constructor(
-        world: planck.World, 
-        edgesList: Segment[], 
-        spawnPoint: Point,
-        containers: DynamicEntityContainers
-    ) {
-        const entity = EntityFactory.create({
-            type: Config.Player.type as EntityType,
-            id: EntityUtils.generateRandomId(Config.Player.type),
-            x: spawnPoint.x,
-            y: spawnPoint.y,
-            radius: Config.Player.radius,
-            color: Config.Player.color,
-            linearDamping: Config.Physics.Player.linearDamping
-        }, world);
+export class Player extends DynamicEntity implements LightOwner {
+    constructor(options: PlayerOptions) {
+        // Generate unique ID
+        const id = EntityUtils.generateRandomId(Config.Player.type);
 
-        super({
-            id: entity.id,
-            sprite: entity.sprite,
-            body: entity.body!,
-            particleEffectOptions,
-            particleContainer: containers.containerForParticles,
-            lightOptions: {...Config.PlayerLight},
-            edgesList
+        // Create the sprite
+        const sprite = SpriteUtils.createSprite({
+            texture: PIXI.Texture.from(Config.Textures.player),
+            x: options.spawnPoint.x * Config.PixelsPerMeter,
+            y: options.spawnPoint.y * Config.PixelsPerMeter,
+            width: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Player.radius * 2 * Config.PixelsPerMeter,
+            color: Config.Player.color
         });
 
-        containers.containerForEntity.addChild(this.sprite);
+        // Create dynamic body
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
+            type: 'dynamic',
+            position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius),
+            circle: { radius: Config.Player.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 0, // No bounce
+                filterCategoryBits: Config.Physics.Collision.categoryPlayer,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categorySentry
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categoryExit
+                    | Config.Physics.Collision.categoryAnti
+                    | Config.Physics.Collision.categoryTorch
+            },
+            linearDamping: Config.Physics.Player.linearDamping
+        });
+
+        super({
+            id,
+            sprite,
+            body,
+            particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
+            containers: options.containers,
+            lightOptions: { ...LightsConfig.PlayerLight },
+            levelContext: options.levelContext
+        });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Player.type,
+            entity: this
+        } as EntityUserData);
     }
 
     handleInput(
@@ -246,40 +253,44 @@ export class Player extends DynamicEntity implements Entity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
+    // @ts-ignore
     update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Call the super to update any particle effects, among other things
-        super.update(deltaTime);
+        // Set the initial position of the particle effect
+        this.particleEffect?.setEffectPosition(
+            this.sprite.x + this.sprite.width / 2,
+            this.sprite.y + this.sprite.height / 2
+        );
     }
 
-    handlePickup(type: EntityType) {
+    onPickup(type: EntityType) {
         switch (type) {
-            case Config.Fuel.type:
+            case Config.Torch.type:
                 // Grow the light
-                this.dynamicLight?.setBaseRadius(
-                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
+                this.light?.increaseBaseRadius(
+                    this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
                     Config.Player.maxLightRadius,
-                    Config.Player.lightGrowDuration
+                    Config.Player.lightChangeDuration
                 );
-
+                break;
+            case Config.Anti.type:
+                // Shrink the light
+                this.light?.decreaseBaseRadius(
+                    this.light.options.baseRadius - Config.Player.lightRadiusDecrement,
+                    Config.Player.minLightRadius,
+                    Config.Player.lightChangeDuration
+                );
+                break;
+            case Config.Sentry.type:
                 // Increase the age of the particle trail
-                // TODO Better encapsulate
                 if(this.particleEffect) {
                     this.particleEffect.template.maxAge += Config.Player.particleTrailMaxAgeIncrement;
                     this.particleEffect.template.maxAge = Math.min(this.particleEffect.template.maxAge, Config.Player.particleTrailMaxAgeCap);
                 }
-                break;
-            case Config.Sentry.type:
-                // Grow the light
-                this.dynamicLight?.setBaseRadius(
-                    this.dynamicLight.options.baseRadius + Config.Player.lightRadiusIncrement,
-                    Config.Player.maxLightRadius,
-                    Config.Player.lightGrowDuration
-                );
                 break;
             default:
                 break;

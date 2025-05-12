@@ -6,7 +6,7 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
-import { Config } from './Config.ts';
+import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
 
 export class Game {
@@ -80,10 +80,10 @@ export class Game {
         await PIXI.Assets.load(Config.Textures.player);
         await PIXI.Assets.load(Config.Textures.sentry);
         await PIXI.Assets.load(Config.Textures.wall);
-        await PIXI.Assets.load(Config.Textures.finish);
+        await PIXI.Assets.load(Config.Textures.exit);
         await PIXI.Assets.load(Config.Textures.torch); 
         await PIXI.Assets.load(Config.Textures.torch); 
-        await PIXI.Assets.load(Config.Textures.fuel);
+        await PIXI.Assets.load(Config.Textures.anti);
         await PIXI.Assets.load(Config.Textures.block);
 
         await PIXI.Assets.load(Config.Textures.Particles.ring);

@@ -1,85 +1,100 @@
-import { Config } from '../core/Config';
-import { Entity, EntityType } from './types';
-import { EntityUtils } from '../utils/EntityUtils';
+import { Config } from '../config/Config';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityFactory } from './EntityFactory';
-import { DynamicEntity, DynamicEntityContainers } from './DynamicEntity';
-import { Segment } from '../utils/types';
-import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { Color } from 'pixi.js';
+import { EntityContainers } from './BaseEntity';
+import { DynamicEntity } from './DynamicEntity';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
+import { LightsConfig } from '../config/LightsConfig';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import * as PIXI from 'pixi.js';
+import { EntityUtils } from '../utils/EntityUtils';
+import { EntityUserData } from './types';
+import { LightOwner } from '../light/Light';
+import { LevelContext } from '../level/LevelContext';
 
-// TODO Make ParticleEffectOptions more configurable rather than
-// have it defined here.
-const particleEffectOptions: ParticleEffectOptions = {
-    texturePath: Config.Textures.Particles.circleSoft,
-    emitPerSecond: 10,
-    maxParticles: 100,
-    particleOptions: {
-        maxAge: 2,
-        startAlpha: 1,
-        endAlpha: 0,
-        startScaleX: 1,
-        startScaleY: 1,
-        endScaleX: 0.42,
-        endScaleY: 0.42,
-        width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-        height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-        startTint: new Color(Config.Sentry.color),
-        endTint: new Color(0x0000ff), // TODO Just for test, should be configurable
-        startDirection: {x: 0, y: 0},
-        endDirection: {x: 0, y: 0},
-        startSpeed: 0,
-        endSpeed: 0
-    }
-};
+export interface SentryOptions { 
+    spawnPoint: Point,
+    containers: EntityContainers, 
+    initialVelocity?: planck.Vec2,
+    levelContext: LevelContext
+}
 
-export class Sentry extends DynamicEntity implements Entity {
-    constructor(
-        world: planck.World,
-        edgesList: Segment[], 
-        spawnPoint: Point,
-        containers: DynamicEntityContainers, 
-        initialVelocity?: planck.Vec2
-    ) {
-        const entity = EntityFactory.create({
-            type: Config.Sentry.type as EntityType,
-            id: EntityUtils.generateRandomId(Config.Sentry.type),
-            x: spawnPoint.x,
-            y: spawnPoint.y,
-            radius: Config.Sentry.radius,
-            color: Config.Sentry.color,
-        }, world);
+export class Sentry extends DynamicEntity implements LightOwner {
+    constructor(options: SentryOptions) {
+        // Generate unique ID
+        const id = EntityUtils.generateRandomId(Config.Sentry.type);
 
-        super({
-            id: entity.id,
-            sprite: entity.sprite,
-            body: entity.body!,
-            particleEffectOptions,
-            particleContainer: containers.containerForParticles,
-            lightOptions: {...Config.SentryLight},
-            edgesList
+        // Create the sprite
+        const sprite = SpriteUtils.createSprite({
+            texture: PIXI.Texture.from(Config.Textures.sentry),
+            x: options.spawnPoint.x * Config.PixelsPerMeter,
+            y: options.spawnPoint.y * Config.PixelsPerMeter,
+            width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            color: Config.Sentry.color
         });
 
+        // Create dynamic body
+        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
+            type: 'dynamic',
+            position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius),
+            circle: { radius: Config.Sentry.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 1, // Perfect elasticity
+                filterCategoryBits: Config.Physics.Collision.categorySentry,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categoryPlayer
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categorySentry
+            }
+        });
+
+        super({
+            id,
+            sprite,
+            body,
+            particleEffectOptions: { ...ParticleEffectsConfig.SentryTrail },
+            containers: options.containers,
+            lightOptions: { ...LightsConfig.SentryLight },
+            levelContext: options.levelContext
+        });
+
+        // Set user data with a self-referencing data
+        body.setUserData({
+            type: Config.Sentry.type,
+            entity: this
+        } as EntityUserData);
+
         // Set an initial velocity if provided
-        if(initialVelocity) {
-            this.body.setLinearVelocity(initialVelocity);
+        if( options.initialVelocity) {
+            this.body.setLinearVelocity(options.initialVelocity);
         }
 
-        containers.containerForEntity.addChild(this.sprite);
+        // Set the initial position of the particle effect
+        this.particleEffect?.setEffectPosition(
+            this.sprite.x + this.sprite.width / 2,
+            this.sprite.y + this.sprite.height / 2
+        );
     }
 
     /**
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
+    // @ts-ignore
     update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body.getPosition().x - Config.Sentry.radius) * Config.PixelsPerMeter;
         this.sprite.y = (this.body.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Call the super to update any particle effects, among other things
-        super.update(deltaTime);
+        // Update the particle effect position
+        this.particleEffect?.setEffectPosition(
+            this.sprite.x + this.sprite.width / 2,
+            this.sprite.y + this.sprite.height / 2
+        );
     }
 }

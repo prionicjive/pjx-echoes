@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { Config } from '../core/Config';
+import { Config } from '../config/Config';
 import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { LightUtils } from '../utils/LightUtils';
 import { CollisionUtils } from '../utils/CollisionUtils';
@@ -27,7 +27,14 @@ export interface LightOptions {
     oscillateColorDelayVariance: number;
 }
 
-export abstract class Light {
+/**
+ * Base Light class. isFadingOut is true if the light is in the process of being faded out and destroyed.
+ */
+export class Light {
+    /**
+     * True if this light is currently fading out and should not be updated or rendered.
+     */
+    public isFadingOut: boolean = false;
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
     public pos: Point;
@@ -91,9 +98,19 @@ export abstract class Light {
         this.entityId = entityId;
 
         // TODO Any additional setup / initialization
+   };
+
+   public setupTweens(): void { };
+
+    // @ts-ignore
+    public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+        this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
     }
 
-    abstract setupTweens(): void;
+    // @ts-ignore
+    public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
+        this.options.baseRadius = minRadius !== undefined ? Math.max(newRadius, minRadius) : newRadius;
+    }
     
     public update(pos: Point | null): void {
         // Use the sprite's current position if no updated position is given
@@ -139,50 +156,51 @@ export abstract class Light {
         this.collisionData = edges;
     }
 
-    public fadeOutAndDestroy(onComplete?: () => void) {
-    // Stop any alpha tween
-    if (this.alphaTween) this.alphaTween.kill();
-
-    this.alphaTween = gsap.to(this.tweenables, {
-        alpha: 0,
-        duration: 0.75, 
-        ease: 'power1.inOut',
-        onComplete: () => {
-            // Clean up visual resources
-            this.mask?.destroy();
-            this.sprite?.destroy();
-
-            // Optionally call the onComplete callback if provided
-            if (onComplete) onComplete();
-        }
-    });
+    public destroy() {
+        this.mask?.destroy();
+        this.sprite?.destroy();
+    }
 }
+
+// Minimal interface for an owner that can provide a light position
+export interface LightOwner {
+    getLightPosition(): Point;
 }
 
 export class DynamicLight extends Light {
-    // Tween for "growing" to a new base radius
-    private growTween?: gsap.core.Tween;   
+    // Tween for changing to a new base radius
+    private changeRadiusTween?: gsap.core.Tween;
+    public owner?: LightOwner;
 
-    constructor(pos: Point, collisionData: Segment[],options: LightOptions, entityId: string = "") {;
+    constructor(
+        pos: Point,
+        collisionData: Segment[],
+        options: LightOptions,
+        entityId: string = "",
+        owner?: LightOwner
+    ) {
         super(pos, collisionData, options, entityId);
+        if (owner) this.owner = owner;
         // TODO Any additional setup / initialization
     }
 
     public setupTweens() {
         this.flickerAlpha();
-        this.flickerRadius();
+        //this.flickerRadius();
         this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
     public update(pos: Point | null = null) {
-        super.update(pos);
+        // If owner is set, always query its position
+        const ownerPos = this.owner ? this.owner.getLightPosition() : pos;
+        super.update(ownerPos);
 
         const lightBounds = {
             minX: this.pos.x - this.radius,
             maxX: this.pos.x + this.radius,
             minY: this.pos.y - this.radius,
             maxY: this.pos.y + this.radius,
-          };
+        };
 
         // Build out the light points in world space (Meters)
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
@@ -190,20 +208,31 @@ export class DynamicLight extends Light {
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
     }
 
-    public setBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
-        const target = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
-
-        // Kill any previous grow tweens
-        if (this.growTween) this.growTween.kill();
+    public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+        super.increaseBaseRadius(newRadius, maxRadius, duration);
+        
+        // Kill any previous change tweens
+        if (this.changeRadiusTween) this.changeRadiusTween.kill();
 
         // Tween the baseRadius property
-        this.growTween = gsap.to(this.options, {
-            baseRadius: target,
+        this.changeRadiusTween = gsap.to(this.tweenables, {
+            radius: this.options.baseRadius,
             duration,
-            ease: "power1.out",
-            onUpdate: () => {
-                this.radius = this.options.baseRadius;
-            }
+            ease: "power1.out"
+        });
+    }
+
+    public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
+        super.decreaseBaseRadius(newRadius, minRadius, duration);
+        
+        // Kill any previous change tweens
+        if (this.changeRadiusTween) this.changeRadiusTween.kill();
+
+        // Tween the baseRadius property
+        this.changeRadiusTween = gsap.to(this.tweenables, {
+            radius: this.options.baseRadius,
+            duration,
+            ease: "power1.out"
         });
     }
 

@@ -2,33 +2,30 @@ import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { CRTFilter, BloomFilter } from 'pixi-filters';
 import { Player } from '../entities/Player.ts';
-import { Level } from './Level.ts';
-import { Segment } from '../utils/types';
-import { Light } from './Light.ts'; 
-import { Config } from './Config.ts'; 
-import { MapUtils } from '../utils/MapUtils.ts'; 
-import { EntityUserData } from '../entities/types.ts'; 
+import { Level } from '../level/Level.ts';
+import { LightManager } from '../light/LightManager.ts';
+import { Config } from '../config/Config.ts'; 
+import { EntityType, EntityUserData } from '../entities/types.ts'; 
 import { InputManager } from '../input/InputManager.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
-import { Sentry } from '../entities/Sentry.ts';
-import { PhysicsUtils } from '../utils/PhysicsUtils.ts';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
+import { BaseEntity } from '../entities/BaseEntity.ts';
+import { LevelUtils } from '../utils/LevelUtils.ts';
+import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
 
 export class World {
     private app: PIXI.Application;
     private world: planck.World | null = null;
     private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-    private level: Level | null = null;
-    private rawLevelMap: number[][] = []; // TODO Better place to put this?
-
+  
     // Input related
     private inputManager: InputManager;
     
-    // TODO Is this the better way to do edge detection?
-    private mergedEdges: Segment[] = [];
-
-    // Entities
+    // The player
     private player: Player | null = null;
-    private sentries: Sentry[] = [];
+
+    // The level (with all its entities)
+    private level: Level | null = null;
 
     // PIXI Containers different rendering objects / layers
     private worldContainer!: PIXI.Container; // Added to stage directly
@@ -43,10 +40,6 @@ export class World {
 
     // Scratch containers never added anywhere, used for temporary rendering
     private tempLightmapContainer!: PIXI.Container; // Not directly added to world
-    
-    // Lights
-    private dynamicLights: Light[] = [];
-    private staticLights: Light[] = [];
 
     // Needed for lightmap rendering
     private lightmapTexture!: PIXI.RenderTexture; // Lightmap used for our render-to-texture'ing and post processing of lights
@@ -83,8 +76,8 @@ export class World {
 
         // TODO Handle additional setup if needed
 
-        // Lastly, reset / reinitialize the world
-        this.reset();
+        // Lastly, initialize the world
+        this.init();
     }
 
     private initializeContainers() {
@@ -149,6 +142,10 @@ export class World {
         this.app.stage.filters = [this.crtFilter];
     }
 
+    private init() {
+        // Basically, set up a new world!
+        this.setUpWorld();
+    }
     /**
      * Resets the game state: clears containers, destroys physics bodies,
      * and generates a fresh level and player.
@@ -161,33 +158,37 @@ export class World {
         this.tearDownWorld();
 
         // ------------------------
-        // NOW, it's time to add things / reinitialize the world
+        // NOW, it's time to add things and set up a new world
         // ------------------------
         this.setUpWorld();
     }
 
     private tearDownWorld() {
         // Tear down dynamic entities
-        this.tearDownDynamicEntities();
+        this.tearDownEntities();
         
         // Empty the various PIXI containers in order
         this.tearDownContainersInOrder();
+
+        // Remove all lights
+        LightManager.instance.removeAllLights();
+
+        // Remove all effects
+        ParticleEffectManager.instance.removeAllEffects();
         
         // Remove all bodies / fixtures from Planck world
-        let body = this.world?.getBodyList();
+        let body = this.world!.getBodyList();
         let counter = 0;
         while (body) {
             const nextBody = body.getNext();
-            this.world?.destroyBody(body);
+            this.world!.destroyBody(body);
             counter++;
             body = nextBody;
         }
         this.bodiesToDestroy = [];
 
         // Remove any listeners
-        if (this.world) {
-            this.world.off('begin-contact', this.onBeginContact.bind(this));
-        }
+        this.world!.off('begin-contact', this.onBeginContact.bind(this));
     }
 
     private setUpWorld() {
@@ -202,108 +203,26 @@ export class World {
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
 
-        // Regenerate level and place player and finish tiles
-        // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
-        //     Config.LevelDimensions.width, 
-        //     Config.LevelDimensions.height,
-        //     Config.MapGeneration.CellularAutomata.wallChance,
-        //     Config.MapGeneration.CellularAutomata.smoothingSteps
-        // );
-
-        const { map: levelMap, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
-            Config.LevelDimensions.width,
-            Config.LevelDimensions.height,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.percentOpen,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.maxWalkers,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.walkerLifetime,
-            Config.MapGeneration.DrunkardsWalkWithSmoothing.smoothingSteps
-        );
-
-        // Useful for look up information
-        this.rawLevelMap = levelMap;
-
-        // TODO Is this the better way to do edge detection?
-        const horizontalEdges = MapUtils.createMergedHorizontalEdgesFromTilemap(this.rawLevelMap);
-        const verticalEdges = MapUtils.createMergedVerticalEdgesFromTilemap(this.rawLevelMap)
-        this.mergedEdges = [...horizontalEdges, ...verticalEdges];
-
-        // Use text renderer for debug purposes
-        // MapGenerator.renderMap(this.rawLevelMap); 
-
-        // Construct the level and finish tiles (among other entities and lights)
-        this.level = new Level(
+        // Create a proceduarally generated level
+        this.level = LevelUtils.createProcGenLevel(
             this.world, {
                 levelGeometryContainer: this.levelGeometryContainer,
+                preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
-            }, 
-            this.rawLevelMap, 
-            openSpaces,
-            this.mergedEdges
-        );
-
-        // Find a random valid starting spot for player
-        const [startX, startY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-        
-        // Construct a player at a given location
-        this.player = new Player(
-            this.world, 
-            this.mergedEdges, 
-            {x: Number(startX), y: Number(startY)}, {
-                containerForEntity: this.entitiesContainer,
-                containerForParticles: this.preEntitiesContainer,
-            }
+            },
+            ProGenLevelsConfig.Standard // ProGenLevelsConfig.Simple
         );
         
-        // Add player's dynamic light to the array if it exists
-        this.player?.dynamicLight && this.dynamicLights.push(this.player.dynamicLight);
-
-        // Construct the sentries
-        const maxSentries = Math.ceil(Config.SentryMaxDensity * openSpaces.length);
-        for (let i = 0; i < maxSentries; i++) {
-            // Find random valid start point
-            const [spawnX, spawnY] = openSpaces[Math.floor(Math.random() * openSpaces.length)].split(",");
-            const initialVelocity = PhysicsUtils.randomUnitVector().mul(Config.Movement.maxSpeed);
-            const sentry = new Sentry(
-                this.world, 
-                this.mergedEdges, 
-                {x: Number(spawnX), y: Number(spawnY)}, {
-                    containerForEntity: this.entitiesContainer,
-                    containerForParticles: this.preEntitiesContainer,
-                },
-                initialVelocity
-            );
-            this.sentries.push(sentry);
-
-            // Add sentry's dynamic light to the array if it exists
-            sentry.dynamicLight && this.dynamicLights.push(sentry.dynamicLight);
-        }
-
-        // Store  static light
-        this.staticLights = this.level.getLights();
+        // Get the player - our "first class" entity
+        this.player = this.level.getPlayer();
 
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }
 
-    private tearDownDynamicEntities() {
-        this.player?.destroy();
-        
-        // Destroy the sentries
-        this.sentries.forEach((sentry) => {
-            sentry.destroy();
-        });
-        this.sentries = [];
-
-        // Kill the lights
-        // this.staticLights.forEach((light) => {
-        //     light.destroy();
-        // });
-        this.staticLights = [];
-
-        // this.dynamicLights.forEach((light) => {
-        //     light.destroy();
-        // });
-        this.dynamicLights = [];
+    private tearDownEntities() {
+         // Destroy the level (and all entities within, including the player)
+        this.level!.destroy();
     }
 
     private tearDownContainersInOrder() {
@@ -346,7 +265,7 @@ export class World {
     }
     
     /**
-     * Handles collision events from Planck.js, such as the player reaching a finish tile
+     * Handles collision events from Planck.js, such as the player reaching a exit tile
      * or interacting with walls.
      * @param {planck.Contact} contact - The collision contact event from Planck.js.
      */
@@ -355,10 +274,10 @@ export class World {
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
-            (aData.type === Config.Player.type && bData.type === Config.Finish.type) ||
-            (aData.type === Config.Finish.type && bData.type === Config.Player.type)
+            (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
+            (aData.type === Config.Exit.type && bData.type === Config.Player.type)
         ) {
-            console.log("Player reached finish tile!");
+            console.log("Player reached exit tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
@@ -375,97 +294,54 @@ export class World {
             // Handle player hitting a sentry
             console.log("Player hit a sentry!");
 
-            const sentryEntity: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
-            this.player?.handlePickup(sentryEntity.type);
-            this.softlyKillSentryEntity(sentryEntity);
+            const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
+            if (sentryData.entity) {
+                this.player!.onPickup(sentryData.type);
+                this.gentlyDestroyEntity(sentryData.type, sentryData.entity);
+            }
+
+            // Disable the contact to prevent the sentry from physically reacting with the player
+            contact.setEnabled(false)
         } else if (
+            (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
+            (aData.type === Config.Torch.type && bData.type === Config.Player.type)
+        ) {
+            // Handle player hitting a torch
+            console.log("Player hit a torch!");
+
+            const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
+            if (torchEntity.entity) {
+                this.player!.onPickup(torchEntity.type);
+                this.gentlyDestroyEntity(torchEntity.type,torchEntity.entity);
+            }
+        }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {
             // TODO Handle a sentry hitting another sentry
             console.log("Sentry hit another sentry!");
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Fuel.type) ||
-            (aData.type === Config.Fuel.type && bData.type === Config.Player.type)
+            (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
+            (aData.type === Config.Anti.type && bData.type === Config.Player.type)
         ) {
-            // Pick up and remove fuel
-            console.log("Player picked up fuel!");
+            // Pick up and remove anti
+            console.log("Player picked up an anti!");
 
-            const fuelEntity: EntityUserData = aData?.type === Config.Fuel.type ? aData : bData; // TODO Make this a little more foolproof
-            this.player?.handlePickup(fuelEntity.type);
-            this.softlyKillStaticEntity(fuelEntity);
+            const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
+            if (antiEntity.entity) {
+                this.player!.onPickup(antiEntity.type);
+                this.gentlyDestroyEntity(antiEntity.type, antiEntity.entity);
+            }
         }
     }
 
-    private softlyKillSentryEntity(sentryEntity: EntityUserData) {
-        this.entitiesContainer.removeChild(sentryEntity.sprite);
-
-        // Remove body
-        if (sentryEntity.body) {
-            this.world?.destroyBody(sentryEntity.body);
-        }
-
-        // Find the light
-        let index = this.dynamicLights.findIndex((light) => light.entityId === sentryEntity.id);
-
-        if (index !== -1) {
-            const light = this.dynamicLights[index]; // We'll handle removal after fade
-            light.fadeOutAndDestroy(() => {
-                const idx = this.dynamicLights.indexOf(light);
-                
-                // Actually remove from dynamic lights array after fade, if not already done
-                if (idx !== -1) {
-                    this.dynamicLights.splice(idx, 1);
-                }
-
-                // Light sprite and mask are destroyed in the fadeOut method
-            });
-        }
-
-        // Now destroy the sentry (With any particle emitter associated)
-        // TODO Make the sentry / dynamic entity's destroy function also destroy the light?
-        index = this.sentries.findIndex((sentry) => {
-            return sentry.id === sentryEntity.id;
-        });
-
-        if (index !== -1) {
-            const [sentry] = this.sentries.splice(index, 1);
-            sentry.destroy();
-        }
-
-        // Lastly, flag the body of the sentry entity for destruction
-        this.bodiesToDestroy.push(sentryEntity.body);
-    }
-
-    private softlyKillStaticEntity(staticEntity: EntityUserData) {
-        // TODO Entity might live in a different container
-        this.entitiesContainer.removeChild(staticEntity.sprite);
-
-        // Remove body
-        if (staticEntity.body) {
-            this.world?.destroyBody(staticEntity.body);
-        }
-
-        // Find the light
-        const index = this.staticLights.findIndex((light) => light.entityId === staticEntity.id);
-
-        if (index !== -1) {
-            const light = this.staticLights[index]; // We'll handle removal after fade
-            light.fadeOutAndDestroy(() => {
-                const idx = this.staticLights.indexOf(light);
-                
-                // Actually remove from static lights after fade, if not already done
-                if (idx !== -1) {
-                    this.staticLights.splice(idx, 1);
-                }
-
-                // Light sprite and mask are destroyed in the fadeOut method
-            });
-        }
+    private gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
+        // Gently destroy the entity from the level
+        this.level!.gentlyDestroyEntity(type, entity);
 
         // TODO Do any other additional destruction on the entity or its subsystems
 
         // Lastly, flag the body of the entity for destruction
-        this.bodiesToDestroy.push(staticEntity.body);
+        this.bodiesToDestroy.push(entity.body);
     }
 
     /**
@@ -476,8 +352,8 @@ export class World {
         // If the level is smaller than the screen, center it. Otherwise, center on the player.
         if (!this.player || !this.worldContainer) return;
 
-        const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
-        const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
@@ -491,7 +367,7 @@ export class World {
             this.worldContainer.x += (targetX - this.worldContainer.x);
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
          }
 
         if (levelHeightInPixels <= screenHeight) {
@@ -503,7 +379,7 @@ export class World {
             this.worldContainer.y += (targetY - this.worldContainer.y);
 
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
         }
     }
 
@@ -519,19 +395,14 @@ export class World {
         this.updateFromInput(deltaTime);
 
         // Step the physics
-        this.world?.step(deltaTime);
+        this.world!.step(deltaTime);
     
-        // Update player
-        this.player?.update(deltaTime);
-    
-        // Update sentries
-        this.sentries.forEach((sentry) => {
-            sentry.update(deltaTime);
-        });
-        // TODO Any other entities to update?    
+        // Update level 
+        // (For player, dynamic entities, static entities with effect, dynamic geometry, etc)
+        this.level!.update(deltaTime);
 
-        // Update level (For dynamic entities or geometry)
-        this.level?.update();
+        // Update particle effects
+        ParticleEffectManager.instance.update(deltaTime);
 
         // Update camera
         this.updateCamera(deltaTime);
@@ -546,7 +417,7 @@ export class World {
     private processBodiesToDestroy() {
         this.bodiesToDestroy.forEach(body => {
             if (body) {
-                this.world?.destroyBody(body);
+                this.world!.destroyBody(body);
             }
         });
         this.bodiesToDestroy = [];
@@ -586,8 +457,8 @@ export class World {
         // Smooth camera follow
         if (!this.player || !this.player.sprite || !this.worldContainer) return;
 
-        const levelWidthInPixels = Config.LevelDimensions.width * Config.PixelsPerMeter;
-        const levelHeightInPixels = Config.LevelDimensions.height * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
         const screenWidth = this.viewportWidth;
         const screenHeight = this.viewportHeight;
 
@@ -617,7 +488,7 @@ export class World {
             this.worldContainer.x -= moveX * Config.Camera.lerpFactor * deltaTime;
 
             // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - Config.LevelDimensions.width * Config.PixelsPerMeter));
+            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
         }
 
         // Center on y-axis if level is shorter than screen
@@ -646,7 +517,7 @@ export class World {
             this.worldContainer.y -= moveY * Config.Camera.lerpFactor * deltaTime;
             
             // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - Config.LevelDimensions.height * Config.PixelsPerMeter));
+            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
         }
    
         // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
@@ -658,6 +529,9 @@ export class World {
     }
 
     private updateAndRenderLights() {
+        // Update all lights
+        LightManager.instance.update();
+
         const cameraOffset = {
             x: -this.worldContainer.x,
             y: -this.worldContainer.y
@@ -673,9 +547,15 @@ export class World {
         // Clear the lightmap container
         this.tempLightmapContainer.removeChildren();
 
-        // Render all lights to the lightmap container
-        LightUtils.renderLightsBatch(this.dynamicLights, cameraOffset, screenBounds, this.tempLightmapContainer);
-        LightUtils.renderLightsBatch(this.staticLights, cameraOffset, screenBounds, this.tempLightmapContainer);
+        // Render all lights to the lightmap container using LightManager
+        LightUtils.renderLightsBatch(
+            LightManager.instance.getDynamicLights(),
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
+        LightUtils.renderLightsBatch(
+            LightManager.instance.getStaticLights(),
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
 
        // Render all lights in the container to the render texture (lightmap)
        this.app.renderer.render({
@@ -688,8 +568,10 @@ export class World {
             target: this.lightmapTexture, 
             clear: false
         });
-    }
 
+        // Process any lights that exited fading out after all updates/renders
+        LightManager.instance.processPendingRemovals();
+    }
     
 
     // @ts-ignore

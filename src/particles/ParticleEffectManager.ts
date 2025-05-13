@@ -42,7 +42,10 @@ export class ParticleEffectManager {
 
     /** Play an effect of a certain type at given position, optionally for a given (possibly overriding) duration of time */
     playEffect(containerToAddEffectTo: PIXI.Container, type: ParticleEffectType, position: {x: number, y: number}, duration?: number): ParticleEffect {
-        const effect = new ParticleEffect({ ...ParticleEffectsConfig[type], duration });
+        const effect = new ParticleEffect({ 
+            ...ParticleEffectsConfig[type], 
+            duration: duration || ParticleEffectsConfig[type].duration 
+        });
         containerToAddEffectTo.addChild(effect.container);
         effect.setPosition(position.x, position.y);
         this.addEffect(effect);

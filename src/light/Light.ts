@@ -37,7 +37,7 @@ export class Light {
     public isFadingOut: boolean = false;
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
-    public pos: Point;
+    protected pos: Point;
     public entityId: string = "";
     protected collisionData: Segment[];
     protected lightPoints: { point: Point; angle: number }[];
@@ -159,6 +159,14 @@ export class Light {
     public destroy() {
         this.mask?.destroy();
         this.sprite?.destroy();
+    }
+
+    public setPosition(pos: Point) {
+        this.pos = {...pos};
+    }
+
+    public getPosition(): Point {
+        return {...this.pos};
     }
 }
 

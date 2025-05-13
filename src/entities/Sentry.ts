@@ -1,8 +1,7 @@
 import { Config } from '../config/Config';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityContainers, EntityUserData } from './BaseEntity';
-import { DynamicEntity } from './DynamicEntity';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
 import { SpriteUtils } from '../utils/SpriteUtils';
@@ -10,6 +9,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as PIXI from 'pixi.js';
 import { EntityUtils } from '../utils/EntityUtils';
 import { LevelContext } from '../level/LevelContext';
+import { DynamicLight } from '../light/Light';
 
 export interface SentryOptions { 
     spawnPoint: Point,
@@ -18,7 +18,7 @@ export interface SentryOptions {
     levelContext: LevelContext
 }
 
-export class Sentry extends DynamicEntity {
+export class Sentry extends BaseEntity {
     constructor(options: SentryOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Sentry.type);
@@ -50,14 +50,21 @@ export class Sentry extends DynamicEntity {
             }
         });
 
+        // Create the light
+        const light = new DynamicLight(
+            {...body.getPosition()},
+            options.levelContext.getEdgesList(),
+            { ...LightsConfig.SentryLight },
+            id,
+        );
+
         super({
             id,
             sprite,
             body,
+            light,
             particleEffectOptions: { ...ParticleEffectsConfig.SentryTrail },
-            containers: options.containers,
-            lightOptions: { ...LightsConfig.SentryLight },
-            levelContext: options.levelContext
+            containers: options.containers
         });
 
         // Set user data with a self-referencing data
@@ -89,7 +96,10 @@ export class Sentry extends DynamicEntity {
         this.sprite.y = (this.body.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Update the particle effect position
+        // Update the light position (Use meters, not pixels)
+        this.light?.setPosition({...this.body.getPosition()});
+
+        // Update the particle effect position (Using pixels, not meters)
         this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2

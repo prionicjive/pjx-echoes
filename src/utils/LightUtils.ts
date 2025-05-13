@@ -72,8 +72,8 @@ export class LightUtils {
             light.sprite.visible = true;
             light.mask.visible = true;
     
-            const screenX = (light.pos.x * Config.PixelsPerMeter) - cameraOffset.x;
-            const screenY = (light.pos.y * Config.PixelsPerMeter) - cameraOffset.y;
+            const screenX = (light.getPosition().x * Config.PixelsPerMeter) - cameraOffset.x;
+            const screenY = (light.getPosition().y * Config.PixelsPerMeter) - cameraOffset.y;
     
             light.sprite.x = screenX;
             light.sprite.y = screenY;

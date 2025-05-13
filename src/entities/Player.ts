@@ -7,19 +7,18 @@
  */
 
 import { Config } from '../config/Config';
-import { EntityType, EntityUserData } from './types';
+import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { PointerState, SwipeState } from '../input/InputManager';
-import { EntityContainers } from './BaseEntity';
-import { DynamicEntity } from './DynamicEntity';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
-import { LightOwner } from '../light/Light';
+import { DynamicLight } from '../light/Light';
 import { LevelContext } from '../level/LevelContext';
 
 export interface PlayerOptions { 
@@ -28,7 +27,7 @@ export interface PlayerOptions {
     levelContext: LevelContext
 }
 
-export class Player extends DynamicEntity implements LightOwner {
+export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Player.type);
@@ -63,14 +62,21 @@ export class Player extends DynamicEntity implements LightOwner {
             linearDamping: Config.Physics.Player.linearDamping
         });
 
+        // Create the light
+        const light = new DynamicLight(
+            {...body.getPosition()},
+            options.levelContext.getEdgesList(),
+            { ...LightsConfig.PlayerLight },
+            id,
+        );
+
         super({
             id,
             sprite,
             body,
+            light,
             particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
-            containers: options.containers,
-            lightOptions: { ...LightsConfig.PlayerLight },
-            levelContext: options.levelContext
+            containers: options.containers
         });
 
         // Set user data with a self-referencing data
@@ -260,7 +266,10 @@ export class Player extends DynamicEntity implements LightOwner {
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Update position of the particle effect
+        // Update the light position (Use meters, not pixels)
+        this.light?.setPosition({...this.body.getPosition()});
+
+        // Update the particle effect position (Using pixels, not meters)
         this.particleEffect?.setPosition(
             this.sprite.x + this.sprite.width / 2,
             this.sprite.y + this.sprite.height / 2

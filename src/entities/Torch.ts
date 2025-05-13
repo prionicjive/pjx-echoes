@@ -62,10 +62,6 @@ export class Torch extends BaseEntity {
         const particleEffect = new ParticleEffect({
             ...ParticleEffectsConfig.TorchRadiance,
         });
-        particleEffect.setPosition(
-            sprite.x + sprite.width / 2,
-            sprite.y + sprite.height / 2
-        );
 
         super({
             id,
@@ -83,10 +79,7 @@ export class Torch extends BaseEntity {
         } as EntityUserData);
     
         // Set the initial position of the particle effect
-        this.particleEffect?.setPosition(
-            this.sprite.x + this.sprite.width / 2,
-            this.sprite.y + this.sprite.height / 2
-        );
+        EntityUtils.syncEffectToSprite(this);
     }
 
     // @ts-ignore

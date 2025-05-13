@@ -73,7 +73,7 @@ export class Anti extends BaseEntity {
 
     // @ts-ignore
     update(deltaTime: number) {
-        // TODO Do any custom updating
+        // No need to update light or particle effect positions... yet? 
     }
 
     // Optionally, add any unique logic on pickup

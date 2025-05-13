@@ -71,14 +71,10 @@ export class Player extends BaseEntity {
             id,
         );
 
-        // Create the particle effect and set initial position
+        // Create the particle effect
         const particleEffect = new ParticleEffect({
             ...ParticleEffectsConfig.PlayerTrail,
         });
-        particleEffect.setPosition(
-            sprite.x + sprite.width / 2,
-            sprite.y + sprite.height / 2
-        );
 
         super({
             id,
@@ -88,6 +84,9 @@ export class Player extends BaseEntity {
             particleEffect,
             containers: options.containers
         });
+
+        // Set initial position
+        EntityUtils.syncEffectToSprite(this);
 
         // Set user data with a self-referencing data
         body.setUserData({
@@ -276,14 +275,8 @@ export class Player extends BaseEntity {
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Update the light position (Use meters, not pixels)
-        this.light?.setPosition({...this.body.getPosition()});
-
-        // Update the particle effect position (Using pixels, not meters)
-        this.particleEffect?.setPosition(
-            this.sprite.x + this.sprite.width / 2,
-            this.sprite.y + this.sprite.height / 2
-        );
+        EntityUtils.syncLightToBody(this);
+        EntityUtils.syncEffectToSprite(this);
     }
 
     onPickup(type: EntityType) {

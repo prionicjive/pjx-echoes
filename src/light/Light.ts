@@ -1,10 +1,10 @@
-import gsap from 'gsap';
 import * as PIXI from 'pixi.js';
+import gsap from 'gsap';
+import { SpriteUtils } from '../utils/SpriteUtils';
 import { Config } from '../config/Config';
-import { CollisionUtils } from '../utils/CollisionUtils';
 import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { LightUtils } from '../utils/LightUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
+import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
 
 export interface LightOptions {

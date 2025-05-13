@@ -100,13 +100,7 @@ export class Sentry extends BaseEntity {
         this.sprite.y = (this.body.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Update the light position (Use meters, not pixels)
-        this.light?.setPosition({...this.body.getPosition()});
-
-        // Update the particle effect position (Using pixels, not meters)
-        this.particleEffect?.setPosition(
-            this.sprite.x + this.sprite.width / 2,
-            this.sprite.y + this.sprite.height / 2
-        );
+        EntityUtils.syncLightToBody(this);
+        EntityUtils.syncEffectToSprite(this);
     }
 }

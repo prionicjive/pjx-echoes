@@ -73,25 +73,25 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
     },
     Explosion: {
         texturePath: Config.Textures.Particles.circleSoft,
-        emitPerSecond: 10,
-        maxParticles: 500,
-        duration: 30,
+        emitPerSecond: 2,
+        maxParticles: 100,
+        duration: 5,
         particleOptions: {
             maxAge: 5.5,
             startAlpha: 1,
-            endAlpha: 1,
-            startScaleX: 10,
-            startScaleY: 10,
-            endScaleX: 10,
-            endScaleY: 10,
+            endAlpha: 0,
+            startScaleX: 5,
+            startScaleY: 5,
+            endScaleX: 2,
+            endScaleY: 2,
             width: Config.Torch.width * Config.PixelsPerMeter,
             height: Config.Torch.height * Config.PixelsPerMeter,
             startTint: new PIXI.Color(Config.Torch.color),
             endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
             startDirection: {x: 1, y: 0},
             endDirection: {x: 0, y: 1},
-            startSpeed: 20,
-            endSpeed: 20
+            startSpeed: 200,
+            endSpeed: 200
         }
     }
 };

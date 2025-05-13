@@ -216,10 +216,6 @@ export class World {
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();
 
-        // Play torch radiance effect
-        ParticleEffectManager.instance.removeAllEffects();
-        ParticleEffectManager.instance.playEffect(this.preEntitiesContainer, "Explosion", {x: this.player.sprite.x, y: this.player.sprite.y}, 10);
-
         // Instantly center camera on player to avoid an initial soft follow
         this.instantlyCenterCamera();      
     }

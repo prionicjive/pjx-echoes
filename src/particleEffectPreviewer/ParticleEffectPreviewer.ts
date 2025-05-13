@@ -1,23 +1,22 @@
-// Game.ts
-// Main game controller for pjx-echoes.
-// Handles initialization, the main loop, and delegation to the World.
+// ParticleEffectPreviewer.ts
+// Handles initialization, the main loop, and delegation to the EffectsWorld.
 // Everything flows through here!
 
 import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
 import { Config } from '../config/Config.ts';
-import { World } from './World.ts';
+import { EffectsWorld } from './EffectsWorld.ts';
 
-export class Game {
+export class ParticleEffectPreviewer {
     private app: PIXI.Application | null = null;
-    private world: World | null = null;
+    private world: EffectsWorld | null = null;
 
     constructor() {}
 
     /**
      * Initializes the PIXI application, loads all required assets,
-     * and starts the main game loop.
+     * and starts the main loop.
      * @async
      * @returns {Promise<void>}
      */
@@ -37,15 +36,14 @@ export class Game {
         // Give the plugin a reference to the PIXI object
         PixiPlugin.registerPIXI(PIXI);
 
-        // Preload textures before starting the game loop to avoid rendering glitches.
-        // TODO Load any other assets possibly need by the game
+        // Preload textures before starting the loop to avoid rendering glitches.
         await this.loadAssets();
 
         // Set up the resize handler
         window.addEventListener('resize', () => this.handleResize());
 
-        // Create the game world
-        this.world = new World(this.app);
+        // Create the effects world
+        this.world = new EffectsWorld(this.app);
 
         // TODO Handle additional setup if needed
 
@@ -59,7 +57,7 @@ export class Game {
         const height = window.innerHeight;
         this.app.renderer.resize(width, height);
         if (this.world) {
-            this.world.onResize(width, height);
+            //this.world.onResize(width, height);
         }
     }
 
@@ -71,14 +69,6 @@ export class Game {
     async loadAssets() {
         // Load textures
         // TODO Refactor how assets are fetched
-        await PIXI.Assets.load(Config.Textures.player);
-        await PIXI.Assets.load(Config.Textures.sentry);
-        await PIXI.Assets.load(Config.Textures.wall);
-        await PIXI.Assets.load(Config.Textures.exit);
-        await PIXI.Assets.load(Config.Textures.torch); 
-        await PIXI.Assets.load(Config.Textures.torch); 
-        await PIXI.Assets.load(Config.Textures.anti);
-        await PIXI.Assets.load(Config.Textures.block);
 
         await PIXI.Assets.load(Config.Textures.Particles.ring);
         await PIXI.Assets.load(Config.Textures.Particles.ringSoft);
@@ -98,3 +88,5 @@ export class Game {
         this.world.update(deltaTime);
     }
 }
+
+

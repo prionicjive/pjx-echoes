@@ -1,8 +1,8 @@
-import { Segment, Point } from "../utils/types";
-import { CollisionUtils } from "./CollisionUtils";
+import * as PIXI from "pixi.js";
 import { Config } from "../config/Config";
 import { Light } from "../light/Light";
-import * as PIXI from "pixi.js";
+import { Point, Segment } from "../utils/types";
+import { CollisionUtils } from "./CollisionUtils";
 
 export class LightUtils {
     /**

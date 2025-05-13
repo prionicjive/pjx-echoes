@@ -1,4 +1,4 @@
-import { Container, Sprite, Color } from 'pixi.js';
+import { Color, Container, Sprite } from 'pixi.js';
 import { Point } from '../utils/types';
 
 export interface ParticleEffectOptions {

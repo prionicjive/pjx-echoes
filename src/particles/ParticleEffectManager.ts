@@ -1,7 +1,7 @@
+import * as PIXI from 'pixi.js';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { ParticleEffect } from './ParticleEffect';
 import { ParticleEffectType } from './types';
-import * as PIXI from 'pixi.js';
 
 export class ParticleEffectManager {
     private static _instance: ParticleEffectManager;

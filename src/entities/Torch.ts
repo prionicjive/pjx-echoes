@@ -1,16 +1,16 @@
-import * as planck from 'planck';
-import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
-import { Config } from '../config/Config';
-import { SpriteUtils } from '../utils/SpriteUtils';
-import { EntityUtils } from '../utils/EntityUtils';
 import * as PIXI from 'pixi.js';
+import * as planck from 'planck';
+import { Config } from '../config/Config';
 import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { LevelContext } from '../level/LevelContext';
-import { LightManager } from '../light/LightManager';
 import { StaticLight } from '../light/Light';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { Point } from '../utils/types';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 
 export interface TorchOptions { 
     levelContext: LevelContext, 
@@ -58,15 +58,21 @@ export class Torch extends BaseEntity {
             id
         );
 
-        // Add light to the LightManager
-        LightManager.instance.addLight(light);
+        // Create the particle effect and set initial position
+        const particleEffect = new ParticleEffect({
+            ...ParticleEffectsConfig.TorchRadiance,
+        });
+        particleEffect.setPosition(
+            sprite.x + sprite.width / 2,
+            sprite.y + sprite.height / 2
+        );
 
         super({
             id,
             sprite,
             body,
             light,
-            particleEffectOptions: { ...ParticleEffectsConfig.TorchRadiance },
+            particleEffect,
             containers: options.containers,
         });
 
@@ -85,7 +91,7 @@ export class Torch extends BaseEntity {
 
     // @ts-ignore
     update(deltaTime: number) {
-        // TODO Do any custom updating   
+        // No need to update light or particle effect positions... yet? 
     }
 
     // Optionally, add any unique logic on pickup

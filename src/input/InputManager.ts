@@ -1,5 +1,5 @@
-import { SwipeGesture } from "./SwipeGesture";
 import { Point } from "../utils/types";
+import { SwipeGesture } from "./SwipeGesture";
 
 export interface PointerState {
     screen: Point,

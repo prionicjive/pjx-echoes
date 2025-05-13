@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
-import { ParticleEffectManager } from '../particles/ParticleEffectManager';
-import { ParticleEffect } from '../particles/ParticleEffect';
 import { InputManager } from '../input/InputManager';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 
 export class EffectsWorld {
     private app: PIXI.Application;

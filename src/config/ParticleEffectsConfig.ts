@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { Config } from './Config';
 import { ParticleEffectType } from '../particles/types';
+import { Config } from './Config';
 
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {

@@ -3,9 +3,9 @@
 // Handles initialization, the main loop, and delegation to the World.
 // Everything flows through here!
 
-import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
+import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
 

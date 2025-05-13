@@ -6,20 +6,21 @@
  * @module Player
  */
 
-import { Config } from '../config/Config';
-import { EntityType } from './types';
-import { EntityUtils } from '../utils/EntityUtils';
-import { Point } from '../utils/types';
-import * as planck from 'planck';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { PointerState, SwipeState } from '../input/InputManager';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
-import { LightsConfig } from '../config/LightsConfig';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
-import { DynamicLight } from '../light/Light';
+import * as planck from 'planck';
+import { Config } from '../config/Config';
+import { LightsConfig } from '../config/LightsConfig';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
+import { PointerState, SwipeState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
+import { DynamicLight } from '../light/Light';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { Point } from '../utils/types';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntityType } from './types';
 
 export interface PlayerOptions { 
     spawnPoint: Point,
@@ -70,12 +71,21 @@ export class Player extends BaseEntity {
             id,
         );
 
+        // Create the particle effect and set initial position
+        const particleEffect = new ParticleEffect({
+            ...ParticleEffectsConfig.PlayerTrail,
+        });
+        particleEffect.setPosition(
+            sprite.x + sprite.width / 2,
+            sprite.y + sprite.height / 2
+        );
+
         super({
             id,
             sprite,
             body,
             light,
-            particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
+            particleEffect,
             containers: options.containers
         });
 

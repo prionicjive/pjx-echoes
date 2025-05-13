@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js';
-import { Light } from '../light/Light';
-import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 import * as planck from 'planck';
-import { ParticleEffectManager } from '../particles/ParticleEffectManager';
+import { Light } from '../light/Light';
 import { LightManager } from '../light/LightManager';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { EntityType } from './types';
 
 export interface EntityContainers {
@@ -16,7 +16,7 @@ export interface BaseEntityOptions {
     sprite: PIXI.Sprite;
     body?: planck.Body;
     light?: Light;
-    particleEffectOptions?: ParticleEffectOptions;
+    particleEffect?: ParticleEffect;
     containers: EntityContainers;
 }
 
@@ -49,15 +49,12 @@ export abstract class BaseEntity {
             LightManager.instance.addLight(this.light);
         }
 
-        // Set up particle effect (if needed)
-        if (options.particleEffectOptions && this.containers.containerForParticleEffects) {
-            this.particleEffect = new ParticleEffect(options.particleEffectOptions);
+        // Store and set up particle effect for management
+        if (options.particleEffect && this.containers.containerForParticleEffects) {
+            this.particleEffect = options.particleEffect;
             this.containers.containerForParticleEffects.addChild(this.particleEffect.container);
-
-            // Add to the manager
             ParticleEffectManager.instance.addEffect(this.particleEffect);
         }
-        // No light construction here!
     }
 
     destroy() {

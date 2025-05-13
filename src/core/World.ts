@@ -1,17 +1,17 @@
+import { BloomFilter, CRTFilter } from 'pixi-filters';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
-import { CRTFilter, BloomFilter } from 'pixi-filters';
+import { Config } from '../config/Config.ts';
+import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
+import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
+import { EntityType } from '../entities/types.ts';
+import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
-import { Config } from '../config/Config.ts'; 
-import { EntityType } from '../entities/types.ts'; 
-import { InputManager } from '../input/InputManager.ts';
-import { LightUtils } from '../utils/LightUtils.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
-import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
-import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
+import { LightUtils } from '../utils/LightUtils.ts';
 
 export class World {
     private app: PIXI.Application;

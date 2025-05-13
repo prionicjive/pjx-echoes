@@ -1,5 +1,5 @@
-import { Light } from './Light';
 import gsap from 'gsap';
+import { Light } from './Light';
 
 export type LightId = string;
 

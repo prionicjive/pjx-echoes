@@ -2,8 +2,8 @@ import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config';
 import { EntityUtils } from '../utils/EntityUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { BaseEntity, EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 
 export interface WallOptions { 
     spawnPoint: Point,

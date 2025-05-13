@@ -1,15 +1,14 @@
 import * as PIXI from 'pixi.js';
+import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LightsConfig } from '../config/LightsConfig';
+import { LevelContext } from '../level/LevelContext';
+import { StaticLight } from '../light/Light';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { BaseEntity,EntityContainers, EntityUserData } from './BaseEntity';
 import { Point } from '../utils/types';
-import * as planck from 'planck';
-import { LevelContext } from '../level/LevelContext';
-import { LightManager } from '../light/LightManager';
-import { StaticLight } from '../light/Light';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 
 export interface AntiOptions {
     spawnPoint: Point,
@@ -56,9 +55,6 @@ export class Anti extends BaseEntity {
             { ...LightsConfig.AntiLight },
             id
         );
-
-        // Add light to the LightManager
-        LightManager.instance.addLight(light);
 
         super({
             id,

@@ -1,15 +1,16 @@
-import { Config } from '../config/Config';
-import { Point } from '../utils/types';
-import * as planck from 'planck';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
-import { LightsConfig } from '../config/LightsConfig';
-import { SpriteUtils } from '../utils/SpriteUtils';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as PIXI from 'pixi.js';
-import { EntityUtils } from '../utils/EntityUtils';
+import * as planck from 'planck';
+import { Config } from '../config/Config';
+import { LightsConfig } from '../config/LightsConfig';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { Point } from '../utils/types';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 
 export interface SentryOptions { 
     spawnPoint: Point,
@@ -58,12 +59,21 @@ export class Sentry extends BaseEntity {
             id,
         );
 
+        // Create the particle effect and set initial position
+        const particleEffect = new ParticleEffect({
+            ...ParticleEffectsConfig.SentryTrail,
+        });
+        particleEffect.setPosition(
+            sprite.x + sprite.width / 2,
+            sprite.y + sprite.height / 2
+        );
+
         super({
             id,
             sprite,
             body,
             light,
-            particleEffectOptions: { ...ParticleEffectsConfig.SentryTrail },
+            particleEffect,
             containers: options.containers
         });
 
@@ -77,12 +87,6 @@ export class Sentry extends BaseEntity {
         if( options.initialVelocity) {
             this.body.setLinearVelocity(options.initialVelocity);
         }
-
-        // Set the initial position of the particle effect
-        this.particleEffect?.setPosition(
-            this.sprite.x + this.sprite.width / 2,
-            this.sprite.y + this.sprite.height / 2
-        );
     }
 
     /**

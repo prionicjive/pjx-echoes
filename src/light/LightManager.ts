@@ -9,8 +9,7 @@ export class LightManager {
      */
     private pendingRemove: Set<LightId> = new Set();
     private static _instance: LightManager | null = null;
-    private staticLights: Map<LightId, Light> = new Map();
-    private dynamicLights: Map<LightId, Light> = new Map();
+    private lights: Map<LightId, Light> = new Map();
 
     private constructor() {}
 
@@ -22,67 +21,40 @@ export class LightManager {
     }
 
     /**
-     * Add a single static light.
+     * Add a single light.
      */
-    addStaticLight(light: Light): LightId {
+    addLight(light: Light): LightId {
         const id = light.entityId || this.generateId();
         light.entityId = id;
-        this.staticLights.set(id, light);
-        // Optionally: light.calculateGeometry() here
+        this.lights.set(id, light);
         return id;
     }
 
     /**
-     * Add multiple static lights at once.
+     * Add multiple lights at once.
      */
-    addStaticLights(lights: Light[]): void {
+    addLights(lights: Light[]): void {
         for (const light of lights) {
-            this.addStaticLight(light);
+            this.addLight(light);
         }
     }
 
-    addDynamicLight(light: Light): LightId {
-        const id = light.entityId || this.generateId();
-        light.entityId = id;
-        this.dynamicLights.set(id, light);
-        return id;
-    }
-
     /**
-     * Remove a dynamic light by reference or ID, with a fade-out tween.
+     * Remove a light by reference or ID, with a fade-out tween.
      */
-    gentlyRemoveDynamicLight(lightOrId: Light | LightId) {
-        const light = typeof lightOrId === 'string' ? this.dynamicLights.get(lightOrId) : lightOrId;
+    gentlyRemoveLight(lightOrId: Light | LightId) {
+        const light = typeof lightOrId === 'string' ? this.lights.get(lightOrId) : lightOrId;
         if (light) {
             this.fadeOutAndRemoveLight(light);
         }
     }
 
-    removeDynamicLight(lightOrId: Light | LightId) {
-        const light = typeof lightOrId === 'string' ? this.dynamicLights.get(lightOrId) : lightOrId;
+    removeLight(lightOrId: Light | LightId) {
+        const light = typeof lightOrId === 'string' ? this.lights.get(lightOrId) : lightOrId;
         if (light) {
             // Destroy and remove right away
             light.destroy();
-            this.dynamicLights.delete(light.entityId);
-        }
-    }
-
-    /**
-     * Remove a static light by reference or ID, with a fade-out tween.
-     */
-    gentlyRemoveStaticLight(lightOrId: Light | LightId) {
-        const light = typeof lightOrId === 'string' ? this.staticLights.get(lightOrId) : lightOrId;
-        if (light) {
-            this.fadeOutAndRemoveLight(light);
-        }
-    }
-
-    removeStaticLight(lightOrId: Light | LightId) {
-        const light = typeof lightOrId === 'string' ? this.staticLights.get(lightOrId) : lightOrId;
-        if (light) {
-            // Destroy and remove right away
-            light.destroy();
-            this.staticLights.delete(light.entityId);
+            this.lights.delete(light.entityId);
         }
     }
 
@@ -111,10 +83,9 @@ export class LightManager {
     // At the end of update/render (or at the start of the next frame)
     public processPendingRemovals() {
         for (const id of this.pendingRemove) {
-            const light = this.dynamicLights.get(id) || this.staticLights.get(id);
+            const light = this.lights.get(id);
             if (light) {
-                this.dynamicLights.delete(id);
-                this.staticLights.delete(id);
+                this.lights.delete(id);
                 light.destroy();
             }
         }
@@ -122,42 +93,27 @@ export class LightManager {
     }
 
     /**
-     * Destroy then remove all static and dynamic lights.
+     * Destroy then remove all lights.
      */
     removeAllLights() {
-        for (const light of this.staticLights.values()) {
+        for (const light of this.lights.values()) {
             light.destroy();
         }
 
-        for (const light of this.staticLights.values()) {
-            light.destroy();
-        }
-        
-        this.staticLights.clear();
-        this.dynamicLights.clear();
+        this.lights.clear();
     }
 
     update() {
-        // Update all dynamic lights
-        for (const light of this.dynamicLights.values()) {
-            if (!light.isFadingOut) {
-                light.update(null);
-            }
-        }
-        
-        // Update all static lights
-        for (const light of this.staticLights.values()) {
+        // Update all lights
+        for (const light of this.lights.values()) {
             if (!light.isFadingOut) {
                 light.update(null);
             }
         }
     }
 
-    getStaticLights(): Light[] {
-        return Array.from(this.staticLights.values());
-    }
-    getDynamicLights(): Light[] {
-        return Array.from(this.dynamicLights.values());
+    getAllLights(): Light[] {
+        return Array.from(this.lights.values());
     }
 
     private generateId(): LightId {

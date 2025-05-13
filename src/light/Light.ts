@@ -162,25 +162,17 @@ export class Light {
     }
 }
 
-// Minimal interface for an owner that can provide a light position
-export interface LightOwner {
-    getLightPosition(): Point;
-}
-
 export class DynamicLight extends Light {
     // Tween for changing to a new base radius
     private changeRadiusTween?: gsap.core.Tween;
-    public owner?: LightOwner;
 
     constructor(
         pos: Point,
         collisionData: Segment[],
         options: LightOptions,
         entityId: string = "",
-        owner?: LightOwner
     ) {
         super(pos, collisionData, options, entityId);
-        if (owner) this.owner = owner;
         // TODO Any additional setup / initialization
     }
 
@@ -191,9 +183,7 @@ export class DynamicLight extends Light {
     }
 
     public update(pos: Point | null = null) {
-        // If owner is set, always query its position
-        const ownerPos = this.owner ? this.owner.getLightPosition() : pos;
-        super.update(ownerPos);
+        super.update(pos);
 
         const lightBounds = {
             minX: this.pos.x - this.radius,

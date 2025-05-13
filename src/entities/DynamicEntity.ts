@@ -3,7 +3,6 @@ import * as planck from 'planck';
 import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { DynamicLight, LightOptions } from '../light/Light';
 import { LightManager } from '../light/LightManager';
-import { LightOwner } from '../light/Light';
 import { LevelContext } from '../level/LevelContext';
 
 export interface DynamicEntityOptions extends BaseEntityOptions {
@@ -11,7 +10,7 @@ export interface DynamicEntityOptions extends BaseEntityOptions {
     levelContext: LevelContext;
 }
 
-export class DynamicEntity extends BaseEntity implements LightOwner {
+export class DynamicEntity extends BaseEntity {
     constructor(options: DynamicEntityOptions) {
         super(options);
 
@@ -26,16 +25,10 @@ export class DynamicEntity extends BaseEntity implements LightOwner {
                 options.levelContext.getEdgesList(),
                 options.lightOptions,
                 options.id,
-                this // Pass owner
             );
             
             // Add light to the LightManager
-            LightManager.instance.addDynamicLight(this.light);
+            LightManager.instance.addLight(this.light);
         }
-    }
-
-    getLightPosition() {
-        const pos = this.body.getPosition();
-        return { x: pos.x, y: pos.y };
     }
 }

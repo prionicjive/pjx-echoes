@@ -1,7 +1,7 @@
 import { Config } from '../config/Config';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityContainers } from './BaseEntity';
+import { EntityContainers, EntityUserData } from './BaseEntity';
 import { DynamicEntity } from './DynamicEntity';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LightsConfig } from '../config/LightsConfig';
@@ -9,8 +9,6 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import * as PIXI from 'pixi.js';
 import { EntityUtils } from '../utils/EntityUtils';
-import { EntityUserData } from './types';
-import { LightOwner } from '../light/Light';
 import { LevelContext } from '../level/LevelContext';
 
 export interface SentryOptions { 
@@ -20,7 +18,7 @@ export interface SentryOptions {
     levelContext: LevelContext
 }
 
-export class Sentry extends DynamicEntity implements LightOwner {
+export class Sentry extends DynamicEntity {
     constructor(options: SentryOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Sentry.type);

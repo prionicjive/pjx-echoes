@@ -549,11 +549,7 @@ export class World {
 
         // Render all lights to the lightmap container using LightManager
         LightUtils.renderLightsBatch(
-            LightManager.instance.getDynamicLights(),
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
-        LightUtils.renderLightsBatch(
-            LightManager.instance.getStaticLights(),
+            LightManager.instance.getAllLights(),
             cameraOffset, screenBounds, this.tempLightmapContainer
         );
 

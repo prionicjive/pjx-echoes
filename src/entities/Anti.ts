@@ -1,15 +1,15 @@
 import * as PIXI from 'pixi.js';
-import { StaticEntity } from './StaticEntity';
 import { Config } from '../config/Config';
 import { LightsConfig } from '../config/LightsConfig';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { EntityContainers } from './BaseEntity';
+import { BaseEntity,EntityContainers, EntityUserData } from './BaseEntity';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityUserData } from './types';
 import { LevelContext } from '../level/LevelContext';
+import { LightManager } from '../light/LightManager';
+import { StaticLight } from '../light/Light';
 
 export interface AntiOptions {
     spawnPoint: Point,
@@ -17,7 +17,7 @@ export interface AntiOptions {
     levelContext: LevelContext
 }
 
-export class Anti extends StaticEntity {
+export class Anti extends BaseEntity {
     constructor(options: AntiOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Anti.type);
@@ -44,15 +44,27 @@ export class Anti extends StaticEntity {
             }
         });
 
+        // Construct a static light
+        const center = {
+            x: options.spawnPoint.x + Config.Anti.width / 2,
+            y: options.spawnPoint.y + Config.Anti.height / 2
+        };
+
+        const light = new StaticLight(
+            center,
+            options.levelContext.getEdgesList(),
+            { ...LightsConfig.AntiLight },
+            id
+        );
+
+        // Add light to the LightManager
+        LightManager.instance.addLight(light);
+
         super({
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.AntiLight },
-            levelContext: options.levelContext,
-            position: options.spawnPoint,
-            width: Config.Anti.width,
-            height: Config.Anti.height,
+            light,
             containers: options.containers
         });
 

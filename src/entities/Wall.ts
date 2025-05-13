@@ -1,19 +1,16 @@
 import * as PIXI from 'pixi.js';
-import { StaticEntity } from './StaticEntity';
 import { Config } from '../config/Config';
 import { EntityUtils } from '../utils/EntityUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { EntityContainers } from './BaseEntity';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 import { Point } from '../utils/types';
-import { LevelContext } from '../level/LevelContext';
 
 export interface WallOptions { 
     spawnPoint: Point,
-    containers: EntityContainers,
-    levelContext: LevelContext
+    containers: EntityContainers
 }
 
-export class Wall extends StaticEntity {
+export class Wall extends BaseEntity {
     constructor(options: WallOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Wall.type);
@@ -31,11 +28,7 @@ export class Wall extends StaticEntity {
         super({
             id,
             sprite, 
-            position: options.spawnPoint,
-            width: Config.Wall.width,
-            height: Config.Wall.height,
             containers: options.containers,
-            levelContext: options.levelContext
         });
     }
 

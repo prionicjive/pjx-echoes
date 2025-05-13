@@ -1,7 +1,6 @@
 import * as planck from 'planck';
 import { Point } from '../utils/types';
-import { EntityContainers } from './BaseEntity';
-import { StaticEntity } from './StaticEntity';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 import { Config } from '../config/Config';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntityUtils } from '../utils/EntityUtils';
@@ -9,8 +8,9 @@ import * as PIXI from 'pixi.js';
 import { LightsConfig } from '../config/LightsConfig';
 import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { EntityUserData } from './BaseEntity';
 import { LevelContext } from '../level/LevelContext';
+import { LightManager } from '../light/LightManager';
+import { StaticLight } from '../light/Light';
 
 export interface TorchOptions { 
     levelContext: LevelContext, 
@@ -18,7 +18,7 @@ export interface TorchOptions {
     containers: EntityContainers
 }
 
-export class Torch extends StaticEntity {
+export class Torch extends BaseEntity {
     constructor(options: TorchOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Torch.type);
@@ -45,17 +45,29 @@ export class Torch extends StaticEntity {
             }
         });
 
+        // Construct a static light
+        const center = {
+            x: options.spawnPoint.x + Config.Torch.width / 2,
+            y: options.spawnPoint.y + Config.Torch.height / 2
+        };
+
+        const light = new StaticLight(
+            center,
+            options.levelContext.getEdgesList(),
+            { ...LightsConfig.TorchLight },
+            id
+        );
+
+        // Add light to the LightManager
+        LightManager.instance.addLight(light);
+
         super({
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.TorchLight },
-            position: options.spawnPoint,
-            width: Config.Torch.width,
-            height: Config.Torch.height,
+            light,
             particleEffectOptions: { ...ParticleEffectsConfig.TorchRadiance },
             containers: options.containers,
-            levelContext: options.levelContext
         });
 
         // Set user data with a self-referencing data

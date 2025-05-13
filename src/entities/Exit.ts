@@ -1,15 +1,15 @@
 import * as PIXI from 'pixi.js';
-import { StaticEntity } from './StaticEntity';
 import { Config } from '../config/Config';
 import { LightsConfig } from '../config/LightsConfig';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
-import { EntityContainers } from './BaseEntity';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 import { Point } from '../utils/types';
 import * as planck from 'planck';
-import { EntityUserData } from './types';
 import { LevelContext } from '../level/LevelContext';
+import { StaticLight } from '../light/Light';
+import { LightManager } from '../light/LightManager';
 
 export interface ExitOptions {
     spawnPoint: Point,
@@ -17,7 +17,7 @@ export interface ExitOptions {
     levelContext: LevelContext
 }
 
-export class Exit extends StaticEntity {
+export class Exit extends BaseEntity {
     constructor(options: ExitOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Exit.type);
@@ -44,15 +44,27 @@ export class Exit extends StaticEntity {
             }
         });
 
+        // Construct a static light
+        const center = {
+            x: options.spawnPoint.x + Config.Exit.width / 2,
+            y: options.spawnPoint.y + Config.Exit.height / 2
+        };
+
+        const light = new StaticLight(
+            center,
+            options.levelContext.getEdgesList(),
+            { ...LightsConfig.ExitLight },
+            id
+        );
+
+        // Add light to the LightManager
+        LightManager.instance.addLight(light);
+
         super({
             id,
             sprite,
             body,
-            lightOptions: { ...LightsConfig.ExitLight },
-            levelContext: options.levelContext,
-            position: options.spawnPoint,
-            width: Config.Exit.width,
-            height: Config.Exit.height,
+            light,
             containers: options.containers
         });
 

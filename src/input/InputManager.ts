@@ -14,6 +14,16 @@ export interface SwipeState {
     detected: boolean,
 };
 
+export interface KeyState {
+    isDown: boolean,
+    justPressed: boolean,
+    justReleased: boolean,
+}
+
+export interface KeysState {
+    keys: Map<string, KeyState>
+}
+
 export class InputManager {
     private pointer: PointerState = {
         screen: { x: 0, y: 0 },
@@ -31,6 +41,10 @@ export class InputManager {
     };
     // Add more state as needed (keyboard, gamepad, etc.)
 
+    private keysState: KeysState = {
+        keys: new Map<string, KeyState>()
+    }
+
     constructor(canvas: HTMLCanvasElement) {
         // Register mouse events
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
@@ -42,6 +56,9 @@ export class InputManager {
         canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
     
         // TODO Add keyboard/gamepad events if needed
+        window.addEventListener('keydown', this.onKeyDown.bind(this));
+        window.addEventListener('keyup', this.onKeyUp.bind(this));
+
     }
 
     private onMouseDown(e: MouseEvent) {
@@ -92,21 +109,42 @@ export class InputManager {
         }
     }
 
+    private onKeyDown(e: KeyboardEvent) {
+        const keyState = this.keysState.keys.get(e.key);
+        if (keyState && keyState.isDown) {
+            keyState.isDown = true;
+            keyState.justPressed = false;
+            keyState.justReleased = false;
+        } else {
+            this.keysState.keys.set(e.key, { isDown: true, justPressed: true, justReleased: false });
+        }
+    }
+
+    private onKeyUp(e: KeyboardEvent) {
+        this.keysState.keys.set(e.key, { isDown: false, justPressed: false, justReleased: true });
+    }
+
     private updatePointerScreen(e: MouseEvent) {
         this.pointer.screen = { x: e.clientX, y: e.clientY };
         // TODO Update pointer.world if you have a screen-to-world transform
     }
 
-    // Call this once per frame to reset "justReleased" flags
+    // Call this once per frame to reset "just pressed / released" flags
     public update() {
         this.pointer.justReleased = false;
         this.swipe.detected = false;
+        
+        this.keysState.keys.forEach((keyState) => {
+            keyState.justPressed = false;
+            keyState.justReleased = false;
+        });
     }
 
     // Public API for World/Player
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getSwipeState(): SwipeState { return { ...this.swipe }; }
     public getIsTouchActive(): boolean { return this.isTouchActive; }
+    public getKeysState(): KeysState { return { ...this.keysState }; }
     
     // TODO Add more getters as needed
 }

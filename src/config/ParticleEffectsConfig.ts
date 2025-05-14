@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Config } from './Config';
 
-export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance';
+export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame';
 
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {
@@ -79,7 +79,30 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         texturePath: Config.Textures.Particles.circleSoft,
         emitPerSecond: 20,
         maxParticles: 100,
-        duration: 10,
+        duration: 2,
+        emitAngle: 0,
+        spreadAmount: 360,
+        particleOptions: {
+            maxAge: 2.5,
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 5,
+            startScaleY: 5,
+            endScaleX: 2,
+            endScaleY: 2,
+            width: Config.Torch.width * Config.PixelsPerMeter,
+            height: Config.Torch.height * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(Config.Torch.color),
+            endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
+            endDirection: {x: 0, y: 0},
+            startSpeed: 200,
+            endSpeed: 100
+        }
+    },
+    BlueFlame: {
+        texturePath: Config.Textures.Particles.circleSoft,
+        emitPerSecond: 20,
+        maxParticles: 100,
         emitAngle: 90,
         spreadAmount: 45,
         emitRotateClockwise: true,
@@ -94,8 +117,8 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
             endScaleY: 2,
             width: Config.Torch.width * Config.PixelsPerMeter,
             height: Config.Torch.height * Config.PixelsPerMeter,
-            startTint: new PIXI.Color(Config.Torch.color),
-            endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
+            startTint: new PIXI.Color(0x0000ff),
+            endTint: new PIXI.Color(0xbbbbff), // TODO Just for test, should be configurable
             endDirection: {x: 0, y: 0},
             startSpeed: 200,
             endSpeed: 100

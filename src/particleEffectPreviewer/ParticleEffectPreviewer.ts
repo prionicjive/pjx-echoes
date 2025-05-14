@@ -57,7 +57,7 @@ export class ParticleEffectPreviewer {
         const height = window.innerHeight;
         this.app.renderer.resize(width, height);
         if (this.world) {
-            //this.world.onResize(width, height);
+            this.world.onResize(width, height);
         }
     }
 

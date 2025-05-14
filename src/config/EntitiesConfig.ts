@@ -1,6 +1,10 @@
 import { EntityType } from "../entities/types";
+import { LightOptions } from "../light/Light";
 import { CreateBodyOptions } from "../utils/PhysicsUtils";
 import { Config } from "./Config";
+import { LightsConfig } from "./LightsConfig";
+import { ParticleEffectOptions } from "../particles/ParticleEffect";
+import { ParticleEffectsConfig } from "./ParticleEffectsConfig";
 
 interface EntitySprite {
     texture: string;
@@ -12,6 +16,8 @@ interface EntitySprite {
 export interface EntityPreset {
     sprite: EntitySprite;
     body?: CreateBodyOptions;
+    light?: LightOptions;
+    particleEffect?: ParticleEffectOptions;
 }
 
 export const EntitiesConfig: Record<EntityType, EntityPreset> = {
@@ -35,7 +41,9 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                     | Config.Physics.Collision.categoryWall
                     | Config.Physics.Collision.categorySentry
             }
-        }
+        },
+        light: LightsConfig.SentryLight,
+        particleEffect: ParticleEffectsConfig.SentryTrail
     },
     Player: {
         sprite: {
@@ -60,7 +68,9 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                     | Config.Physics.Collision.categoryTorch
             },
             linearDamping: Config.Physics.Player.linearDamping
-        }
+        },
+        light: LightsConfig.PlayerLight,
+        particleEffect: ParticleEffectsConfig.PlayerTrail
     },
     Anti: {
         sprite: {
@@ -77,7 +87,8 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterCategoryBits: Config.Physics.Collision.categoryAnti,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
-        }
+        },
+        light: LightsConfig.AntiLight,
     },
     Torch: {
         sprite: {
@@ -94,7 +105,9 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterCategoryBits: Config.Physics.Collision.categoryTorch,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
-        }
+        },
+        light: LightsConfig.TorchLight,
+        particleEffect: ParticleEffectsConfig.TorchRadiance,
     },
     Exit: {
         sprite: {
@@ -111,7 +124,8 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterCategoryBits: Config.Physics.Collision.categoryExit,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
-        }
+        },
+        light: LightsConfig.ExitLight,
     },
     Wall: {
         sprite: {

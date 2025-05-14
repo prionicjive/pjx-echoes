@@ -1,6 +1,8 @@
 import { LightOptions } from "../light/Light";
 
-export const LightsConfig: Record<string, LightOptions> = {
+export type LightType = 'PlayerLight' | 'SentryLight' | 'ExitLight' | 'TorchLight' | 'AntiLight';
+
+export const LightsConfig: Record<LightType, LightOptions> = {
     PlayerLight: {
         numRays: 360,
         baseRadius: 7,

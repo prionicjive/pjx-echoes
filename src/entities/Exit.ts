@@ -49,7 +49,7 @@ export class Exit extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...LightsConfig.ExitLight },
+            { ...EntitiesConfig.Exit.light! },
             id
         );
 

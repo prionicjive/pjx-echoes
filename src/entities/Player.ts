@@ -56,13 +56,13 @@ export class Player extends BaseEntity {
         const light = new DynamicLight(
             {...body.getPosition()},
             options.levelContext.getEdgesList(),
-            { ...LightsConfig.PlayerLight },
+            { ...EntitiesConfig.Player.light! },
             id,
         );
 
         // Create the particle effect
         const particleEffect = new ParticleEffect({
-            ...ParticleEffectsConfig.PlayerTrail,
+            ...EntitiesConfig.Player.particleEffect!,
         });
 
         super({

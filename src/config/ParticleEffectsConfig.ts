@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
-import { ParticleEffectType } from '../particles/types';
 import { Config } from './Config';
+
+export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance';
 
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {

@@ -49,7 +49,7 @@ export class Anti extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...LightsConfig.AntiLight },
+            { ...EntitiesConfig.Anti.light! },
             id
         );
 

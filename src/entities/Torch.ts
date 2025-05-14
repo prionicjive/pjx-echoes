@@ -51,13 +51,13 @@ export class Torch extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...LightsConfig.TorchLight },
+            { ...EntitiesConfig.Torch.light! },
             id
         );
 
         // Create the particle effect and set initial position
         const particleEffect = new ParticleEffect({
-            ...ParticleEffectsConfig.TorchRadiance,
+            ...EntitiesConfig.Torch.particleEffect!,
         });
 
         super({

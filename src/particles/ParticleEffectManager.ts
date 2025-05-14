@@ -39,7 +39,9 @@ export class ParticleEffectManager {
         return Array.from(this.effects);
     }
 
-    /** Play an effect of a certain type at given position, optionally for a given (possibly overriding) duration of time */
+    /** Play an effect of a certain type at given position, optionally for a given (possibly overriding) duration of time. This will also add the effect
+     * to the specified container for rendering purposes.
+    */
     playEffect(containerToAddEffectTo: PIXI.Container, type: ParticleEffectType, position: {x: number, y: number}, duration?: number): ParticleEffect {
         const effect = new ParticleEffect({ 
             ...ParticleEffectsConfig[type], 

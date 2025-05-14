@@ -1,8 +1,6 @@
 import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { LightsConfig } from '../config/LightsConfig';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -87,6 +85,25 @@ export class Sentry extends BaseEntity {
      */
     // @ts-ignore
     update(deltaTime: number) {
+        // Check to see if the sentry is locked to a certain axis and if so, nudge it away
+        const epsilon = 0.01;
+        const kick = 1;
+
+        if (Math.abs(this.body.getLinearVelocity().x) < epsilon) {
+            const sign = Math.random() < 0.5 ? -1 : 1;
+            this.body.setLinearVelocity(new planck.Vec2(
+                sign * kick,
+                this.body.getLinearVelocity().y
+            ));
+        }
+        if (Math.abs(this.body.getLinearVelocity().y) < epsilon) {
+            const sign = Math.random() < 0.5 ? -1 : 1;
+            this.body.setLinearVelocity(new planck.Vec2(
+                this.body.getLinearVelocity().x,
+                sign * kick
+            ));
+        }
+        
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body.getPosition().x - Config.Sentry.radius) * Config.PixelsPerMeter;
         this.sprite.y = (this.body.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;

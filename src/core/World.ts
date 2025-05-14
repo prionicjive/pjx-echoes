@@ -121,8 +121,8 @@ export class World {
         // TODO Make some of this configurable!
         this.crtFilter = new CRTFilter({
             curvature: 0,
-            lineWidth: 0,
-            lineContrast: 0,
+            lineWidth: 0.05,
+            lineContrast: 0.25,
             vignetting: 0,
             noise: 0.2,
             noiseSize: 1
@@ -130,15 +130,15 @@ export class World {
 
         this.bloomFilter = new BloomFilter({
             kernelSize: 5,
-            quality: 4,
-            resolution: 1.5,
-            strength: 12
+            quality: 2,
+            resolution: 1,
+            strength: 8
         });
 
         // Apply bloom to the world
         this.worldContainer.filters = [this.bloomFilter];
 
-        // Apply the CRT filter to EVERYTHING
+        // // Apply the CRT filter to EVERYTHING
         this.app.stage.filters = [this.crtFilter];
     }
 
@@ -211,7 +211,7 @@ export class World {
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            ProGenLevelsConfig.Simple
+            ProGenLevelsConfig.Standard
         );
         
         // Get the player - our "first class" entity

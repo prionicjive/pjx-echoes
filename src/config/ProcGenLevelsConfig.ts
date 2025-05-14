@@ -58,7 +58,7 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
         exitChance: 0.0001,
         torchChance: 0.00087,
         antiChance: 0.00065,
-        sentryChance: 0.0025,
+        sentryChance: 0.0095,
         mapGeneration: {   
             type: 'CellularAutomata',
             options: {

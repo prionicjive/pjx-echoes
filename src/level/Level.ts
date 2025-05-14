@@ -129,7 +129,7 @@ export class Level implements LevelContext {
         // Create single body and multiple fixtures for all the edges of the level
         const id = EntityUtils.generateRandomId(Config.Edges.type);
 
-        const body = PhysicsUtils.createLevelEdgesBody(world, { 
+        const body = PhysicsUtils.createChainsBodyFromEdges(world, { 
             edges: this.edgesList, 
             edgeFixture: {
                 restitution: Config.Physics.Wall.restitution,

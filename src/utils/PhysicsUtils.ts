@@ -60,8 +60,78 @@ export class PhysicsUtils {
         const body = world.createBody();
         options.edges.forEach(edge => {
             body.createFixture(new planck.Edge(edge.a, edge.b), options.edgeFixture);
-        });
+        });    
         return body;
+    }
+
+    static createChainsBodyFromEdges(
+        world: planck.World,
+        options: CreateLevelEdgesBodyOptions
+    ): planck.Body {
+        const body = world.createBody();
+    
+        // Group edges into continuous chains
+        const chains = this.groupEdgesIntoChains(options.edges);
+    
+        for (const chain of chains) {
+            // Detect if closed (first and last points are equal)
+            const isClosed = this.pointsEqual(chain[0], chain[chain.length - 1]);
+            // Remove duplicate endpoint for closed loop (Planck expects N unique points)
+            const vertices = isClosed ? chain.slice(0, -1) : chain;
+            body.createFixture(planck.Chain(vertices, isClosed), options.edgeFixture);
+        }
+    
+        return body;
+    }
+
+    
+    static pointsEqual(a: planck.Vec2, b: planck.Vec2): boolean {
+        const EPSILON = 1e-6;
+        return Math.abs(a.x - b.x) < EPSILON && Math.abs(a.y - b.y) < EPSILON;
+    }
+
+    static groupEdgesIntoChains(
+        edges: Segment[]
+    ): planck.Vec2[][] {
+        const unused = edges.slice();
+        const chains: planck.Vec2[][] = [];
+
+        while (unused.length > 0) {
+            // Start a new chain with any edge
+            const edge = unused.pop()!;
+            let chain = [edge.a, edge.b];
+
+            let extended = true;
+            while (extended) {
+                extended = false;
+                for (let i = 0; i < unused.length; i++) {
+                    const next = unused[i];
+                    if (this.pointsEqual(chain[chain.length - 1], next.a)) {
+                        chain.push(next.b);
+                        unused.splice(i, 1);
+                        extended = true;
+                        break;
+                    } else if (this.pointsEqual(chain[chain.length - 1], next.b)) {
+                        chain.push(next.a);
+                        unused.splice(i, 1);
+                        extended = true;
+                        break;
+                    } else if (this.pointsEqual(chain[0], next.a)) {
+                        chain.unshift(next.b);
+                        unused.splice(i, 1);
+                        extended = true;
+                        break;
+                    } else if (this.pointsEqual(chain[0], next.b)) {
+                        chain.unshift(next.a);
+                        unused.splice(i, 1);
+                        extended = true;
+                        break;
+                    }
+                }
+            }
+            chains.push(chain);
+        }
+        return chains;
     }
 
     static calculateForceVector(startPos: planck.Vec2, endPos: planck.Vec2, forceFactor: number = 1): planck.Vec2 {

@@ -4,6 +4,7 @@ import { EntityUtils } from '../utils/EntityUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface WallOptions { 
     spawnPoint: Point,
@@ -17,12 +18,12 @@ export class Wall extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.block),
+            texture: PIXI.Texture.from(EntitiesConfig.Wall.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Wall.width * Config.PixelsPerMeter,
-            height: Config.Wall.height * Config.PixelsPerMeter,
-            color: Config.Wall.color
+            width: EntitiesConfig.Wall.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Wall.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Wall.sprite.color
         });
 
         super({

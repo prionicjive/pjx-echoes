@@ -36,12 +36,12 @@ export class Player extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.player),
+            texture: PIXI.Texture.from(EntitiesConfig.Player.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Player.radius * 2 * Config.PixelsPerMeter,
-            height: Config.Player.radius * 2 * Config.PixelsPerMeter,
-            color: Config.Player.color
+            width: EntitiesConfig.Player.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Player.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Player.sprite.color
         });
 
         // Create dynamic body

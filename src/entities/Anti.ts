@@ -24,12 +24,12 @@ export class Anti extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.anti),
+            texture: PIXI.Texture.from(EntitiesConfig.Anti.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Anti.width * Config.PixelsPerMeter,
-            height: Config.Anti.height * Config.PixelsPerMeter,
-            color: Config.Anti.color
+            width: EntitiesConfig.Anti.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Anti.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Anti.sprite.color
         });
 
         // Create static body

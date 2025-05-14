@@ -2,12 +2,26 @@ import { EntityType } from "../entities/types";
 import { CreateBodyOptions } from "../utils/PhysicsUtils";
 import { Config } from "./Config";
 
+interface EntitySprite {
+    texture: string;
+    widthInMeters: number;
+    heightInMeters: number;
+    color: number;
+}
+
 export interface EntityPreset {
+    sprite: EntitySprite;
     body?: CreateBodyOptions;
 }
 
 export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     Sentry: {
+        sprite: {
+            texture: Config.Textures.sentry,
+            widthInMeters: Config.Sentry.radius * 2,
+            heightInMeters: Config.Sentry.radius * 2,
+            color: Config.Sentry.color
+        },
         body: {
             type: 'dynamic',
             circle: { radius: Config.Sentry.radius },
@@ -24,6 +38,12 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         }
     },
     Player: {
+        sprite: {
+            texture: Config.Textures.player,
+            widthInMeters: Config.Player.radius * 2,
+            heightInMeters: Config.Player.radius * 2,
+            color: Config.Player.color
+        },
         body: {
             type: 'dynamic',
             circle: { radius: Config.Player.radius },
@@ -43,6 +63,12 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         }
     },
     Anti: {
+        sprite: {
+            texture: Config.Textures.anti,
+            widthInMeters: Config.Anti.width,
+            heightInMeters: Config.Anti.height,
+            color: Config.Anti.color
+        },
         body: {
             type: 'static',
             box: { width: Config.Anti.width, height: Config.Anti.height },
@@ -54,6 +80,12 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         }
     },
     Torch: {
+        sprite: {
+            texture: Config.Textures.torch,
+            widthInMeters: Config.Torch.width,
+            heightInMeters: Config.Torch.height,
+            color: Config.Torch.color
+        },
         body: {
             type: 'static',
             box: { width: Config.Torch.width, height: Config.Torch.height },
@@ -65,6 +97,12 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         }
     },
     Exit: {
+        sprite: {
+            texture: Config.Textures.exit,
+            widthInMeters: Config.Exit.width,
+            heightInMeters: Config.Exit.height,
+            color: Config.Exit.color
+        },
         body: {
             type: 'static',
             box: { width: Config.Exit.width, height: Config.Exit.height },
@@ -76,6 +114,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         }
     },
     Wall: {
-
+        sprite: {
+            texture: Config.Textures.block,
+            widthInMeters: Config.Wall.width,
+            heightInMeters: Config.Wall.height,
+            color: Config.Wall.color
+        }
     }
 };

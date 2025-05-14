@@ -27,12 +27,12 @@ export class Sentry extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.sentry),
+            texture: PIXI.Texture.from(EntitiesConfig.Sentry.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-            height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
-            color: Config.Sentry.color
+            width: EntitiesConfig.Sentry.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Sentry.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Sentry.sprite.color
         });
 
         // Create dynamic body

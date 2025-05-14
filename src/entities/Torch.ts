@@ -26,12 +26,12 @@ export class Torch extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.torch),
+            texture: PIXI.Texture.from(EntitiesConfig.Torch.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Torch.width * Config.PixelsPerMeter,
-            height: Config.Torch.height * Config.PixelsPerMeter,
-            color: Config.Torch.color
+            width: EntitiesConfig.Torch.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Torch.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Torch.sprite.color
         });
 
         // Create static body

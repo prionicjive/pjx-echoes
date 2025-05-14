@@ -24,12 +24,12 @@ export class Exit extends BaseEntity {
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.exit),
+            texture: PIXI.Texture.from(EntitiesConfig.Exit.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Exit.width * Config.PixelsPerMeter,
-            height: Config.Exit.height * Config.PixelsPerMeter,
-            color: Config.Exit.color
+            width: EntitiesConfig.Exit.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Exit.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Exit.sprite.color
         });
 
         // Create static body

@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js';
-import { Light } from '../light/Light';
-import { ParticleEffect, ParticleEffectOptions } from '../particles/ParticleEffect';
 import * as planck from 'planck';
-import { ParticleEffectManager } from '../particles/ParticleEffectManager';
+import { Light } from '../light/Light';
 import { LightManager } from '../light/LightManager';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { ParticleEffectManager } from '../particles/ParticleEffectManager';
+import { EntityType } from './types';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -14,8 +15,15 @@ export interface BaseEntityOptions {
     id: string;
     sprite: PIXI.Sprite;
     body?: planck.Body;
-    particleEffectOptions?: ParticleEffectOptions;
+    light?: Light;
+    particleEffect?: ParticleEffect;
     containers: EntityContainers;
+}
+
+export interface EntityUserData {
+    type: EntityType;
+    entity?: BaseEntity;
+    body?: planck.Body;
 }
 
 export abstract class BaseEntity {
@@ -35,15 +43,18 @@ export abstract class BaseEntity {
         // Add sprite to proper container
         options.containers.containerForEntity.addChild(this.sprite);
 
-        // Set up particle effect (if needed)
-        if (options.particleEffectOptions && this.containers.containerForParticleEffects) {
-            this.particleEffect = new ParticleEffect(options.particleEffectOptions);
-            this.containers.containerForParticleEffects.addChild(this.particleEffect.container);
+        // Store and set light up for management
+        if (options.light) {
+            this.light = options.light;
+            LightManager.instance.addLight(this.light);
+        }
 
-            // Add to the manager
+        // Store and set up particle effect for management
+        if (options.particleEffect && this.containers.containerForParticleEffects) {
+            this.particleEffect = options.particleEffect;
+            this.containers.containerForParticleEffects.addChild(this.particleEffect.container);
             ParticleEffectManager.instance.addEffect(this.particleEffect);
         }
-        // No light construction here!
     }
 
     destroy() {
@@ -57,7 +68,7 @@ export abstract class BaseEntity {
 
         // Immediately remove light from LightManager
         if (this.light) {
-            LightManager.instance.removeStaticLight(this.light);
+            LightManager.instance.removeLight(this.light);
         }
 
         // Immediately remove particle by having it stop emitting before destroying
@@ -77,7 +88,7 @@ export abstract class BaseEntity {
 
         // Gently remove light from LightManager
         if (this.light) {
-            LightManager.instance.gentlyRemoveStaticLight(this.light);
+            LightManager.instance.gentlyRemoveLight(this.light);
         }
 
         // Gently remove particle by having it stop emitting before destroying

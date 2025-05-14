@@ -37,7 +37,7 @@ export class Light {
     public isFadingOut: boolean = false;
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
-    public pos: Point;
+    protected pos: Point;
     public entityId: string = "";
     protected collisionData: Segment[];
     protected lightPoints: { point: Point; angle: number }[];
@@ -160,27 +160,27 @@ export class Light {
         this.mask?.destroy();
         this.sprite?.destroy();
     }
-}
 
-// Minimal interface for an owner that can provide a light position
-export interface LightOwner {
-    getLightPosition(): Point;
+    public setPosition(pos: Point) {
+        this.pos = {...pos};
+    }
+
+    public getPosition(): Point {
+        return {...this.pos};
+    }
 }
 
 export class DynamicLight extends Light {
     // Tween for changing to a new base radius
     private changeRadiusTween?: gsap.core.Tween;
-    public owner?: LightOwner;
 
     constructor(
         pos: Point,
         collisionData: Segment[],
         options: LightOptions,
         entityId: string = "",
-        owner?: LightOwner
     ) {
         super(pos, collisionData, options, entityId);
-        if (owner) this.owner = owner;
         // TODO Any additional setup / initialization
     }
 
@@ -191,9 +191,7 @@ export class DynamicLight extends Light {
     }
 
     public update(pos: Point | null = null) {
-        // If owner is set, always query its position
-        const ownerPos = this.owner ? this.owner.getLightPosition() : pos;
-        super.update(ownerPos);
+        super.update(pos);
 
         const lightBounds = {
             minX: this.pos.x - this.radius,

@@ -1,12 +1,9 @@
-import { Level } from "../level/Level";
-import { MapUtils } from "./MapUtils";
-import { LevelContainers } from "../level/Level";
 import * as planck from 'planck';
-import { Point } from "../utils/types";
+import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, MapGenerationType, ProGenLevelOptions } from "../config/ProcGenLevelsConfig";
+import { Level, LevelContainers } from "../level/Level";
 import { LevelSkeleton } from "../level/LevelSkeleton";
-import { ProGenLevelOptions } from "../config/ProcGenLevelsConfig";
-import { DrunkardsWalkWithSmoothingOptions, MapGenerationType } from "../config/ProcGenLevelsConfig";
-import { CellularAutomataOptions } from "../config/ProcGenLevelsConfig";
+import { Point } from "../utils/types";
+import { MapUtils } from "./MapUtils";
 
 export class LevelUtils {
     static createProcGenLevel(
@@ -58,6 +55,7 @@ export class LevelUtils {
         return new Level({
             physicsWorld: world, 
             containers: {
+                bgContainer: containers.bgContainer,
                 levelGeometryContainer: containers.levelGeometryContainer,
                 preEntitiesContainer: containers.preEntitiesContainer,
                 entitiesContainer: containers.entitiesContainer

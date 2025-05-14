@@ -6,20 +6,20 @@
  * @module Level
  */
 
-import { Config } from '../config/Config';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import * as planck from 'planck';
 import * as PIXI from 'pixi.js';
-import { Point, Segment } from '../utils/types';
-import { EntityUtils } from '../utils/EntityUtils';
+import * as planck from 'planck';
+import { Config } from '../config/Config';
 import { Anti } from '../entities/Anti';
+import { BaseEntity, EntityUserData } from '../entities/BaseEntity';
 import { Exit } from '../entities/Exit';
-import { Torch } from '../entities/Torch';
-import { Wall } from '../entities/Wall';
-import { Sentry } from '../entities/Sentry';
-import { EntityType, EntityUserData } from '../entities/types';
-import { BaseEntity } from '../entities/BaseEntity';
 import { Player } from '../entities/Player';
+import { Sentry } from '../entities/Sentry';
+import { Torch } from '../entities/Torch';
+import { EntityType } from '../entities/types';
+import { Wall } from '../entities/Wall';
+import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { Point, Segment } from '../utils/types';
 import { LevelContext } from './LevelContext';
 import { LevelSkeleton } from './LevelSkeleton';
 
@@ -31,6 +31,7 @@ export interface LevelOptions {
 }
 
 export interface LevelContainers {
+    bgContainer: PIXI.Container;
     levelGeometryContainer: PIXI.Container;
     preEntitiesContainer: PIXI.Container;
     entitiesContainer: PIXI.Container;
@@ -74,7 +75,7 @@ export class Level implements LevelContext {
         this.createLevelEdges(options.physicsWorld, options.containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
-        if (Config.Debug.drawWalls) {
+        if (Config.Debug.createVisibleWalls) {
             this.walls = this.createWalls(
                 [...options.entitiesOptions.wallPositions],
                 options.containers.levelGeometryContainer
@@ -111,7 +112,8 @@ export class Level implements LevelContext {
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
         let edgeGraphics: PIXI.Graphics | null = null;
         
-        if (Config.Debug.drawEdges) {
+        // We may not want to draw the edges
+        if (Config.Debug.createVisibleEdges) {
             // Also, while iterating, draw the edges of the walls
             edgeGraphics = new PIXI.Graphics();
             
@@ -128,7 +130,7 @@ export class Level implements LevelContext {
         // Create single body and multiple fixtures for all the edges of the level
         const id = EntityUtils.generateRandomId(Config.Edges.type);
 
-        const body = PhysicsUtils.createLevelEdgesBody(world, { 
+        const body = PhysicsUtils.createChainsBodyFromEdges(world, { 
             edges: this.edgesList, 
             edgeFixture: {
                 restitution: Config.Physics.Wall.restitution,
@@ -154,8 +156,7 @@ export class Level implements LevelContext {
                 spawnPoint: {...position},
                 containers: { 
                     containerForEntity: container,
-                },
-                levelContext: this
+                }
             });
 
             walls.push(entity);
@@ -210,7 +211,7 @@ export class Level implements LevelContext {
                 spawnPoint: {...position},
                 containers: { 
                     containerForEntity: containers.entitiesContainer,
-                    containerForParticleEffects: containers.preEntitiesContainer
+                    containerForParticleEffects: containers.bgContainer
                 },
                 levelContext: this
             });

@@ -1,0 +1,138 @@
+import { EntityType } from "../entities/types";
+import { LightOptions } from "../light/Light";
+import { CreateBodyOptions } from "../utils/PhysicsUtils";
+import { Config } from "./Config";
+import { LightsConfig } from "./LightsConfig";
+import { ParticleEffectOptions } from "../particles/ParticleEffect";
+import { ParticleEffectsConfig } from "./ParticleEffectsConfig";
+
+interface EntitySprite {
+    texture: string;
+    widthInMeters: number;
+    heightInMeters: number;
+    color: number;
+}
+
+export interface EntityPreset {
+    sprite: EntitySprite;
+    body?: CreateBodyOptions;
+    light?: LightOptions;
+    particleEffect?: ParticleEffectOptions;
+}
+
+export const EntitiesConfig: Record<EntityType, EntityPreset> = {
+    Sentry: {
+        sprite: {
+            texture: Config.Textures.sentry,
+            widthInMeters: Config.Sentry.radius * 2,
+            heightInMeters: Config.Sentry.radius * 2,
+            color: Config.Sentry.color
+        },
+        body: {
+            type: 'dynamic',
+            circle: { radius: Config.Sentry.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 1, // Perfect elasticity
+                filterCategoryBits: Config.Physics.Collision.categorySentry,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categoryPlayer
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categorySentry
+            }
+        },
+        light: LightsConfig.SentryLight,
+        particleEffect: ParticleEffectsConfig.SentryTrail
+    },
+    Player: {
+        sprite: {
+            texture: Config.Textures.player,
+            widthInMeters: Config.Player.radius * 2,
+            heightInMeters: Config.Player.radius * 2,
+            color: Config.Player.color
+        },
+        body: {
+            type: 'dynamic',
+            circle: { radius: Config.Player.radius },
+            fixture: {
+                friction: 0,
+                density: 1,
+                restitution: 0, // No bounce
+                filterCategoryBits: Config.Physics.Collision.categoryPlayer,
+                filterMaskBits: Config.Physics.Collision.categoryEdge
+                    | Config.Physics.Collision.categorySentry
+                    | Config.Physics.Collision.categoryWall
+                    | Config.Physics.Collision.categoryExit
+                    | Config.Physics.Collision.categoryAnti
+                    | Config.Physics.Collision.categoryTorch
+            },
+            linearDamping: Config.Physics.Player.linearDamping
+        },
+        light: LightsConfig.PlayerLight,
+        particleEffect: ParticleEffectsConfig.PlayerTrail
+    },
+    Anti: {
+        sprite: {
+            texture: Config.Textures.anti,
+            widthInMeters: Config.Anti.width,
+            heightInMeters: Config.Anti.height,
+            color: Config.Anti.color
+        },
+        body: {
+            type: 'static',
+            box: { width: Config.Anti.width, height: Config.Anti.height },
+            fixture: {
+                isSensor: true,
+                filterCategoryBits: Config.Physics.Collision.categoryAnti,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+            }
+        },
+        light: LightsConfig.AntiLight,
+    },
+    Torch: {
+        sprite: {
+            texture: Config.Textures.torch,
+            widthInMeters: Config.Torch.width,
+            heightInMeters: Config.Torch.height,
+            color: Config.Torch.color
+        },
+        body: {
+            type: 'static',
+            box: { width: Config.Torch.width, height: Config.Torch.height },
+            fixture: {
+                isSensor: true,
+                filterCategoryBits: Config.Physics.Collision.categoryTorch,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+            }
+        },
+        light: LightsConfig.TorchLight,
+        particleEffect: ParticleEffectsConfig.TorchRadiance,
+    },
+    Exit: {
+        sprite: {
+            texture: Config.Textures.exit,
+            widthInMeters: Config.Exit.width,
+            heightInMeters: Config.Exit.height,
+            color: Config.Exit.color
+        },
+        body: {
+            type: 'static',
+            box: { width: Config.Exit.width, height: Config.Exit.height },
+            fixture: {
+                isSensor: true,
+                filterCategoryBits: Config.Physics.Collision.categoryExit,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+            }
+        },
+        light: LightsConfig.ExitLight,
+    },
+    Wall: {
+        sprite: {
+            texture: Config.Textures.block,
+            widthInMeters: Config.Wall.width,
+            heightInMeters: Config.Wall.height,
+            color: Config.Wall.color
+        }
+    }
+};

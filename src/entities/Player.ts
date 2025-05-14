@@ -6,21 +6,22 @@
  * @module Player
  */
 
-import { Config } from '../config/Config';
-import { EntityType, EntityUserData } from './types';
-import { EntityUtils } from '../utils/EntityUtils';
-import { Point } from '../utils/types';
-import * as planck from 'planck';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { PointerState, SwipeState } from '../input/InputManager';
-import { EntityContainers } from './BaseEntity';
-import { DynamicEntity } from './DynamicEntity';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
-import { LightsConfig } from '../config/LightsConfig';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import * as PIXI from 'pixi.js';
-import { LightOwner } from '../light/Light';
+import * as planck from 'planck';
+import { Config } from '../config/Config';
+import { LightsConfig } from '../config/LightsConfig';
+import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
+import { PointerState, SwipeState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
+import { DynamicLight } from '../light/Light';
+import { ParticleEffect } from '../particles/ParticleEffect';
+import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { Point } from '../utils/types';
+import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntityType } from './types';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface PlayerOptions { 
     spawnPoint: Point,
@@ -28,50 +29,53 @@ export interface PlayerOptions {
     levelContext: LevelContext
 }
 
-export class Player extends DynamicEntity implements LightOwner {
+export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
         // Generate unique ID
         const id = EntityUtils.generateRandomId(Config.Player.type);
 
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(Config.Textures.player),
+            texture: PIXI.Texture.from(EntitiesConfig.Player.sprite.texture),
             x: options.spawnPoint.x * Config.PixelsPerMeter,
             y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: Config.Player.radius * 2 * Config.PixelsPerMeter,
-            height: Config.Player.radius * 2 * Config.PixelsPerMeter,
-            color: Config.Player.color
+            width: EntitiesConfig.Player.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: EntitiesConfig.Player.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: EntitiesConfig.Player.sprite.color
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'dynamic',
-            position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius),
-            circle: { radius: Config.Player.radius },
-            fixture: {
-                friction: 0,
-                density: 1,
-                restitution: 0, // No bounce
-                filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-                filterMaskBits: Config.Physics.Collision.categoryEdge
-                    | Config.Physics.Collision.categorySentry
-                    | Config.Physics.Collision.categoryWall
-                    | Config.Physics.Collision.categoryExit
-                    | Config.Physics.Collision.categoryAnti
-                    | Config.Physics.Collision.categoryTorch
-            },
-            linearDamping: Config.Physics.Player.linearDamping
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Player.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius)
+            }
+        );
+
+        // Create the light
+        const light = new DynamicLight(
+            {...body.getPosition()},
+            options.levelContext.getEdgesList(),
+            { ...EntitiesConfig.Player.light! },
+            id,
+        );
+
+        // Create the particle effect
+        const particleEffect = new ParticleEffect({
+            ...EntitiesConfig.Player.particleEffect!,
         });
 
         super({
             id,
             sprite,
             body,
-            particleEffectOptions: { ...ParticleEffectsConfig.PlayerTrail },
-            containers: options.containers,
-            lightOptions: { ...LightsConfig.PlayerLight },
-            levelContext: options.levelContext
+            light,
+            particleEffect,
+            containers: options.containers
         });
+
+        // Set initial position
+        EntityUtils.syncEffectToSprite(this);
 
         // Set user data with a self-referencing data
         body.setUserData({
@@ -260,11 +264,8 @@ export class Player extends DynamicEntity implements LightOwner {
         this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.rotation = this.body.getAngle();
 
-        // Set the initial position of the particle effect
-        this.particleEffect?.setEffectPosition(
-            this.sprite.x + this.sprite.width / 2,
-            this.sprite.y + this.sprite.height / 2
-        );
+        EntityUtils.syncLightToBody(this);
+        EntityUtils.syncEffectToSprite(this);
     }
 
     onPickup(type: EntityType) {

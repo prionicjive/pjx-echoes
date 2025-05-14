@@ -1,9 +1,11 @@
-export interface Point {
+import * as planck from 'planck';
+
+export type Point = {
     x: number;
     y: number;
 }
 
-export interface Segment { 
-    a: Point; 
-    b: Point;
+export type Segment = { 
+    a: planck.Vec2; 
+    b: planck.Vec2;
 } 

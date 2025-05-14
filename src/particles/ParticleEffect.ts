@@ -1,12 +1,20 @@
-import { Container, Sprite, Color } from 'pixi.js';
+import { Color, Container, Sprite } from 'pixi.js';
+import { Point } from '../utils/types';
+import { MathUtils } from '../utils/MathUtils';
 
 export interface ParticleEffectOptions {
     texturePath: string;
     maxParticles?: number;
     emitPerSecond?: number;
+    duration?: number;
+    emitAngle: number;
+    spreadAmount: number;
+    emitRotationSpeed?: number;
+    emitRotateClockwise?: boolean;
     particleOptions: ParticleOptions;
 }
 
+// TODO Consider how to provide randomization for these values, in terms of min max ranges
 interface ParticleOptions {
   maxAge: number;
   startAlpha: number;
@@ -21,7 +29,6 @@ interface ParticleOptions {
   height: number;
   startSpeed: number;
   endSpeed: number;
-  startDirection: {x: number, y: number };
   endDirection: {x: number, y: number };
 }
 
@@ -29,28 +36,55 @@ interface Particle {
   sprite: Sprite;
   alive: boolean;
   age: number;
-  maxAge: number;
-
-  // TODO May want to store more "over time" properties but for not, everything can be calculated on the fly
+  maxAge: number; // TODO Store values within Particle that might be random per particle and can't just be referenced from ParticleOptions
+  startDirection: {x: number, y: number };
+  endDirection: {x: number, y: number };
+  startSpeed: number;
+  endSpeed: number;
+  startScaleX: number;
+  startScaleY: number;
+  endScaleX: number;
+  endScaleY: number;
+  startAlpha: number;
+  endAlpha: number;
+  startTint: Color;
+  endTint: Color;
+  width: number;
+  height: number;
 }
 
 export class ParticleEffect {
-  private emitPerSecond: number;
+  
+  private timeElapsed: number = 0;
   private accum: number = 0;
   public container: Container;
   public template: ParticleOptions;
   private particles: Particle[] = [];
   private maxParticles: number;
-  private emitPosition = { x: 0, y: 0 }; // TODO Make a Point?
+  private position: Point = { x: 0, y: 0 }; // TODO Make a Point?
   private numAliveParticles: number = 0;
   private emissionStopped: boolean = false;
   private emptyCallback?: () => void;
 
+  // Behavioral properties of the effect
+  private duration?: number;
+  private emitPerSecond: number;
+  private emitAngle: number;
+  private spreadAmount: number;
+  private emitRotationSpeed: number;
+  private emitRotateClockwise: boolean;
+
   constructor(options: ParticleEffectOptions) {
     this.container = new Container();
     this.maxParticles = options.maxParticles ?? 100;
-    this.emitPerSecond = options.emitPerSecond ?? 30;
     this.template = {...options.particleOptions};
+
+    this.emitPerSecond = options.emitPerSecond ?? 30;
+    this.emitAngle = options.emitAngle ?? 0;
+    this.spreadAmount = options.spreadAmount ?? 0;
+    this.duration = options.duration;
+    this.emitRotationSpeed = options.emitRotationSpeed ?? 0;
+    this.emitRotateClockwise = options.emitRotateClockwise ?? true;
 
     for (let i = 0; i < this.maxParticles; i++) {
       
@@ -61,12 +95,26 @@ export class ParticleEffect {
       // Add our particle sprite to the container
       this.container.addChild(sprite);
 
-      // TODO Consider options passed in, or have a factory of emitters that have their own options (And textures!) and single ask for one of those
+      // Make a default particle, considering it will have its internals changed upon emission
       this.particles.push({
         sprite,
         alive: false,
         age: 0,
-        maxAge: this.template.maxAge
+        maxAge: 0,
+        startDirection: {x: 0, y: 0},
+        endDirection: {x: 0, y: 0},
+        startSpeed: 0,
+        endSpeed: 0,
+        startScaleX: 0,
+        startScaleY: 0,
+        endScaleX: 0,
+        endScaleY: 0,
+        startAlpha: 0,
+        endAlpha: 0,
+        startTint: new Color(),
+        endTint: new Color(),
+        width: 0,
+        height: 0,
       });
     }
 
@@ -76,12 +124,20 @@ export class ParticleEffect {
     this.accum = 1 / this.emitPerSecond;
   }
 
-  setEffectPosition(x: number, y: number): void {
-    this.emitPosition.x = x;
-    this.emitPosition.y = y;
+  setPosition(x: number, y: number): void {
+    this.position.x = x;
+    this.position.y = y;
   }
 
   update(dt: number): void {
+    // If there is a finite duration to be had, see if we've crossed that threshold and stop emission if need be
+    if (this.duration !== undefined) {
+      this.timeElapsed += dt;
+      if (this.timeElapsed >= this.duration) {
+        this.stopEmission();
+      }
+    }
+
     this.accum += dt;
     const emitInterval = 1 / this.emitPerSecond;
 
@@ -93,6 +149,15 @@ export class ParticleEffect {
       }
     }
 
+    // Update properties to the emitter itself
+
+    // Rotate the emitter
+    this.emitAngle += this.emitRotationSpeed * dt * (this.emitRotateClockwise ? 1 : -1);
+    if (this.emitAngle > 360) {
+      this.emitAngle -= 360;
+    } else if (this.emitAngle < 0) {
+      this.emitAngle += 360;
+    }
     for (const particle of this.particles) {
       if (!particle.alive) continue;
 
@@ -109,15 +174,16 @@ export class ParticleEffect {
       const s = particle.sprite;
 
       // Lerp speed and direction
-      const speed = this.lerp(this.template.startSpeed, this.template.endSpeed, t);
-      const directionX = this.lerp(this.template.startDirection.x, this.template.endDirection.x, t);
-      const directionY = this.lerp(this.template.startDirection.y, this.template.endDirection.y, t);
+      const speed = this.lerp(particle.startSpeed, particle.endSpeed, t);
+      const directionX = this.lerp(particle.startDirection.x, particle.endDirection.x, t);
+      const directionY = this.lerp(particle.startDirection.y, particle.endDirection.y, t);
 
       // Update position based on most recent velocity
       s.x += directionX * speed * dt;
       s.y += directionY * speed * dt;
 
       // Update alpha, scale and tint
+      // TODO Change to leverage what might now exist at the particle level
       s.alpha = this.lerp(this.template.startAlpha, this.template.endAlpha, t);
       const scaleX = this.lerp(this.template.startScaleX, this.template.endScaleX, t);
       const scaleY = this.lerp(this.template.startScaleY, this.template.endScaleY, t);
@@ -127,7 +193,7 @@ export class ParticleEffect {
     }
 
     // If the emission has stopped and all particles are dead, call the callback
-    if (!this.emissionStopped && this.numAliveParticles === 0 && this.emptyCallback) {
+    if (this.emissionStopped && this.numAliveParticles === 0 && this.emptyCallback) {
       this.emptyCallback();
     }
   }
@@ -159,18 +225,47 @@ export class ParticleEffect {
     const particle = this.particles.find(p => !p.alive);
     if (!particle) return;
 
-    // Reset living related things
-    particle.alive = true;
+    // Ready the particle
+    this.readyParticle(particle);
     this.numAliveParticles++;
+  }
+
+  private readyParticle(particle: Particle): void {
+    particle.alive = true;
     particle.age = 0;
+
+    // TODO Possibly randomize all the things?
     particle.maxAge = this.template.maxAge;
 
+    const emitAngle = -MathUtils.getRandomAngleInSpread(MathUtils.degreesToRadians(this.emitAngle), MathUtils.degreesToRadians(this.spreadAmount));
+    particle.startDirection = {x: Math.cos(emitAngle), y: Math.sin(emitAngle)};
+
+    particle.endDirection = this.template.endDirection;
+    particle.startSpeed = this.template.startSpeed;
+    particle.endSpeed = this.template.endSpeed;
+
+    particle.startScaleX = this.template.startScaleX;
+    particle.startScaleY = this.template.startScaleY;
+
+    particle.endScaleX = this.template.endScaleX;
+    particle.endScaleY = this.template.endScaleY;
+
+    particle.startAlpha = this.template.startAlpha;
+    particle.endAlpha = this.template.endAlpha;
+
+    particle.startTint = this.template.startTint;
+    particle.endTint = this.template.endTint;
+
+    particle.width = this.template.width;
+    particle.height = this.template.height;
+
     // Init the sprite
-    // TODO Make init function?
     const s = particle.sprite;
     s.visible = true;
+
+    // TODO Possibly randomize all the things?
     s.alpha = this.template.startAlpha;
-    s.position.set(this.emitPosition.x, this.emitPosition.y);
+    s.position.set(this.position.x, this.position.y);
     s.width = this.template.width * this.template.startScaleX;
     s.height = this.template.height * this.template.startScaleY;
     s.tint = this.template.startTint.toNumber();

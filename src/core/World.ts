@@ -1,17 +1,17 @@
+import { BloomFilter, CRTFilter } from 'pixi-filters';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
-import { CRTFilter, BloomFilter } from 'pixi-filters';
+import { Config } from '../config/Config.ts';
+import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
+import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
+import { EntityType } from '../entities/types.ts';
+import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
-import { Config } from '../config/Config.ts'; 
-import { EntityType, EntityUserData } from '../entities/types.ts'; 
-import { InputManager } from '../input/InputManager.ts';
-import { LightUtils } from '../utils/LightUtils.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
-import { BaseEntity } from '../entities/BaseEntity.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
-import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
+import { LightUtils } from '../utils/LightUtils.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -121,8 +121,8 @@ export class World {
         // TODO Make some of this configurable!
         this.crtFilter = new CRTFilter({
             curvature: 0,
-            lineWidth: 0,
-            lineContrast: 0,
+            lineWidth: 0.05,
+            lineContrast: 0.25,
             vignetting: 0,
             noise: 0.2,
             noiseSize: 1
@@ -130,15 +130,15 @@ export class World {
 
         this.bloomFilter = new BloomFilter({
             kernelSize: 5,
-            quality: 4,
-            resolution: 1.5,
-            strength: 12
+            quality: 2,
+            resolution: 1,
+            strength: 8
         });
 
         // Apply bloom to the world
         this.worldContainer.filters = [this.bloomFilter];
 
-        // Apply the CRT filter to EVERYTHING
+        // // Apply the CRT filter to EVERYTHING
         this.app.stage.filters = [this.crtFilter];
     }
 
@@ -206,11 +206,12 @@ export class World {
         // Create a proceduarally generated level
         this.level = LevelUtils.createProcGenLevel(
             this.world, {
+                bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            ProGenLevelsConfig.Standard // ProGenLevelsConfig.Simple
+            ProGenLevelsConfig.Standard
         );
         
         // Get the player - our "first class" entity
@@ -247,14 +248,14 @@ export class World {
         this.app.stage.addChild(this.worldContainer); // Added directly to the stage
 
         this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
+
+        // We may not want to show the level geometry to start with
+        this.levelGeometryContainer.visible = Config.Debug.showLevelGeometry;
         this.worldContainer.addChild(this.levelGeometryContainer);
-        
-        // We MAY want to render without lights
-        // TODO We might want multiple light containers are different layers with different light colors
-        if (Config.Debug.drawLights) {
-            this.worldContainer.addChild(this.lightsContainer); 
-            
-        }
+
+        // We may want lights off to start with
+        this.lightsContainer.visible = Config.Debug.showLights;
+        this.worldContainer.addChild(this.lightsContainer); 
 
         this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
@@ -391,6 +392,9 @@ export class World {
         // Destroy any bodies that need to be destroyed
         this.processBodiesToDestroy();
         
+        // Handle debugging input
+        this.handleDebugInput();
+
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
 
@@ -423,6 +427,19 @@ export class World {
         this.bodiesToDestroy = [];
     }
 
+    private handleDebugInput() {
+        // Process any debugging input
+
+        // Toggle lights
+        if (this.inputManager.getKeysState().keys.get("1")?.justPressed) {
+            this.lightsContainer.visible = !this.lightsContainer.visible;
+        }
+        // Toggle level geometry
+        if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
+            this.levelGeometryContainer.visible = !this.levelGeometryContainer.visible;
+        }
+    }
+    
     private updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 
@@ -549,11 +566,7 @@ export class World {
 
         // Render all lights to the lightmap container using LightManager
         LightUtils.renderLightsBatch(
-            LightManager.instance.getDynamicLights(),
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
-        LightUtils.renderLightsBatch(
-            LightManager.instance.getStaticLights(),
+            LightManager.instance.getAllLights(),
             cameraOffset, screenBounds, this.tempLightmapContainer
         );
 

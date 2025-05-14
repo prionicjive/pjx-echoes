@@ -1,5 +1,5 @@
 /**
- * Entry point for the pjx-echoes browser game.
+ * Entry point for pjx-echoes.
  * Sets up styles and starts the main Game instance.
  */
 

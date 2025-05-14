@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+            <title>Particle Effect Previewer</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!-- Add a favicon or custom styles here if need be -->
+        <style>
+            html, body {
+                margin: 0;
+                padding: 0;
+                background: #000;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+            body {
+                /* Optional: Center canvas if not fullscreen */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- The PIXI canvas will be injected here by the previewer -->
+        <script type="module" src="/src/particleEffectPreviewer/index.ts"></script>
+    </body>
+</html>

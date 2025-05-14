@@ -35,7 +35,7 @@ export class Exit extends BaseEntity {
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Exit.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Exit.width / 2, options.spawnPoint.y + Config.Exit.height / 2)
+                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
             }
         );
 

@@ -75,7 +75,7 @@ export class Level implements LevelContext {
         this.createLevelEdges(options.physicsWorld, options.containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
-        if (Config.Debug.drawWalls) {
+        if (Config.Debug.createVisibleWalls) {
             this.walls = this.createWalls(
                 [...options.entitiesOptions.wallPositions],
                 options.containers.levelGeometryContainer
@@ -112,7 +112,8 @@ export class Level implements LevelContext {
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
         let edgeGraphics: PIXI.Graphics | null = null;
         
-        if (Config.Debug.drawEdges) {
+        // We may not want to draw the edges
+        if (Config.Debug.createVisibleEdges) {
             // Also, while iterating, draw the edges of the walls
             edgeGraphics = new PIXI.Graphics();
             

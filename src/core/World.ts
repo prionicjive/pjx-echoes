@@ -248,14 +248,14 @@ export class World {
         this.app.stage.addChild(this.worldContainer); // Added directly to the stage
 
         this.worldContainer.addChild(this.bgContainer); // Here and below are added to the world container
+
+        // We may not want to show the level geometry to start with
+        this.levelGeometryContainer.visible = Config.Debug.showLevelGeometry;
         this.worldContainer.addChild(this.levelGeometryContainer);
-        
-        // We MAY want to render without lights
-        // TODO We might want multiple light containers are different layers with different light colors
-        if (Config.Debug.drawLights) {
-            this.worldContainer.addChild(this.lightsContainer); 
-            
-        }
+
+        // We may want lights off to start with
+        this.lightsContainer.visible = Config.Debug.showLights;
+        this.worldContainer.addChild(this.lightsContainer); 
 
         this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
@@ -392,6 +392,9 @@ export class World {
         // Destroy any bodies that need to be destroyed
         this.processBodiesToDestroy();
         
+        // Handle debugging input
+        this.handleDebugInput();
+
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
 
@@ -424,6 +427,19 @@ export class World {
         this.bodiesToDestroy = [];
     }
 
+    private handleDebugInput() {
+        // Process any debugging input
+
+        // Toggle lights
+        if (this.inputManager.getKeysState().keys.get("1")?.justPressed) {
+            this.lightsContainer.visible = !this.lightsContainer.visible;
+        }
+        // Toggle level geometry
+        if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
+            this.levelGeometryContainer.visible = !this.levelGeometryContainer.visible;
+        }
+    }
+    
     private updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 

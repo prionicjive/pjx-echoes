@@ -1,8 +1,6 @@
 import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { LightsConfig } from '../config/LightsConfig';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';

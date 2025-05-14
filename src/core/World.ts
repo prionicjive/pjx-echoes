@@ -206,6 +206,7 @@ export class World {
         // Create a proceduarally generated level
         this.level = LevelUtils.createProcGenLevel(
             this.world, {
+                bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer

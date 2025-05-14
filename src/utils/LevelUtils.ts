@@ -55,6 +55,7 @@ export class LevelUtils {
         return new Level({
             physicsWorld: world, 
             containers: {
+                bgContainer: containers.bgContainer,
                 levelGeometryContainer: containers.levelGeometryContainer,
                 preEntitiesContainer: containers.preEntitiesContainer,
                 entitiesContainer: containers.entitiesContainer

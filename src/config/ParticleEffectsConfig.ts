@@ -59,7 +59,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         emitAngle: 0,
         spreadAmount: 0,
         particleOptions: {
-            maxAge: 5,
+            maxAge: 3,
             startAlpha: 1,
             endAlpha: 0,
             startScaleX: 0.25,

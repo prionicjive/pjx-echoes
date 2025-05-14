@@ -1,4 +1,5 @@
 import { Point, Segment } from "../utils/types";
+import * as planck from 'planck';
 
 
 // MapUtils.ts
@@ -470,7 +471,7 @@ export class MapUtils {
               const by = y * tileSize;
       
               // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: {x: ax, y: ay}, b: {x: bx, y: by} });
+              edgeSegments.push({ a: new planck.Vec2(ax, ay), b: new planck.Vec2(bx, by) });
       
               // Reset the start position
               startX = null;
@@ -512,7 +513,7 @@ export class MapUtils {
               const by = y * tileSize;
       
               // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: {x: ax, y: ay}, b: {x: bx, y: by} });
+              edgeSegments.push({ a: new planck.Vec2(ax, ay), b: new planck.Vec2(bx, by) });
       
               // Reset the start position
               startY = null;

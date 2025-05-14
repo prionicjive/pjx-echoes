@@ -9,8 +9,6 @@
 import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { LightsConfig } from '../config/LightsConfig';
-import { ParticleEffectsConfig } from '../config/ParticleEffectsConfig';
 import { PointerState, SwipeState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';

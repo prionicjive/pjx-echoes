@@ -9,6 +9,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface ExitOptions {
     spawnPoint: Point,
@@ -32,16 +33,12 @@ export class Exit extends BaseEntity {
         });
 
         // Create static body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'static',
-            position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.Exit.width, height: Config.Exit.height },
-            fixture: {
-                isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryExit,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Exit.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Exit.width / 2, options.spawnPoint.y + Config.Exit.height / 2)
             }
-        });
+        );
 
         // Construct a static light
         const center = {

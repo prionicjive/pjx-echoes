@@ -9,6 +9,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface AntiOptions {
     spawnPoint: Point,
@@ -32,16 +33,12 @@ export class Anti extends BaseEntity {
         });
 
         // Create static body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'static',
-            position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.Anti.width, height: Config.Anti.height },
-            fixture: {
-                isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryAnti,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Anti.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Anti.width / 2, options.spawnPoint.y + Config.Anti.height / 2)
             }
-        });
+        );
 
         // Construct a static light
         const center = {

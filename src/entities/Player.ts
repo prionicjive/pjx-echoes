@@ -21,6 +21,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
 import { EntityType } from './types';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface PlayerOptions { 
     spawnPoint: Point,
@@ -44,24 +45,12 @@ export class Player extends BaseEntity {
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'dynamic',
-            position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius),
-            circle: { radius: Config.Player.radius },
-            fixture: {
-                friction: 0,
-                density: 1,
-                restitution: 0, // No bounce
-                filterCategoryBits: Config.Physics.Collision.categoryPlayer,
-                filterMaskBits: Config.Physics.Collision.categoryEdge
-                    | Config.Physics.Collision.categorySentry
-                    | Config.Physics.Collision.categoryWall
-                    | Config.Physics.Collision.categoryExit
-                    | Config.Physics.Collision.categoryAnti
-                    | Config.Physics.Collision.categoryTorch
-            },
-            linearDamping: Config.Physics.Player.linearDamping
-        });
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Player.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius)
+            }
+        );
 
         // Create the light
         const light = new DynamicLight(

@@ -1,9 +1,9 @@
 import * as planck from 'planck';
 import { Segment } from './types';
 
-interface CreateBodyOptions {
+export interface CreateBodyOptions {
     type?: planck.BodyType; // 'static', 'dynamic', etc.
-    position: planck.Vec2;
+    position?: planck.Vec2;
     // Only one of box or circle should be provided
     box?: { width: number; height: number; center?: planck.Vec2; angle?: number };
     circle?: { radius: number; center?: planck.Vec2 };
@@ -27,7 +27,7 @@ export class PhysicsUtils {
     ): planck.Body {
         const body = world.createBody({
             type: options.type ?? 'static',
-            position: options.position,
+            position: options.position ?? new planck.Vec2(0, 0),
             linearDamping: options.linearDamping ?? 0
         });
 

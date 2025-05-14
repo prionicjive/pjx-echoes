@@ -11,6 +11,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface TorchOptions { 
     levelContext: LevelContext, 
@@ -34,16 +35,12 @@ export class Torch extends BaseEntity {
         });
 
         // Create static body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'static',
-            position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y),
-            box: { width: Config.Torch.width, height: Config.Torch.height },
-            fixture: {
-                isSensor: true,
-                filterCategoryBits: Config.Physics.Collision.categoryTorch,
-                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Torch.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Torch.width / 2, options.spawnPoint.y + Config.Torch.height / 2)
             }
-        });
+        );
 
         // Construct a static light
         const center = {

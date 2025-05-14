@@ -11,6 +11,7 @@ import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface SentryOptions { 
     spawnPoint: Point,
@@ -35,21 +36,12 @@ export class Sentry extends BaseEntity {
         });
 
         // Create dynamic body
-        const body = PhysicsUtils.createBody(options.levelContext.getPhysicsWorld(), {
-            type: 'dynamic',
-            position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius),
-            circle: { radius: Config.Sentry.radius },
-            fixture: {
-                friction: 0,
-                density: 1,
-                restitution: 1, // Perfect elasticity
-                filterCategoryBits: Config.Physics.Collision.categorySentry,
-                filterMaskBits: Config.Physics.Collision.categoryEdge
-                    | Config.Physics.Collision.categoryPlayer
-                    | Config.Physics.Collision.categoryWall
-                    | Config.Physics.Collision.categorySentry
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Sentry.body!,
+                position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius)
             }
-        });
+        );
 
         // Create the light
         const light = new DynamicLight(

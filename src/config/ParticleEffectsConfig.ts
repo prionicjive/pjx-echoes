@@ -82,6 +82,8 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         duration: 10,
         emitAngle: 90,
         spreadAmount: 45,
+        emitRotateClockwise: true,
+        emitRotationSpeed: 75,
         particleOptions: {
             maxAge: 2.5,
             startAlpha: 1,
@@ -95,7 +97,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
             startTint: new PIXI.Color(Config.Torch.color),
             endTint: new PIXI.Color(Config.Torch.color), // TODO Just for test, should be configurable
             endDirection: {x: 0, y: 0},
-            startSpeed: 100,
+            startSpeed: 200,
             endSpeed: 100
         }
     }

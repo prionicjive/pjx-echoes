@@ -9,6 +9,8 @@ export interface ParticleEffectOptions {
     duration?: number;
     emitAngle: number;
     spreadAmount: number;
+    emitRotationSpeed?: number;
+    emitRotateClockwise?: boolean;
     particleOptions: ParticleOptions;
 }
 
@@ -69,6 +71,8 @@ export class ParticleEffect {
   private emitPerSecond: number;
   private emitAngle: number;
   private spreadAmount: number;
+  private emitRotationSpeed: number;
+  private emitRotateClockwise: boolean;
 
   constructor(options: ParticleEffectOptions) {
     this.container = new Container();
@@ -79,6 +83,8 @@ export class ParticleEffect {
     this.emitAngle = options.emitAngle ?? 0;
     this.spreadAmount = options.spreadAmount ?? 0;
     this.duration = options.duration;
+    this.emitRotationSpeed = options.emitRotationSpeed ?? 0;
+    this.emitRotateClockwise = options.emitRotateClockwise ?? true;
 
     for (let i = 0; i < this.maxParticles; i++) {
       
@@ -143,6 +149,15 @@ export class ParticleEffect {
       }
     }
 
+    // Update properties to the emitter itself
+
+    // Rotate the emitter
+    this.emitAngle += this.emitRotationSpeed * dt * (this.emitRotateClockwise ? 1 : -1);
+    if (this.emitAngle > 360) {
+      this.emitAngle -= 360;
+    } else if (this.emitAngle < 0) {
+      this.emitAngle += 360;
+    }
     for (const particle of this.particles) {
       if (!particle.alive) continue;
 

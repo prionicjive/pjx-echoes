@@ -451,11 +451,10 @@ export class World {
         };
     
         const pointer = this.inputManager.getPointerState();
-        const swipe = this.inputManager.getSwipeState();
-        const isTouchActive = this.inputManager.getIsTouchActive();
+        const touchState = this.inputManager.getTouchState();
     
         this.player.handleInput(
-            { pointer, swipe, isTouchActive },
+            { pointer, touchState },
             { levelPosition, playerScreenPos },
             deltaTime
         );

@@ -9,7 +9,7 @@
 import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { PointerState, SwipeState } from '../input/InputManager';
+import { PointerState, TouchState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -83,25 +83,53 @@ export class Player extends BaseEntity {
     }
 
     handleInput(
-        input: { pointer: PointerState, swipe: SwipeState, isTouchActive: boolean },
+        input: { pointer: PointerState, touchState: TouchState },
         context: {
             levelPosition: { x: number, y: number },
             playerScreenPos: { x: number, y: number }
         },
         deltaTime: number
     ) {
-        // If a swipe just happened, skip any pointer logic and handle the swipe
-        if (input.swipe.detected) {
-            this.handleSwipe(input.swipe);
-            return;
-        }
-        
-        // If we are in touch mode, skip any pointer logic
-        if (input.isTouchActive) {
+        const touchState = input.touchState;
+
+        // 1. Attractor logic while touch is held
+        if (touchState?.active) {
+            const levelRelative = {
+                x: touchState.lastPos.x - context.levelPosition.x,
+                y: touchState.lastPos.y - context.levelPosition.y
+            };
+            const dx = context.playerScreenPos.x - touchState.lastPos.x;
+            const dy = context.playerScreenPos.y - touchState.lastPos.y;
+            const screenDistance = Math.sqrt(dx * dx + dy * dy);
+            const screenThreshold = Config.PixelsPerMeter / 2;
+
+            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
+                if (Config.Movement.towardsPoint) {
+                    this.applyForceTowards(levelRelative, deltaTime);
+                } else {
+                    this.applyForceAwayFrom(levelRelative, deltaTime);
+                }
+            } else {
+                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+            }
             return;
         }
 
-        // Convert pointer to level-relative position
+        // 2. On touch end, check for recent swipe
+        if (
+            !touchState.active &&
+            input.pointer.justReleased &&
+            touchState.lastSwipeTime > 0 &&
+            (performance.now() - touchState.lastSwipeTime) < Config.Movement.Gesture.swipeReleaseWindowInMs
+        ) {
+            const speedMeters = touchState.lastSwipeVelocity / Config.PixelsPerMeter;
+            const vx = touchState.lastSwipeDirection.x * speedMeters;
+            const vy = touchState.lastSwipeDirection.y * speedMeters;
+            this.handleSwipe(vx, vy);
+            return;
+        }
+
+        // 3. Fallback to pointer logic (Converting pointer to level-relative position)
         const pointerLevelRelativePositionInPixels = {
             x: input.pointer.screen.x - context.levelPosition.x,
             y: input.pointer.screen.y - context.levelPosition.y
@@ -138,10 +166,10 @@ export class Player extends BaseEntity {
         }
     }
 
-    handleSwipe(swipe: SwipeState) {
+    handleSwipe(velocityX: number, velocityY: number) {
      // Convert to world units
-        let vx = swipe.velocityX / Config.PixelsPerMeter;
-        let vy = swipe.velocityY / Config.PixelsPerMeter;
+        let vx = velocityX / Config.PixelsPerMeter;
+        let vy = velocityY / Config.PixelsPerMeter;
          
         // This exaggerates fast flicks, and damps slow ones
         const speed = Math.sqrt(vx * vx + vy * vy);

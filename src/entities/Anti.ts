@@ -35,7 +35,7 @@ export class Anti extends BaseEntity {
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Anti.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Anti.width / 2, options.spawnPoint.y + Config.Anti.height / 2)
+                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
             }
         );
 

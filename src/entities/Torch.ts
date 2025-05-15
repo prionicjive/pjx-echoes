@@ -36,7 +36,7 @@ export class Torch extends BaseEntity {
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Torch.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Torch.width / 2, options.spawnPoint.y + Config.Torch.height / 2)
+                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
             }
         );
 

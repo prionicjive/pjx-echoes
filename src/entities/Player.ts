@@ -122,9 +122,9 @@ export class Player extends BaseEntity {
             touchState.lastSwipeTime > 0 &&
             (performance.now() - touchState.lastSwipeTime) < Config.Movement.Gesture.swipeReleaseWindowInMs
         ) {
-            const speedMeters = touchState.lastSwipeVelocity / Config.PixelsPerMeter;
-            const vx = touchState.lastSwipeDirection.x * speedMeters;
-            const vy = touchState.lastSwipeDirection.y * speedMeters;
+            const vx = touchState.lastSwipeDirection.x * touchState.lastSwipeSpeed;
+            const vy = touchState.lastSwipeDirection.y * touchState.lastSwipeSpeed;
+            console.log("Handling swipe!", vx, vy);
             this.handleSwipe(vx, vy);
             return;
         }
@@ -173,9 +173,14 @@ export class Player extends BaseEntity {
          
         // This exaggerates fast flicks, and damps slow ones
         const speed = Math.sqrt(vx * vx + vy * vy);
+        console.log("Swipe speed", speed);
         const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
+        
+        console.log("Nonlinear scale", nonlinearScale);
         vx = (vx / speed) * nonlinearScale;
         vy = (vy / speed) * nonlinearScale;
+
+        console.log("Applying linear velocity", vx, vy);
          
         // Apply to player body
         this.body.setLinearVelocity(new planck.Vec2(vx, vy));   

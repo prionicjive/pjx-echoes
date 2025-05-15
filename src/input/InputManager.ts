@@ -15,7 +15,7 @@ export interface TouchState {
     lastPos: { x: number, y: number },
     history: { x: number, y: number, time: number }[],
     lastSwipeTime: number,
-    lastSwipeVelocity: number, // TODO Rename to speed possibly
+    lastSwipeSpeed: number, // TODO Rename to speed possibly
     lastSwipeDirection: { x: number, y: number },
 }
 
@@ -44,7 +44,7 @@ export class InputManager {
         lastPos: { x: 0, y: 0 },
         history: [],
         lastSwipeTime: 0,
-        lastSwipeVelocity: 0,
+        lastSwipeSpeed: 0,
         lastSwipeDirection: { x: 0, y: 0 },
     };
 
@@ -109,7 +109,7 @@ export class InputManager {
         this.touchState.lastPos = { x: touch.clientX, y: touch.clientY };
         this.touchState.history = [{ x: touch.clientX, y: touch.clientY, time: now }];
         this.touchState.lastSwipeTime = 0;
-        this.touchState.lastSwipeVelocity = 0;
+        this.touchState.lastSwipeSpeed = 0;
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
     }
     
@@ -137,19 +137,19 @@ export class InputManager {
         const dx = last.x - first.x;
         const dy = last.y - first.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const velocity = distance / (dt || 0.001); // px/sec
+        const speed = distance / (dt || 0.001); // px/sec
 
         // 3. Detect swipe
         if (
             distance > Config.Movement.Gesture.minSwipeDistance &&
-            velocity > Config.Movement.Gesture.swipeVelocityThreshold
+            speed > Config.Movement.Gesture.swipeSpeedThreshold
         ) {
             const magnitude = Math.sqrt(dx * dx + dy * dy) || 1;
             this.touchState.lastSwipeTime = now;
-            this.touchState.lastSwipeVelocity = velocity;
+            this.touchState.lastSwipeSpeed = speed;
             this.touchState.lastSwipeDirection = { x: dx / magnitude, y: dy / magnitude };
             // Optional: log for debugging
-            // console.log("Swipe candidate detected!", velocity, this.touchState.lastSwipeDirection);
+            console.log("Swipe candidate detected!", distance,speed, this.touchState.lastSwipeDirection);
         }
 
         this.touchState.lastPos = { x: touch.clientX, y: touch.clientY };

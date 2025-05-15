@@ -90,7 +90,7 @@ export const Config = {
     Movement: {
         Gesture: {
             swipeReleaseWindowInMs: 120,
-            minSwipeDistance: 16,
+            minSwipeDistance: 100,
             swipeSpeedPixelsPerSecondThreshold: 750,
             swipeSpeedScaleExponent: 0.95,
             maxSpeedScaleExponent: 1.1,

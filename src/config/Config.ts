@@ -91,10 +91,10 @@ export const Config = {
         Gesture: {
             swipeReleaseWindowInMs: 120,
             minSwipeDistance: 16,
-            swipeSpeedThreshold: 20,
+            swipeSpeedPixelsPerSecondThreshold: 750,
             swipeSpeedScaleExponent: 0.95,
             maxSpeedScaleExponent: 1.1,
-            maxSpeed: 10.00,
+            maxSpeedMetersPerSecond: 10.00,
         },
         towardsPoint: true,
         towardsPointMode: "FORCE", // "IMPULSE" or "FORCE"

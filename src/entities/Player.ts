@@ -122,10 +122,12 @@ export class Player extends BaseEntity {
             touchState.lastSwipeTime > 0 &&
             (performance.now() - touchState.lastSwipeTime) < Config.Movement.Gesture.swipeReleaseWindowInMs
         ) {
-            const vx = touchState.lastSwipeDirection.x * touchState.lastSwipeSpeed;
-            const vy = touchState.lastSwipeDirection.y * touchState.lastSwipeSpeed;
-            console.log("Handling swipe!", vx, vy);
-            this.handleSwipe(vx, vy);
+            const velocityInPixelsPerSecond = {
+                x: touchState.lastSwipeDirection.x * touchState.lastSwipeSpeedPixelsPerSecond,
+                y: touchState.lastSwipeDirection.y * touchState.lastSwipeSpeedPixelsPerSecond
+            }
+            console.log(`Handling swipe!    \nVelocity (px/s): x:${velocityInPixelsPerSecond.x} y:${velocityInPixelsPerSecond.y}\nSpeed (px/s): ${touchState.lastSwipeSpeedPixelsPerSecond}`);
+            this.handleSwipe(velocityInPixelsPerSecond);
             return;
         }
 
@@ -166,19 +168,39 @@ export class Player extends BaseEntity {
         }
     }
 
-    handleSwipe(velocityX: number, velocityY: number) {
-     // Convert to world units
-        let vx = velocityX / Config.PixelsPerMeter;
-        let vy = velocityY / Config.PixelsPerMeter;
+    handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }) {
+        // Convert to meters (Physics space)
+        let velocityInMetersPerSecond = { 
+            x: velocityInPixelsPerSecond.x / Config.PixelsPerMeter, 
+            y: velocityInPixelsPerSecond.y / Config.PixelsPerMeter
+        };
+
+        console.log("Swipe velocity (px/s)", velocityInPixelsPerSecond);
          
         // This exaggerates fast flicks, and damps slow ones
-        const speed = Math.sqrt(vx * vx + vy * vy);
-        console.log("Swipe speed", speed);
-        const nonlinearScale = Math.pow(speed, Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(Config.Movement.Gesture.maxSpeed, Config.Movement.Gesture.maxSpeedScaleExponent);
+        const speedMetersPerSecond = Math.sqrt(
+            velocityInMetersPerSecond.x * velocityInMetersPerSecond.x + velocityInMetersPerSecond.y * velocityInMetersPerSecond.y
+        );
+        console.log("Swipe speed (m/s)", speedMetersPerSecond);
         
+        // Calculate the non-linear scale to boost and smooth flickers / swipes
+        const nonlinearScale = Math.pow(
+            speedMetersPerSecond, 
+            Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(
+                Config.Movement.Gesture.maxSpeedMetersPerSecond, 
+                Config.Movement.Gesture.maxSpeedScaleExponent
+            );
         console.log("Nonlinear scale", nonlinearScale);
-        vx = (vx / speed) * nonlinearScale;
-        vy = (vy / speed) * nonlinearScale;
+        
+        
+        let vx = (velocityInMetersPerSecond.x / speedMetersPerSecond);
+        console.log("vx", vx);
+        vx *= nonlinearScale;
+        console.log("vx scaled", vx);
+        let vy = (velocityInMetersPerSecond.y / speedMetersPerSecond);
+        console.log("vy", vy);
+        vy *= nonlinearScale;
+        console.log("vy scaled", vy);
 
         console.log("Applying linear velocity", vx, vy);
          

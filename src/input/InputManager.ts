@@ -113,7 +113,7 @@ export class InputManager {
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
     }
     
-    private onTouchEnd(e: TouchEvent) {
+    private onTouchEnd() {
         this.pointer.isDown = false;
         this.pointer.justReleased = true;
         this.touchState.active = false;

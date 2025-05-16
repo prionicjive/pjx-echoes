@@ -14,10 +14,10 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         spreadAmount: 0,
         particleOptions: {
             maxAge: 0.5,
-            startAlpha: 1,
+            startAlpha: 0.75,
             endAlpha: 0,
-            startScaleX: 1,
-            startScaleY: 1,
+            startScaleX: 0.9,
+            startScaleY: 0.9,
             endScaleX: 0.42,
             endScaleY: 0.42,
             width: Config.Player.radius * 2 * Config.PixelsPerMeter,

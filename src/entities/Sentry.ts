@@ -42,12 +42,12 @@ export class Sentry extends BaseEntity {
         );
 
         // Create the light
-        const light = new DynamicLight(
+        const light = EntitiesConfig.Sentry.light ? new DynamicLight(
             {...body.getPosition()},
             options.levelContext.getEdgesList(),
             { ...EntitiesConfig.Sentry.light! },
             id,
-        );
+        ) : undefined;
 
         // Create the particle effect and set initial position
         const particleEffect = new ParticleEffect({

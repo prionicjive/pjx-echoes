@@ -42,7 +42,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                     | Config.Physics.Collision.categorySentry
             }
         },
-        light: LightsConfig.SentryLight,
+        //light: LightsConfig.SentryLight,
         particleEffect: ParticleEffectsConfig.SentryTrail
     },
     Player: {

@@ -16,14 +16,16 @@ import { Player } from '../entities/Player';
 import { Sentry } from '../entities/Sentry';
 import { Torch } from '../entities/Torch';
 import { EntityType } from '../entities/types';
-import { Wall } from '../entities/Wall';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Point, Segment } from '../utils/types';
 import { LevelContext } from './LevelContext';
 import { LevelSkeleton } from './LevelSkeleton';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { EntitiesConfig } from '../config/EntitiesConfig';
 
 export interface LevelOptions {
+    renderer: PIXI.Renderer;
     physicsWorld: planck.World;
     containers: LevelContainers;
     edgesList: Segment[];
@@ -43,8 +45,8 @@ export interface LevelContainers {
  * physics and rendering objects.
  */
 export class Level implements LevelContext {
+    private renderer: PIXI.Renderer;
     private player: Player | null;
-    private walls: Wall[];
     private exits: Exit[];
     private torches: Torch[];
     private antiEntities: Anti[];
@@ -52,6 +54,7 @@ export class Level implements LevelContext {
     private edgesList: Segment[];
     private dimensions: { width: number; height: number };
     private physicsWorld: planck.World;
+    private containers: LevelContainers;
 
     constructor(
         options: LevelOptions
@@ -60,12 +63,17 @@ export class Level implements LevelContext {
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
 
+        // Store the renderer
+        this.renderer = options.renderer;
+
+        // Store the containers
+        this.containers = options.containers;
+
         // Store the dimensions of the level
         this.dimensions = {...options.entitiesOptions.dimensions};
 
         // Store references to the various level entities
         this.player = null;
-        this.walls = [];
         this.exits = [];
         this.torches = [];
         this.antiEntities = [];
@@ -76,7 +84,7 @@ export class Level implements LevelContext {
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.createVisibleWalls) {
-            this.walls = this.createWalls(
+            this.createTilemap(
                 [...options.entitiesOptions.wallPositions],
                 options.containers.levelGeometryContainer
             );
@@ -148,21 +156,70 @@ export class Level implements LevelContext {
         return { id, body, graphics: edgeGraphics }
     }
 
-    private createWalls(positions: Point[], container: PIXI.Container): Wall[] {
-        const walls: Wall[] = [];
+    private createTilemap(positions: Point[], container: PIXI.Container): void {
+        if (positions.length === 0) return;
+    
+        // 1. Calculate the bounds of all positions
+        const bounds = positions.reduce((acc, pos) => ({
+            minX: Math.min(acc.minX, pos.x),
+            minY: Math.min(acc.minY, pos.y),
+            maxX: Math.max(acc.maxX, pos.x),
+            maxY: Math.max(acc.maxY, pos.y)
+        }), { 
+            minX: Infinity, 
+            minY: Infinity, 
+            maxX: -Infinity, 
+            maxY: -Infinity 
+        });
+    
+        // 2. Calculate dimensions in tiles and pixels
+        const tileWidth = Config.Wall.width * Config.PixelsPerMeter; // Your desired tile size in pixels
+        const tileHeight = Config.Wall.height * Config.PixelsPerMeter; // Your desired tile size in pixels
+        const widthInTiles = (bounds.maxX - bounds.minX + 1);
+        const heightInTiles = (bounds.maxY - bounds.minY + 1);
+        const widthInPixels = widthInTiles * tileWidth;
+        const heightInPixels = heightInTiles * tileHeight;
+    
+        // 3. Create a temporary container to hold our sprites
+        const tempContainer = new PIXI.Container();
         
-        for (const position of positions) {
-            const entity = new Wall({
-                spawnPoint: {...position},
-                containers: { 
-                    containerForEntity: container,
-                }
+        // 5. Create and position each tile's sprite
+        for (const pos of positions) {
+            const sprite = SpriteUtils.createSprite({
+                texture: PIXI.Texture.from(EntitiesConfig.Wall.sprite.texture),
+                x: (pos.x - bounds.minX) * tileWidth,
+                y: (pos.y - bounds.minY) * tileHeight,
+                width: tileWidth,
+                height: tileHeight,
+                color: EntitiesConfig.Wall.sprite.color
             });
-
-            walls.push(entity);
+            tempContainer.addChild(sprite);
         }
-
-        return walls;
+    
+        // 6. Create a render texture and render the container to it
+        const renderTexture = PIXI.RenderTexture.create({
+            width: widthInPixels,
+            height: heightInPixels
+        });
+        
+        // 7. Make sure we have a renderer reference
+        this.renderer.render({
+            container: tempContainer, 
+            target: renderTexture, 
+            clear: false
+        });
+    
+        // 8. Create a sprite using the render texture
+        const mapSprite = new PIXI.Sprite(renderTexture);
+        
+        // 9. Position the sprite in the world
+        mapSprite.x = bounds.minX * Config.PixelsPerMeter;
+        mapSprite.y = bounds.minY * Config.PixelsPerMeter;
+        
+        // 10. Add to container
+        container.addChild(mapSprite);
+    
+        console.log(`Created tilemap with ${positions.length} tiles at (${bounds.minX},${bounds.minY})`);
     }
 
     private createPlayer(
@@ -272,7 +329,6 @@ export class Level implements LevelContext {
         // Combine all entities into a single array
         const allEntities = [
             this.player!,
-            ...this.walls, 
             ...this.torches, 
             ...this.antiEntities, 
             ...this.exits,
@@ -302,9 +358,6 @@ export class Level implements LevelContext {
     private removeEntity(type: EntityType, entity: BaseEntity) {
         // Now, remove the entity from the correct array
         switch (type) {
-            case Config.Wall.type:
-                this.walls.splice(this.walls.indexOf(entity as Wall), 1);
-                break;
             case Config.Torch.type:
                 this.torches.splice(this.torches.indexOf(entity as Torch), 1);
                 break;
@@ -323,11 +376,6 @@ export class Level implements LevelContext {
     destroy() {
         // Destroy all entities
         this.player?.destroy();
-
-        this.walls.forEach((wall) => {
-            wall.destroy();
-        });
-        this.walls = [];
 
         this.torches.forEach((torch) => {
             torch.destroy();
@@ -372,5 +420,44 @@ export class Level implements LevelContext {
     
     getPhysicsWorld(): planck.World {
         return this.physicsWorld;
+    }
+
+    cullNonVisibleObjects(screenBounds: { left: number; top: number; right: number; bottom: number }) {
+        // Cull non-visible level geometry
+        const levelGeometryObjects = this.containers.levelGeometryContainer.children;
+
+        let levelGeometryVisibleCount = 0;
+        for (const object of levelGeometryObjects) {
+            const x = object.x;
+            const y = object.y;
+
+            if (x > screenBounds.right || x < screenBounds.left || y > screenBounds.bottom || y < screenBounds.top) {
+                object.visible = false;
+            } else {
+                object.visible = true;
+                levelGeometryVisibleCount++;
+            }
+        }
+        
+        console.log("Level geometry total count: " + levelGeometryObjects.length);
+        console.log("Level geometry visible count: " + levelGeometryVisibleCount);
+
+        // Cull non-visible level geometry
+        const entitiesObjects = this.containers.entitiesContainer.children;
+
+        let entitiesVisibleCount = 0;
+        for (const object of entitiesObjects) {
+            const bounds = object.getBounds();
+
+            if (bounds.left > screenBounds.right || bounds.right < screenBounds.left || bounds.top > screenBounds.bottom || bounds.bottom < screenBounds.top) {
+                object.visible = false;
+            } else {
+                object.visible = true;
+                entitiesVisibleCount++;
+            }
+        }
+        
+        console.log("Entities total count: " + entitiesObjects.length);
+        console.log("Entities visible count: " + entitiesVisibleCount);
     }
 }

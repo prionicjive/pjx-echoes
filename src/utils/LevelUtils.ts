@@ -4,9 +4,11 @@ import { Level, LevelContainers } from "../level/Level";
 import { LevelSkeleton } from "../level/LevelSkeleton";
 import { Point } from "../utils/types";
 import { MapUtils } from "./MapUtils";
+import * as PIXI from 'pixi.js';
 
 export class LevelUtils {
     static createProcGenLevel(
+        renderer: PIXI.Renderer,
         world: planck.World, 
         containers: LevelContainers,
         levelOptions: ProGenLevelOptions
@@ -53,6 +55,7 @@ export class LevelUtils {
 
         // Construct the level with all entities, including player
         return new Level({
+            renderer,
             physicsWorld: world, 
             containers: {
                 bgContainer: containers.bgContainer,

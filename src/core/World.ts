@@ -121,25 +121,22 @@ export class World {
         // TODO Make some of this configurable!
         this.crtFilter = new CRTFilter({
             curvature: 0,
-            lineWidth: 0.05,
-            lineContrast: 0.25,
-            vignetting: 0,
-            noise: 0.2,
+            lineWidth: 0.1,
+            lineContrast: 0.1,
+            vignetting: 0.3,
+            noise: 0.3,
             noiseSize: 1
         });
 
         this.bloomFilter = new BloomFilter({
             kernelSize: 5,
-            quality: 2,
+            quality: 4,
             resolution: 1,
             strength: 8
         });
 
-        // Apply bloom to the world
-        this.worldContainer.filters = [this.bloomFilter];
-
-        // // Apply the CRT filter to EVERYTHING
-        this.app.stage.filters = [this.crtFilter];
+        // Apply bloom and CRT to the world (We might not want any of this on UI layer)
+        this.worldContainer.filters = [this.bloomFilter, this.crtFilter];
     }
 
     private init() {
@@ -205,6 +202,7 @@ export class World {
 
         // Create a proceduarally generated level
         this.level = LevelUtils.createProcGenLevel(
+            this.app.renderer,
             this.world, {
                 bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,

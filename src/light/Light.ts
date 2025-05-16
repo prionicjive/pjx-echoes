@@ -6,6 +6,7 @@ import { GraphicsUtils } from '../utils/GraphicsUtils';
 import { LightUtils } from '../utils/LightUtils';
 import { CollisionUtils } from '../utils/CollisionUtils';
 import { Point, Segment } from '../utils/types';
+import { EntityUtils } from '../utils/EntityUtils';
 
 export interface LightOptions {
     baseRadius: number; // TODO BAD PRACTICE - We are setting and using this directly, SHOULD be a radius property on the Light object
@@ -38,7 +39,7 @@ export class Light {
     public sprite: PIXI.Sprite;
     public mask: PIXI.Graphics;
     protected pos: Point;
-    public entityId: string = "";
+    public id: string = "";
     protected collisionData: Segment[];
     protected lightPoints: { point: Point; angle: number }[];
 
@@ -56,7 +57,7 @@ export class Light {
     protected alphaTween?: gsap.core.Tween;
     protected tweenables: { radius: number, tint: number, alpha: number };
 
-    constructor(pos: Point, collisionData: Segment[], options: LightOptions, entityId: string) {
+    constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
         if (new.target === Light) {
             throw new Error("Light cannot be instantiated directly");
         }
@@ -94,8 +95,8 @@ export class Light {
         };
         this.setupTweens();
 
-        // Link with entity if needed
-        this.entityId = entityId;
+        // Generated unique Id
+        this.id = EntityUtils.generateRandomId("Light");
 
         // TODO Any additional setup / initialization
    };
@@ -177,10 +178,9 @@ export class DynamicLight extends Light {
     constructor(
         pos: Point,
         collisionData: Segment[],
-        options: LightOptions,
-        entityId: string = "",
+        options: LightOptions
     ) {
-        super(pos, collisionData, options, entityId);
+        super(pos, collisionData, options);
         // TODO Any additional setup / initialization
     }
 
@@ -290,8 +290,8 @@ export class StaticLight extends Light {
     // which would be used to invalidate and regenerate the light points
     private lastPos: Point;
    
-    constructor(pos: Point, collisionData: Segment[], options: LightOptions, entityId: string = "") {
-        super(pos, collisionData, options, entityId);
+    constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
+        super(pos, collisionData, options);
 
         // Set up values we assume will RARELY change
         this.lastPos = pos;

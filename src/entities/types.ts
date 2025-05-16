@@ -1,1 +1,1 @@
-export type EntityType = 'Player' | 'Sentry' | 'Wall' | 'Exit' | 'Torch' | 'Anti';
+export type EntityType = 'Player' | 'Sentry' | 'Wall' | 'Exit' | 'Torch' | 'Anti' | 'Base';

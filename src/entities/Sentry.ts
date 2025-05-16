@@ -4,12 +4,12 @@ import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
-import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { EntityType } from './types';
 
 export interface SentryOptions { 
     spawnPoint: Point,
@@ -20,9 +20,6 @@ export interface SentryOptions {
 
 export class Sentry extends BaseEntity {
     constructor(options: SentryOptions) {
-        // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Sentry.type);
-
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
             texture: PIXI.Texture.from(EntitiesConfig.Sentry.sprite.texture),
@@ -46,20 +43,15 @@ export class Sentry extends BaseEntity {
             {...body.getPosition()},
             options.levelContext.getEdgesList(),
             { ...EntitiesConfig.Sentry.light! },
-            id,
         ) : undefined;
 
         // Create the particle effect and set initial position
         const particleEffect = new ParticleEffect({
             ...EntitiesConfig.Sentry.particleEffect!,
         });
-        particleEffect.setPosition(
-            sprite.x + sprite.width / 2,
-            sprite.y + sprite.height / 2
-        );
 
         super({
-            id,
+            type: Config.Sentry.type as EntityType,
             sprite,
             body,
             light,
@@ -67,15 +59,9 @@ export class Sentry extends BaseEntity {
             containers: options.containers
         });
 
-        // Set user data with a self-referencing data
-        body.setUserData({
-            type: Config.Sentry.type,
-            entity: this
-        } as EntityUserData);
-
         // Set an initial velocity if provided
         if( options.initialVelocity) {
-            this.body.setLinearVelocity(options.initialVelocity);
+            this.body!.setLinearVelocity(options.initialVelocity);
         }
     }
 
@@ -83,33 +69,26 @@ export class Sentry extends BaseEntity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    // @ts-ignore
     update(deltaTime: number) {
         // Check to see if the sentry is locked to a certain axis and if so, nudge it away
         const epsilon = 0.01;
         const kick = 1;
 
-        if (Math.abs(this.body.getLinearVelocity().x) < epsilon) {
+        if (Math.abs(this.body!.getLinearVelocity().x) < epsilon) {
             const sign = Math.random() < 0.5 ? -1 : 1;
-            this.body.setLinearVelocity(new planck.Vec2(
+            this.body!.setLinearVelocity(new planck.Vec2(
                 sign * kick,
-                this.body.getLinearVelocity().y
+                this.body!.getLinearVelocity().y
             ));
         }
-        if (Math.abs(this.body.getLinearVelocity().y) < epsilon) {
+        if (Math.abs(this.body!.getLinearVelocity().y) < epsilon) {
             const sign = Math.random() < 0.5 ? -1 : 1;
-            this.body.setLinearVelocity(new planck.Vec2(
-                this.body.getLinearVelocity().x,
+            this.body!.setLinearVelocity(new planck.Vec2(
+                this.body!.getLinearVelocity().x,
                 sign * kick
             ));
         }
         
-        // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Sentry.radius) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;
-        this.sprite.rotation = this.body.getAngle();
-
-        EntityUtils.syncLightToBody(this);
-        EntityUtils.syncEffectToSprite(this);
+        super.update(deltaTime);
     }
 }

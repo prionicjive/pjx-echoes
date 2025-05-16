@@ -3,12 +3,12 @@ import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
-import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { EntityType } from './types';
 
 export interface AntiOptions {
     spawnPoint: Point,
@@ -18,9 +18,6 @@ export interface AntiOptions {
 
 export class Anti extends BaseEntity {
     constructor(options: AntiOptions) {
-        // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Anti.type);
-
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
             texture: PIXI.Texture.from(EntitiesConfig.Anti.sprite.texture),
@@ -48,28 +45,20 @@ export class Anti extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Anti.light! },
-            id
+            { ...EntitiesConfig.Anti.light! }
         );
 
         super({
-            id,
+            type: Config.Anti.type as EntityType,
             sprite,
             body,
             light,
             containers: options.containers
         });
-
-        // Set user data with a self-referencing data
-        body.setUserData({
-            type: Config.Anti.type,
-            entity: this
-        } as EntityUserData);
     }
 
-    // @ts-ignore
     update(deltaTime: number) {
-        // No need to update light or particle effect positions... yet? 
+        super.update(deltaTime);
     }
 
     // Optionally, add any unique logic on pickup

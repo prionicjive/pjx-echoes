@@ -23,11 +23,8 @@ export class LightManager {
     /**
      * Add a single light.
      */
-    addLight(light: Light): LightId {
-        const id = light.entityId || this.generateId();
-        light.entityId = id;
-        this.lights.set(id, light);
-        return id;
+    addLight(light: Light): void {
+        this.lights.set(light.id, light);
     }
 
     /**
@@ -54,7 +51,7 @@ export class LightManager {
         if (light) {
             // Destroy and remove right away
             light.destroy();
-            this.lights.delete(light.entityId);
+            this.lights.delete(light.id);
         }
     }
 
@@ -62,7 +59,7 @@ export class LightManager {
      * Fades out a light, queues for removal after update/render. Do not destroy immediately.
      */
     private fadeOutAndRemoveLight(light: Light, fadeDuration: number = 1) {
-        const id = light.entityId;
+        const id = light.id;
         if (!id) return;
         // Mark as fading out so update/render skips this light
         light.isFadingOut = true;
@@ -114,9 +111,5 @@ export class LightManager {
 
     getAllLights(): Light[] {
         return Array.from(this.lights.values());
-    }
-
-    private generateId(): LightId {
-        return 'light_' + Math.random().toString(36).substr(2, 9);
     }
 }

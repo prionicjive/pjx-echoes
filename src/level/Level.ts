@@ -359,16 +359,16 @@ export class Level implements LevelContext {
         // Now, remove the entity from the correct array
         switch (type) {
             case Config.Torch.type:
-                this.torches.splice(this.torches.indexOf(entity as Torch), 1);
+                this.torches = this.torches.filter((torch) => torch !== entity as Torch);
                 break;
             case Config.Anti.type:
-                this.antiEntities.splice(this.antiEntities.indexOf(entity as Anti), 1);
+                this.antiEntities = this.antiEntities.filter((anti) => anti !== entity as Anti);
                 break;
             case Config.Exit.type:
-                this.exits.splice(this.exits.indexOf(entity as Exit), 1);
+                this.exits = this.exits.filter((exit) => exit !== entity as Exit);
                 break;
             case Config.Sentry.type:
-                this.sentries.splice(this.sentries.indexOf(entity as Sentry), 1);
+                this.sentries = this.sentries.filter((sentry) => sentry !== entity as Sentry);
                 break;
         }
     }

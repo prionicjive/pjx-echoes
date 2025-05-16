@@ -339,8 +339,10 @@ export class World {
 
         // TODO Do any other additional destruction on the entity or its subsystems
 
-        // Lastly, flag the body of the entity for destruction
-        this.bodiesToDestroy.push(entity.body);
+        // Lastly, flag the body of the entity for destruction (if it exists)
+        if (entity.body) {
+            this.bodiesToDestroy.push(entity.body);
+        }
     }
 
     /**

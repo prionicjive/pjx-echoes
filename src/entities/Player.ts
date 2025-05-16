@@ -13,11 +13,10 @@ import { PointerState, TouchState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
-import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntityType } from './types';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 
@@ -29,9 +28,6 @@ export interface PlayerOptions {
 
 export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
-        // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Player.type);
-
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
             texture: PIXI.Texture.from(EntitiesConfig.Player.sprite.texture),
@@ -54,8 +50,7 @@ export class Player extends BaseEntity {
         const light = new DynamicLight(
             {...body.getPosition()},
             options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Player.light! },
-            id,
+            { ...EntitiesConfig.Player.light! }
         );
 
         // Create the particle effect
@@ -64,22 +59,13 @@ export class Player extends BaseEntity {
         });
 
         super({
-            id,
+            type: Config.Player.type as EntityType,
             sprite,
             body,
             light,
             particleEffect,
             containers: options.containers
         });
-
-        // Set initial position
-        EntityUtils.syncEffectToSprite(this);
-
-        // Set user data with a self-referencing data
-        body.setUserData({
-            type: Config.Player.type,
-            entity: this
-        } as EntityUserData);
     }
 
     handleInput(
@@ -110,7 +96,7 @@ export class Player extends BaseEntity {
                     this.applyForceAwayFrom(levelRelative, deltaTime);
                 }
             } else {
-                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
             }
             return;
         }
@@ -151,11 +137,11 @@ export class Player extends BaseEntity {
                     this.applyForceAwayFrom(pointerLevelRelativePositionInPixels, deltaTime);
                 }
             } else {
-                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
             }
         } else if (input.pointer.justReleased) {
             // On mouse up, stop player if close enough
-            const playerPos = this.body.getPosition();
+            const playerPos = this.body!.getPosition();
             const targetPos = new planck.Vec2(
                 pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter,
                 pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
@@ -163,12 +149,12 @@ export class Player extends BaseEntity {
             const delta = targetPos.clone().sub(playerPos);
             const distance = delta.length();
             if (distance <= 0.15) { // TODO Make this configurable as dead zone
-                this.body.setLinearVelocity(new planck.Vec2(0, 0));
+                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
             }
         }
     }
 
-    handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }) {
+    private handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }) {
         // Convert to meters (Physics space)
         let velocityInMetersPerSecond = { 
             x: velocityInPixelsPerSecond.x / Config.PixelsPerMeter, 
@@ -205,12 +191,12 @@ export class Player extends BaseEntity {
         console.log("Applying linear velocity", vx, vy);
          
         // Apply to player body
-        this.body.setLinearVelocity(new planck.Vec2(vx, vy));   
+        this.body!.setLinearVelocity(new planck.Vec2(vx, vy));   
     }
 
-    applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {
+    private applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {
         // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body.getPosition();
+        const playerPos = this.body!.getPosition();
         
         // Calculate normalized force vector
         const force = PhysicsUtils.calculateForceVector(
@@ -223,28 +209,28 @@ export class Player extends BaseEntity {
         );
 
         // Fetch the current linear velocity in its various components
-        const currLinearVelocity = this.body.getLinearVelocity()
+        const currLinearVelocity = this.body!.getLinearVelocity()
         const speed: number = Math.min(currLinearVelocity.length(), Config.Movement.maxSpeed);
         const direction: planck.Vec2 = PhysicsUtils.normalizeVector(currLinearVelocity);
 
         // If we want to instantly change the direction, the capped speed needs to scale the new direction unit vector
         if(Config.Movement.instantlyChangeDirection) {
-            this.body.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
+            this.body!.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
         } else {
             // Otherwise check to see we have a speed at all (Meaning we have non-zero / non-NaN linerar velocity)
             // If we DO, then (And ONLY then) do we adjust the linear velocity
             if(speed !== 0 && !isNaN(speed)) {
-                this.body.setLinearVelocity(direction.mul(speed));
+                this.body!.setLinearVelocity(direction.mul(speed));
             }
         }
 
         // Apply force at the center of mass
-        this.body.applyForceToCenter(force);
+        this.body!.applyForceToCenter(force);
     }
 
-    applyForceAwayFrom(levelRelativePositionInPixels: Point, deltaTime: number) {
+    private applyForceAwayFrom(levelRelativePositionInPixels: Point, deltaTime: number) {
         // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body.getPosition();
+        const playerPos = this.body!.getPosition();
         
         // Calculate normalized force vector
         const force = PhysicsUtils.calculateForceVector(
@@ -257,7 +243,7 @@ export class Player extends BaseEntity {
         );
 
         // Apply force at the center of mass
-        this.body.applyForceToCenter(force);
+        this.body!.applyForceToCenter(force);
     }
 
     /**
@@ -266,9 +252,10 @@ export class Player extends BaseEntity {
      *
      * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
      */
-    applyImpulseTowards(levelRelativePositionInPixels: Point) {
+    // @ts-ignore
+    private applyImpulseTowards(levelRelativePositionInPixels: Point) {
         // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body.getPosition();
+        const playerPos = this.body!.getPosition();
         
         // Calculate normalized force vector
         const impulse = PhysicsUtils.calculateForceVector(
@@ -280,7 +267,7 @@ export class Player extends BaseEntity {
             Config.Movement.impulseFactor
         );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+        this.body!.applyLinearImpulse(impulse, this.body!.getWorldCenter(), true);
     }
 
     /**
@@ -289,9 +276,10 @@ export class Player extends BaseEntity {
      *
      * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
      */
-    applyImpulseAwayFrom(levelRelativePositionInPixels: Point) {
+    // @ts-ignore
+    private applyImpulseAwayFrom(levelRelativePositionInPixels: Point) {
         // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body.getPosition();
+        const playerPos = this.body!.getPosition();
         
         // Calculate normalized force vector
         const impulse = PhysicsUtils.calculateForceVector(
@@ -303,22 +291,15 @@ export class Player extends BaseEntity {
             Config.Movement.impulseFactor
         );
         // Apply impulse at the center of mass
-        this.body.applyLinearImpulse(impulse, this.body.getWorldCenter(), true);
+        this.body!.applyLinearImpulse(impulse, this.body!.getWorldCenter(), true);
     }
 
     /**
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    // @ts-ignore
     update(deltaTime: number) {
-        // Keep the sprite visually synced with the physics body
-        this.sprite.x = (this.body.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
-        this.sprite.y = (this.body.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
-        this.sprite.rotation = this.body.getAngle();
-
-        EntityUtils.syncLightToBody(this);
-        EntityUtils.syncEffectToSprite(this);
+        super.update(deltaTime);
     }
 
     onPickup(type: EntityType) {

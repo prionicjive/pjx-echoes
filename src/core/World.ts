@@ -124,7 +124,7 @@ export class World {
             lineWidth: 0.1,
             lineContrast: 0.1,
             vignetting: 0,
-            noise: 0.3,
+            noise: 0.2,
             noiseSize: 1
         });
 

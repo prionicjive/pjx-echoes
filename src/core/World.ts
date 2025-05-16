@@ -123,7 +123,7 @@ export class World {
             curvature: 0,
             lineWidth: 0.1,
             lineContrast: 0.1,
-            vignetting: 0.3,
+            vignetting: 0,
             noise: 0.3,
             noiseSize: 1
         });

@@ -22,8 +22,8 @@ export const LightsConfig: Record<LightType, LightOptions> = {
     },
     SentryLight: {
         numRays: 360,
-        baseRadius: 2,
-        radiusVariance: 1,
+        baseRadius: 4,
+        radiusVariance: 2,
         baseAlpha: 0.5,
         alphaVariance: 0.4,
         startColor: 0xBB32FF,

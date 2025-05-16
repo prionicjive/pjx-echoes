@@ -6,15 +6,11 @@
  * @module Player
  */
 
-import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { PointerState, TouchState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
-import { DynamicLight } from '../light/Light';
-import { ParticleEffect } from '../particles/ParticleEffect';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntityType } from './types';
@@ -28,43 +24,22 @@ export interface PlayerOptions {
 
 export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Player.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Player.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Player.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Player.sprite.color
-        });
-
-        // Create dynamic body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Player.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius)
-            }
-        );
-
-        // Create the light
-        const light = new DynamicLight(
-            {...body.getPosition()},
-            options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Player.light! }
-        );
-
-        // Create the particle effect
-        const particleEffect = new ParticleEffect({
-            ...EntitiesConfig.Player.particleEffect!,
-        });
+        const preset = {...EntitiesConfig.Player};
+                        
+        // Set the position of the body before passing it on
+        if (preset.body) {
+            preset.body.position = new planck.Vec2(
+                options.spawnPoint.x + Config.Player.radius, 
+                options.spawnPoint.y + Config.Player.radius
+            );
+        }
 
         super({
             type: Config.Player.type as EntityType,
-            sprite,
-            body,
-            light,
-            particleEffect,
-            containers: options.containers
+            containers: options.containers,
+            levelContext: options.levelContext,
+            spawnPoint: options.spawnPoint,
+            preset,
         });
     }
 
@@ -160,14 +135,11 @@ export class Player extends BaseEntity {
             x: velocityInPixelsPerSecond.x / Config.PixelsPerMeter, 
             y: velocityInPixelsPerSecond.y / Config.PixelsPerMeter
         };
-
-        console.log("Swipe velocity (px/s)", velocityInPixelsPerSecond);
          
         // This exaggerates fast flicks, and damps slow ones
         const speedMetersPerSecond = Math.sqrt(
             velocityInMetersPerSecond.x * velocityInMetersPerSecond.x + velocityInMetersPerSecond.y * velocityInMetersPerSecond.y
         );
-        console.log("Swipe speed (m/s)", speedMetersPerSecond);
         
         // Calculate the non-linear scale to boost and smooth flickers / swipes
         const nonlinearScale = Math.pow(
@@ -175,21 +147,14 @@ export class Player extends BaseEntity {
             Config.Movement.Gesture.swipeSpeedScaleExponent) / Math.pow(
                 Config.Movement.Gesture.maxSpeedMetersPerSecond, 
                 Config.Movement.Gesture.maxSpeedScaleExponent
-            );
-        console.log("Nonlinear scale", nonlinearScale);
-        
+            );   
         
         let vx = (velocityInMetersPerSecond.x / speedMetersPerSecond);
-        console.log("vx", vx);
         vx *= nonlinearScale;
-        console.log("vx scaled", vx);
+        
         let vy = (velocityInMetersPerSecond.y / speedMetersPerSecond);
-        console.log("vy", vy);
         vy *= nonlinearScale;
-        console.log("vy scaled", vy);
 
-        console.log("Applying linear velocity", vx, vy);
-         
         // Apply to player body
         this.body!.setLinearVelocity(new planck.Vec2(vx, vy));   
     }

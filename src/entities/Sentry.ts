@@ -1,68 +1,34 @@
-import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { LevelContext } from '../level/LevelContext';
-import { DynamicLight } from '../light/Light';
-import { ParticleEffect } from '../particles/ParticleEffect';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
-import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers } from './BaseEntity';
+import { BaseEntity, BaseEntityOptions } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityType } from './types';
 
-export interface SentryOptions { 
-    spawnPoint: Point,
-    containers: EntityContainers, 
+export interface SentryOptions extends BaseEntityOptions { 
     initialVelocity?: planck.Vec2,
-    levelContext: LevelContext
 }
 
 export class Sentry extends BaseEntity {
     constructor(options: SentryOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Sentry.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Sentry.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Sentry.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Sentry.sprite.color
-        });
+        const preset = {...EntitiesConfig.Sentry};
+        
+        // Set the position and initial velocity of the body before passing it on
+        if (preset.body) {
+            preset.body.position = new planck.Vec2(
+                options.spawnPoint.x + Config.Sentry.radius, 
+                options.spawnPoint.y + Config.Sentry.radius
+            );
 
-        // Create dynamic body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Sentry.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius)
-            }
-        );
-
-        // Create the light
-        const light = EntitiesConfig.Sentry.light ? new DynamicLight(
-            {...body.getPosition()},
-            options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Sentry.light! },
-        ) : undefined;
-
-        // Create the particle effect and set initial position
-        const particleEffect = new ParticleEffect({
-            ...EntitiesConfig.Sentry.particleEffect!,
-        });
+            preset.body.initialVelocity = options.initialVelocity;
+        }
 
         super({
             type: Config.Sentry.type as EntityType,
-            sprite,
-            body,
-            light,
-            particleEffect,
-            containers: options.containers
+            containers: options.containers,
+            levelContext: options.levelContext,
+            spawnPoint: options.spawnPoint,
+            preset,
         });
-
-        // Set an initial velocity if provided
-        if( options.initialVelocity) {
-            this.body!.setLinearVelocity(options.initialVelocity);
-        }
     }
 
     /**

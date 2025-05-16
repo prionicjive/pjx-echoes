@@ -9,6 +9,7 @@ export interface CreateBodyOptions {
     circle?: { radius: number; center?: planck.Vec2 };
     linearDamping?: number;
     fixture: planck.FixtureOpt;
+    initialVelocity?: planck.Vec2;
 }
 
 interface CreateLevelEdgesBodyOptions {
@@ -48,6 +49,10 @@ export class PhysicsUtils {
             );
         } else {
             throw new Error('Either box or circle options must be provided');
+        }
+
+        if (options.initialVelocity) {
+            body.setLinearVelocity(options.initialVelocity);
         }
 
         return body;

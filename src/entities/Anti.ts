@@ -1,10 +1,6 @@
-import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
-import { StaticLight } from '../light/Light';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
@@ -18,42 +14,22 @@ export interface AntiOptions {
 
 export class Anti extends BaseEntity {
     constructor(options: AntiOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Anti.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Anti.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Anti.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Anti.sprite.color
-        });
-
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Anti.body!,
-                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
-            }
-        );
-
-        // Construct a static light
-        const center = {
-            x: options.spawnPoint.x + Config.Anti.width / 2,
-            y: options.spawnPoint.y + Config.Anti.height / 2
-        };
-
-        const light = new StaticLight(
-            center,
-            options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Anti.light! }
-        );
+       const preset = {...EntitiesConfig.Anti};
+                       
+        // Set the position of the body before passing it on
+        if (preset.body) {
+            preset.body.position = new planck.Vec2(
+                options.spawnPoint.x, 
+                options.spawnPoint.y
+            );
+        }
 
         super({
             type: Config.Anti.type as EntityType,
-            sprite,
-            body,
-            light,
-            containers: options.containers
+            containers: options.containers,
+            levelContext: options.levelContext,
+            spawnPoint: options.spawnPoint,
+            preset,
         });
     }
 

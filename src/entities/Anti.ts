@@ -58,7 +58,7 @@ export class Anti extends BaseEntity {
     }
 
     update(deltaTime: number) {
-        super.update(deltaTime);
+        // No special update logic... for now
     }
 
     // Optionally, add any unique logic on pickup

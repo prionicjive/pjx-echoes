@@ -58,6 +58,6 @@ export class Exit extends BaseEntity {
     }
 
     update(deltaTime: number) {
-        super.update(deltaTime);
+        // No special update logic... for now
     }
 }

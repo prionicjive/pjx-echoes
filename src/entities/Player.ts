@@ -19,6 +19,7 @@ import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntityType } from './types';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { EntityUtils } from '../utils/EntityUtils';
 
 export interface PlayerOptions { 
     spawnPoint: Point,
@@ -66,6 +67,9 @@ export class Player extends BaseEntity {
             particleEffect,
             containers: options.containers
         });
+
+        // Set initial position
+        EntityUtils.syncEffectToSprite(this);
     }
 
     handleInput(
@@ -160,14 +164,11 @@ export class Player extends BaseEntity {
             x: velocityInPixelsPerSecond.x / Config.PixelsPerMeter, 
             y: velocityInPixelsPerSecond.y / Config.PixelsPerMeter
         };
-
-        console.log("Swipe velocity (px/s)", velocityInPixelsPerSecond);
          
         // This exaggerates fast flicks, and damps slow ones
         const speedMetersPerSecond = Math.sqrt(
             velocityInMetersPerSecond.x * velocityInMetersPerSecond.x + velocityInMetersPerSecond.y * velocityInMetersPerSecond.y
         );
-        console.log("Swipe speed (m/s)", speedMetersPerSecond);
         
         // Calculate the non-linear scale to boost and smooth flickers / swipes
         const nonlinearScale = Math.pow(
@@ -176,19 +177,11 @@ export class Player extends BaseEntity {
                 Config.Movement.Gesture.maxSpeedMetersPerSecond, 
                 Config.Movement.Gesture.maxSpeedScaleExponent
             );
-        console.log("Nonlinear scale", nonlinearScale);
-        
         
         let vx = (velocityInMetersPerSecond.x / speedMetersPerSecond);
-        console.log("vx", vx);
         vx *= nonlinearScale;
-        console.log("vx scaled", vx);
         let vy = (velocityInMetersPerSecond.y / speedMetersPerSecond);
-        console.log("vy", vy);
         vy *= nonlinearScale;
-        console.log("vy scaled", vy);
-
-        console.log("Applying linear velocity", vx, vy);
          
         // Apply to player body
         this.body!.setLinearVelocity(new planck.Vec2(vx, vy));   
@@ -299,7 +292,13 @@ export class Player extends BaseEntity {
      * Should be called every frame.
      */
     update(deltaTime: number) {
-        super.update(deltaTime);
+        // Keep the sprite visually synced with the physics body
+        this.sprite.x = (this.body!.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body!.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;
+        this.sprite.rotation = this.body!.getAngle();
+
+        EntityUtils.syncLightToBody(this);
+        EntityUtils.syncEffectToSprite(this);
     }
 
     onPickup(type: EntityType) {

@@ -72,24 +72,6 @@ export abstract class BaseEntity {
         }
     }
 
-    // @ts-ignore
-    update(deltaTime: number) {
-        // Update sprite position to match physics body if it exists
-        if (this.body) {
-            this.sprite.x = this.body.getPosition().x * Config.PixelsPerMeter;
-            this.sprite.y = this.body.getPosition().y * Config.PixelsPerMeter;
-            this.sprite.rotation = this.body.getAngle();
-        }
-
-        // Sync light and particle effects if they exist
-        if (this.light) {
-            EntityUtils.syncLightToBody(this);
-        }
-        if (this.particleEffect) {
-            EntityUtils.syncEffectToSprite(this);
-        }
-    }
-
     destroy() {
         // Instantly remove the sprite from the container
         this.containers.containerForEntity.removeChild(this.sprite);

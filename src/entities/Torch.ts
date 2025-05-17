@@ -10,6 +10,7 @@ import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityType } from './types';
+import { EntityUtils } from '../utils/EntityUtils';
 
 export interface TorchOptions { 
     levelContext: LevelContext, 
@@ -62,10 +63,13 @@ export class Torch extends BaseEntity {
             particleEffect,
             containers: options.containers,
         });
+
+        // Set the initial position of the particle effect
+        EntityUtils.syncEffectToSprite(this);
     }
 
     update(deltaTime: number) {
-        super.update(deltaTime);
+        // No special update logic... for now
     }
 
     // Optionally, add any unique logic on pickup

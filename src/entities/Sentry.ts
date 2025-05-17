@@ -10,6 +10,7 @@ import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityType } from './types';
+import { EntityUtils } from '../utils/EntityUtils';
 
 export interface SentryOptions { 
     spawnPoint: Point,
@@ -59,6 +60,9 @@ export class Sentry extends BaseEntity {
             containers: options.containers
         });
 
+        // Set the initial position of the particle effect
+        EntityUtils.syncEffectToSprite(this);
+
         // Set an initial velocity if provided
         if( options.initialVelocity) {
             this.body!.setLinearVelocity(options.initialVelocity);
@@ -89,6 +93,12 @@ export class Sentry extends BaseEntity {
             ));
         }
         
-        super.update(deltaTime);
+        // Keep the sprite visually synced with the physics body
+        this.sprite.x = (this.body!.getPosition().x - Config.Sentry.radius) * Config.PixelsPerMeter;
+        this.sprite.y = (this.body!.getPosition().y - Config.Sentry.radius) * Config.PixelsPerMeter;
+        this.sprite.rotation = this.body!.getAngle();
+
+        EntityUtils.syncLightToBody(this);
+        EntityUtils.syncEffectToSprite(this);
     }
 }

@@ -68,6 +68,7 @@ export class Torch extends BaseEntity {
         EntityUtils.syncEffectToSprite(this);
     }
 
+    // @ts-ignore
     update(deltaTime: number) {
         // No special update logic... for now
     }

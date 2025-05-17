@@ -57,6 +57,7 @@ export class Anti extends BaseEntity {
         });
     }
 
+    // @ts-ignore
     update(deltaTime: number) {
         // No special update logic... for now
     }

@@ -73,6 +73,7 @@ export class Sentry extends BaseEntity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
+    // @ts-ignore
     update(deltaTime: number) {
         // Check to see if the sentry is locked to a certain axis and if so, nudge it away
         const epsilon = 0.01;

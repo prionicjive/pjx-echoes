@@ -6,7 +6,6 @@ import { ParticleEffect } from '../particles/ParticleEffect';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { Config } from '../config/Config';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;

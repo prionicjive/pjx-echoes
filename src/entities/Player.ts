@@ -291,6 +291,7 @@ export class Player extends BaseEntity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
+    // @ts-ignore
     update(deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body!.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;

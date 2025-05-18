@@ -4,12 +4,13 @@ import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
-import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
-import { BaseEntity, EntityContainers, EntityUserData } from './BaseEntity';
+import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { EntityType } from './types';
+import { EntityUtils } from '../utils/EntityUtils';
 
 export interface TorchOptions { 
     levelContext: LevelContext, 
@@ -19,9 +20,6 @@ export interface TorchOptions {
 
 export class Torch extends BaseEntity {
     constructor(options: TorchOptions) {
-        // Generate unique ID
-        const id = EntityUtils.generateRandomId(Config.Torch.type);
-
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
             texture: PIXI.Texture.from(EntitiesConfig.Torch.sprite.texture),
@@ -49,8 +47,7 @@ export class Torch extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Torch.light! },
-            id
+            { ...EntitiesConfig.Torch.light! }
         );
 
         // Create the particle effect and set initial position
@@ -59,7 +56,7 @@ export class Torch extends BaseEntity {
         });
 
         super({
-            id,
+            type: Config.Torch.type as EntityType,
             sprite,
             body,
             light,
@@ -67,19 +64,13 @@ export class Torch extends BaseEntity {
             containers: options.containers,
         });
 
-        // Set user data with a self-referencing data
-        body.setUserData({
-            type: Config.Torch.type,
-            entity: this
-        } as EntityUserData);
-    
         // Set the initial position of the particle effect
         EntityUtils.syncEffectToSprite(this);
     }
 
     // @ts-ignore
     update(deltaTime: number) {
-        // No need to update light or particle effect positions... yet? 
+        // No special update logic... for now
     }
 
     // Optionally, add any unique logic on pickup

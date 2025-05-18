@@ -284,8 +284,62 @@ export class World {
             (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
             (aData.type === Config.Edges.type && bData.type === Config.Player.type)
         ) {
-            // TODO Handle player hitting a wall
-            console.log("Player hit a wall!");
+            // TODO Handle player hitting an edge
+            console.log("Player hit an edge!");
+
+            // Access the manifold to get the contact points
+            const manifold = contact.getManifold();
+            if (manifold.pointCount > 0) {
+                const worldManifold = contact.getWorldManifold(null);
+
+                if (!worldManifold) {
+                    return;
+                }
+                for (let i = 0; i < manifold.pointCount; i++) {
+                    const point = worldManifold.points[i]; // { x, y }
+
+                    // This is where you spawn your sprite/particle
+                    console.log("Player/EdgeCollision point: ", point);
+                    // ParticleEffectManager.instance.playEffect(
+                    //     this.preEntitiesContainer, 
+                    //     "PlayerTrail", { 
+                    //         x: point.x * Config.PixelsPerMeter,
+                    //         y: point.y * Config.PixelsPerMeter 
+                    //     },
+                    //     3
+                    // );
+                }
+            }
+        } else if (
+            (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
+            (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
+        ) {
+            // TODO Handle sentry hitting an edge
+            console.log("Sentry hit an edge!");
+
+            // // Access the manifold to get the contact points
+            // const manifold = contact.getManifold();
+            // if (manifold.pointCount > 0) {
+            //     const worldManifold = contact.getWorldManifold(null);
+
+            //     if (!worldManifold) {
+            //         return;
+            //     }
+            //     for (let i = 0; i < manifold.pointCount; i++) {
+            //         const point = worldManifold.points[i]; // { x, y }
+
+            //         // This is where you spawn your sprite/particle
+            //         console.log("Sentry/EdgeCollision point: ", point);
+            //         // ParticleEffectManager.instance.playEffect(
+            //         //     this.preEntitiesContainer, 
+            //         //     "PlayerTrail", { 
+            //         //         x: point.x * Config.PixelsPerMeter,
+            //         //         y: point.y * Config.PixelsPerMeter 
+            //         //     },
+            //         //     3
+            //         // );
+            //     }
+            // }
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
             (aData.type === Config.Sentry.type && bData.type === Config.Player.type)

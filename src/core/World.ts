@@ -3,7 +3,7 @@ import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
 import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
-import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
+import { EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
 import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
@@ -350,7 +350,7 @@ export class World {
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
                 this.player!.onPickup(sentryData.type);
-                this.gentlyDestroyEntity(sentryData.entity);
+                this.level!.gentlyDestroyEntity(sentryData.entity);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -365,7 +365,7 @@ export class World {
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
                 this.player!.onPickup(torchEntity.type);
-                this.gentlyDestroyEntity(torchEntity.entity);
+                this.level!.gentlyDestroyEntity(torchEntity.entity);
             }
         }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
@@ -382,7 +382,7 @@ export class World {
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
                 this.player!.onPickup(antiEntity.type);
-                this.gentlyDestroyEntity(antiEntity.entity);
+                this.level!.gentlyDestroyEntity(antiEntity.entity);
             }
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Switch.type) ||
@@ -394,20 +394,7 @@ export class World {
             const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
             if (switchEntity.entity) {
                 this.level!.onSwitchPressed(switchEntity.entity);
-                this.gentlyDestroyEntity(switchEntity.entity);
             }
-        }
-    }
-
-    private gentlyDestroyEntity(entity: BaseEntity) {
-        // Gently destroy the entity from the level
-        this.level!.gentlyDestroyEntity(entity);
-
-        // TODO Do any other additional destruction on the entity or its subsystems
-
-        // Lastly, flag the body of the entity for destruction (if it exists)
-        if (entity.body) {
-            this.physicsManager!.destroyBody(entity.body);
         }
     }
 

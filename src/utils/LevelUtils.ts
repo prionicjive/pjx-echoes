@@ -125,8 +125,7 @@ export class LevelUtils {
             const exitPositions: Point[] = [];
             
             // Randomly place exits in open spaces for the player to reach
-            const numExits = Math.ceil(validSpaces.length * levelOptions.exitChance);
-            for (let i = 0; i < numExits; i++) {
+            for (let i = 0; i < levelOptions.numExits; i++) {
                 // Check to see if there are any valid spaces left
                 if (validSpaces.length === 0) {
                     break;

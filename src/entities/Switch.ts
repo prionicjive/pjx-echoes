@@ -56,7 +56,7 @@ export class Switch extends BaseEntity {
         });
 
         super({
-            type: Config.Gate.type as EntityType,
+            type: Config.Switch.type as EntityType,
             sprite,
             body,
             light,

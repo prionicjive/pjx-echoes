@@ -15,7 +15,6 @@ import { Exit } from '../entities/Exit';
 import { Player } from '../entities/Player';
 import { Sentry } from '../entities/Sentry';
 import { Torch } from '../entities/Torch';
-import { EntityType } from '../entities/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Point, Segment } from '../utils/types';
@@ -398,23 +397,36 @@ export class Level implements LevelContext {
         });
     }
 
-    gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
+    // @ts-ignore
+    onSwitchPressed(pressedSwitch: BaseEntity) {
+        // Gently destroy the switches
+        for (const switchEntity of this.switches) {
+            this.gentlyDestroyEntity(switchEntity);
+        }
+
+        // Instantly remove gates
+        for (const gate of this.gates) {
+            this.destroyEntity(gate);
+        }
+    }
+
+    gentlyDestroyEntity(entity: BaseEntity) {
         // Gently remove the entity
         entity.gentlyDestroy();
 
-        this.removeEntity(type, entity);
+        this.removeEntity(entity);
     }
 
-    destroyEntity(type: EntityType, entity: BaseEntity) {
+    destroyEntity(entity: BaseEntity) {
         // Instantly remove the entity
         entity.destroy();
 
-        this.removeEntity(type, entity);
+        this.removeEntity(entity);
     }
 
-    private removeEntity(type: EntityType, entity: BaseEntity) {
+    private removeEntity(entity: BaseEntity) {
         // Now, remove the entity from the correct array
-        switch (type) {
+        switch (entity.type) {
             case Config.Torch.type:
                 this.torches = this.torches.filter((torch) => torch !== entity as Torch);
                 break;

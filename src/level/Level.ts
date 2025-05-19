@@ -24,10 +24,12 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { Gate } from '../entities/Gate';
 import { Switch } from '../entities/Switch';
+import { PhysicsManager } from '../physics/PhysicManager';
 
 export interface LevelOptions {
     renderer: PIXI.Renderer;
     physicsWorld: planck.World;
+    physicsManager: PhysicsManager;
     containers: LevelContainers;
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
@@ -57,6 +59,7 @@ export class Level implements LevelContext {
     private edgesList: Segment[];
     private dimensions: { width: number; height: number };
     private physicsWorld: planck.World;
+    private physicsManager: PhysicsManager;
     private containers: LevelContainers;
 
     constructor(
@@ -65,6 +68,7 @@ export class Level implements LevelContext {
         // Store LevelContext related things
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
+        this.physicsManager = options.physicsManager;
 
         // Store the renderer
         this.renderer = options.renderer;
@@ -85,50 +89,50 @@ export class Level implements LevelContext {
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(options.physicsWorld, options.containers.levelGeometryContainer);
+        this.createLevelEdges(options.physicsWorld, this.containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.createVisibleWalls) {
             this.createTilemap(
                 [...options.entitiesOptions.wallPositions],
-                options.containers.levelGeometryContainer
+                this.containers.levelGeometryContainer
             );
         }       
         
         // Create the other various entities
         this.exits = this.createExits(
             [...options.entitiesOptions.exitPositions], 
-            options.containers
+            this.containers
         );
 
         this.gates = this.createGates(
             [...options.entitiesOptions.gatePositions], 
-            options.containers
+            this.containers
         );
 
         this.switches = this.createSwitches(
             [...options.entitiesOptions.switchPositions], 
-            options.containers
+            this.containers
         );
 
         this.torches = this.createTorches(
             [...options.entitiesOptions.torchPositions], 
-            options.containers);
+            this.containers);
 
         this.antiEntities = this.createAntiEntities(
             [...options.entitiesOptions.antiPositions], 
-            options.containers
+            this.containers
         );
         
         this.sentries = this.createSentries(
             [...options.entitiesOptions.sentryPositions], 
-            options.containers
+            this.containers
         );
 
         // Lastly, create the player
         this.player = this.createPlayer(
             {...options.entitiesOptions.playerSpawnPosition},
-            options.containers
+            this.containers
         ); 
     }
 
@@ -412,15 +416,13 @@ export class Level implements LevelContext {
 
     gentlyDestroyEntity(entity: BaseEntity) {
         // Gently remove the entity
-        entity.gentlyDestroy();
-
+        entity.gentlyDestroy(this.physicsManager);
         this.removeEntity(entity);
     }
 
     destroyEntity(entity: BaseEntity) {
         // Instantly remove the entity
-        entity.destroy();
-
+        entity.destroy(this.physicsManager);
         this.removeEntity(entity);
     }
 
@@ -450,35 +452,35 @@ export class Level implements LevelContext {
 
     destroy() {
         // Destroy all entities
-        this.player?.destroy();
+        this.player?.destroy(this.physicsManager);
 
         this.torches.forEach((torch) => {
-            torch.destroy();
+            torch.destroy(this.physicsManager);
         });
         this.torches = [];
 
         this.antiEntities.forEach((anti) => {
-            anti.destroy();
+            anti.destroy(this.physicsManager);
         });
         this.antiEntities = [];
 
         this.exits.forEach((exit) => {
-            exit.destroy();
+            exit.destroy(this.physicsManager);
         });
         this.exits = [];
 
         this.gates.forEach((gate) => {
-            gate.destroy();
+            gate.destroy(this.physicsManager);
         });
         this.gates = [];
 
         this.switches.forEach((switchEntity) => {
-            switchEntity.destroy();
+            switchEntity.destroy(this.physicsManager);
         });
         this.switches = [];
 
         this.sentries.forEach((sentry) => {
-            sentry.destroy();
+            sentry.destroy(this.physicsManager);
         });
         this.sentries = [];
     }

@@ -2,6 +2,7 @@ import * as planck from 'planck';
 import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, MapGenerationType, ProGenLevelOptions } from "../config/ProcGenLevelsConfig";
 import { Level, LevelContainers } from "../level/Level";
 import { LevelSkeleton } from "../level/LevelSkeleton";
+import { PhysicsManager } from "../physics/PhysicManager";
 import { Point } from "../utils/types";
 import { MapUtils } from "./MapUtils";
 import * as PIXI from 'pixi.js';
@@ -9,7 +10,8 @@ import * as PIXI from 'pixi.js';
 export class LevelUtils {
     static createProcGenLevel(
         renderer: PIXI.Renderer,
-        world: planck.World, 
+        world: planck.World,
+        physicsManager: PhysicsManager,
         containers: LevelContainers,
         levelOptions: ProGenLevelOptions
     ) {
@@ -57,6 +59,7 @@ export class LevelUtils {
         return new Level({
             renderer,
             physicsWorld: world, 
+            physicsManager,
             containers: {
                 bgContainer: containers.bgContainer,
                 levelGeometryContainer: containers.levelGeometryContainer,

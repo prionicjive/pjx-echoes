@@ -11,12 +11,15 @@ import { LightManager } from '../light/LightManager.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
+import { PhysicsManager } from '../physics/PhysicManager.ts';
 
 export class World {
     private app: PIXI.Application;
+    
+    // Physics related
+    private physicsManager: PhysicsManager | null = null;
     private world: planck.World | null = null;
-    private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-  
+
     // Input related
     private inputManager: InputManager;
     
@@ -173,18 +176,13 @@ export class World {
         ParticleEffectManager.instance.removeAllEffects();
         
         // Remove all bodies / fixtures from Planck world
-        let body = this.world!.getBodyList();
-        let counter = 0;
-        while (body) {
-            const nextBody = body.getNext();
-            this.world!.destroyBody(body);
-            counter++;
-            body = nextBody;
-        }
-        this.bodiesToDestroy = [];
+        this.physicsManager?.destroy();
 
         // Remove any listeners
         this.world!.off('begin-contact', this.onBeginContact.bind(this));
+    
+        // Remove the physics manager
+        this.physicsManager = null;
     }
 
     private setUpWorld() {
@@ -195,14 +193,17 @@ export class World {
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
 
-        // TODO This may be too drastic, but regenerate entire Planck world
+        // TODO This may be too drastic, but regenerate entire Planck world and the physics manager
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
+        this.physicsManager = new PhysicsManager(this.world);
 
         // Create a proceduarally generated level
         this.level = LevelUtils.createProcGenLevel(
             this.app.renderer,
-            this.world, {
+            this.world,
+            this.physicsManager,
+            {
                 bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,
                 preEntitiesContainer: this.preEntitiesContainer,
@@ -406,7 +407,7 @@ export class World {
 
         // Lastly, flag the body of the entity for destruction (if it exists)
         if (entity.body) {
-            this.bodiesToDestroy.push(entity.body);
+            this.physicsManager!.destroyBody(entity.body);
         }
     }
 
@@ -453,17 +454,15 @@ export class World {
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
-    update(deltaTime: number) {
-        // Destroy any bodies that need to be destroyed
-        this.processBodiesToDestroy();
-        
+    update(deltaTime: number) {    
         // Handle debugging input
         this.handleDebugInput();
 
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
 
-        // Step the physics
+        // Update and step the physics
+        this.physicsManager?.update();
         this.world!.step(deltaTime);
     
         // Update level 
@@ -481,15 +480,6 @@ export class World {
 
         // Update anything needed for post processing
         this.updatePostProcessing(deltaTime);
-    }
-
-    private processBodiesToDestroy() {
-        this.bodiesToDestroy.forEach(body => {
-            if (body) {
-                this.world!.destroyBody(body);
-            }
-        });
-        this.bodiesToDestroy = [];
     }
 
     private handleDebugInput() {

@@ -209,7 +209,7 @@ export class World {
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            ProGenLevelsConfig.Standard
+            ProGenLevelsConfig.Simple
         );
         
         // Get the player - our "first class" entity

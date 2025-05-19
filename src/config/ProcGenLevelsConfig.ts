@@ -4,6 +4,8 @@ export interface ProGenLevelOptions {
         height: number;
     }; 
     minDistanceBetweenPlayerSpawnAndExit: number;
+    minDistanceBetweenSwitchAndExit: number;
+    radiusAroundExitForGates: number;
     exitChance: number;
     torchChance: number;
     antiChance: number;
@@ -35,6 +37,8 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
             height: 96
         },
         minDistanceBetweenPlayerSpawnAndExit: 48,
+        minDistanceBetweenSwitchAndExit: 32,
+        radiusAroundExitForGates: 1,
         exitChance: 0.0001,
         torchChance: 0.00087,
         antiChance: 0.00065,
@@ -55,6 +59,8 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
             height: 42
         },
         minDistanceBetweenPlayerSpawnAndExit: 21,
+        minDistanceBetweenSwitchAndExit: 12,
+        radiusAroundExitForGates: 1,
         exitChance: 0.0001,
         torchChance: 0.00087,
         antiChance: 0.00065,

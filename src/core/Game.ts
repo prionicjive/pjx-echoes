@@ -75,6 +75,8 @@ export class Game {
         await PIXI.Assets.load(Config.Textures.sentry);
         await PIXI.Assets.load(Config.Textures.wall);
         await PIXI.Assets.load(Config.Textures.exit);
+        await PIXI.Assets.load(Config.Textures.gate);
+        await PIXI.Assets.load(Config.Textures.switch);
         await PIXI.Assets.load(Config.Textures.torch); 
         await PIXI.Assets.load(Config.Textures.torch); 
         await PIXI.Assets.load(Config.Textures.anti);

@@ -38,8 +38,8 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterCategoryBits: Config.Physics.Collision.categorySentry,
                 filterMaskBits: Config.Physics.Collision.categoryEdge
                     | Config.Physics.Collision.categoryPlayer
-                    | Config.Physics.Collision.categoryWall
                     | Config.Physics.Collision.categorySentry
+                    | Config.Physics.Collision.categoryGate
             }
         },
         //light: LightsConfig.SentryLight,
@@ -62,10 +62,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterCategoryBits: Config.Physics.Collision.categoryPlayer,
                 filterMaskBits: Config.Physics.Collision.categoryEdge
                     | Config.Physics.Collision.categorySentry
-                    | Config.Physics.Collision.categoryWall
                     | Config.Physics.Collision.categoryExit
                     | Config.Physics.Collision.categoryAnti
                     | Config.Physics.Collision.categoryTorch
+                    | Config.Physics.Collision.categoryGate
+                    | Config.Physics.Collision.categorySwitch
             },
             linearDamping: Config.Physics.Player.linearDamping
         },
@@ -134,5 +135,42 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
             heightInMeters: Config.Wall.height,
             color: Config.Wall.color
         }
+    },
+    Gate: {
+        sprite: {
+            texture: Config.Textures.gate,
+            widthInMeters: Config.Gate.width,
+            heightInMeters: Config.Gate.height,
+            color: Config.Gate.color
+        },
+        body: {
+            type: 'static',
+            box: { width: Config.Switch.width, height: Config.Switch.height },
+            fixture: {
+                restitution: Config.Physics.Gate.restitution,
+                friction: 0,
+                filterCategoryBits: Config.Physics.Collision.categoryGate,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer | Config.Physics.Collision.categorySentry,
+            }
+        },
+    },
+    Switch: {
+        sprite: {
+            texture: Config.Textures.switch,
+            widthInMeters: Config.Switch.width,
+            heightInMeters: Config.Switch.height,
+            color: Config.Switch.color
+        },
+        body: {
+            type: 'static',
+            box: { width: Config.Switch.width, height: Config.Switch.height },
+            fixture: {
+                isSensor: true,
+                filterCategoryBits: Config.Physics.Collision.categorySwitch,
+                filterMaskBits: Config.Physics.Collision.categoryPlayer,
+            }
+        },
+        particleEffect: ParticleEffectsConfig.SwitchRadiance,
+        light: LightsConfig.SwitchLight,
     }
 };

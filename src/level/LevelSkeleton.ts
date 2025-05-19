@@ -5,6 +5,8 @@ export interface LevelSkeleton {
     playerSpawnPosition: Point;
     wallPositions: Point[];
     exitPositions: Point[];
+    gatePositions: Point[];
+    switchPositions: Point[];
     torchPositions: Point[];
     antiPositions: Point[];
     sentryPositions: Point[];   

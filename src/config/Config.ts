@@ -11,17 +11,21 @@ export const Config = {
     Physics: {
         Collision: {
             categoryPlayer: 0x0001, // Bitmasks for Planck.js collision filtering
-            categoryWall: 0x0002,
-            categoryEdge: 0x0004,
-            categoryExit: 0x0008,
-            categoryAnti: 0x0010,
-            categoryTorch: 0x0020,
-            categorySentry: 0x0040
+            categoryEdge: 0x0002,
+            categoryGate: 0x0004,
+            categorySwitch: 0x0008,
+            categoryExit: 0x0010,
+            categoryAnti: 0x0020,
+            categoryTorch: 0x0040,
+            categorySentry: 0x0080
         },
         Player: {
             linearDamping: 0.35,    // How quickly the player slows down
         },
-        Wall: {
+        Edge: {
+            restitution: 0.15,
+        }, 
+        Gate: {
             restitution: 0.15,
         }
     },
@@ -48,6 +52,18 @@ export const Config = {
         width: 1,
         height: 1,
         color: 0x111111,  // Tint color for walls
+    },
+    Gate: {
+        type: "GATE",
+        width: 1,
+        height: 1,
+        color: 0x0000FF,  // Tint color for walls
+    },
+    Switch: {
+        type: "SWITCH",
+        width: 1,
+        height: 1,
+        color: 0x0000FF,  // Tint color for walls
     },
     Torch: {
         type: "TORCH",
@@ -76,6 +92,8 @@ export const Config = {
         player: '/assets/textures/player.png', // Paths to texture assets
         sentry: '/assets/textures/sentry.png',
         wall: '/assets/textures/wall.png',
+        gate: '/assets/textures/gate.png',
+        switch: '/assets/textures/switch.png',
         torch: '/assets/textures/torch.png',
         exit: '/assets/textures/exit.png',
         anti: '/assets/textures/anti.png',

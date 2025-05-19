@@ -81,6 +81,8 @@ export class LevelUtils {
         const wallPositions = gatherWallPositions(map);
         const playerSpawnPosition = createPlayerSpawnPosition(openSpaces);
         const exitPositions = createExitPositions(openSpaces, playerSpawnPosition);
+        const gatePositions = createGatePositions(openSpaces, exitPositions);
+        const switchPositions = createSwitchPositions(openSpaces, exitPositions);
         const torchPositions = createTorchPositions(openSpaces);
         const antiPositions = createAntiPositions(openSpaces);
         const sentryPositions = createSentryPositions(openSpaces);
@@ -90,6 +92,8 @@ export class LevelUtils {
             wallPositions,
             playerSpawnPosition,
             exitPositions,
+            gatePositions,
+            switchPositions,
             torchPositions,
             antiPositions,
             sentryPositions 
@@ -132,6 +136,54 @@ export class LevelUtils {
             }
             
             return exitPositions;
+        }
+
+        
+        function createGatePositions(validSpaces: string[], exitPositions: Point[]): Point[] {
+            const gatePositions: Point[] = [];
+            
+            // TODO Methodically place gates in open spaces in a radius arount the exit to obstruct the player
+            // TODO Find all tiles of exacltly a certain distance from the exit and make them gates 
+            const numGates = Math.ceil(8);
+            for (let i = 0; i < numGates; i++) {
+                // Check to see if there are any valid spaces left
+                if (validSpaces.length === 0) {
+                    break;
+                }
+
+                // TODO Do the radius distance check and get back an array of valid spaces, then fill them all in
+                gatePositions.push(LevelUtils.spliceRandomValidPointWithMinDistance(
+                    validSpaces, 
+                    exitPositions[0], 
+                    levelOptions.radiusAroundExitForGates
+                ));
+            }
+            
+            return gatePositions;
+        }
+
+
+        function createSwitchPositions(validSpaces: string[], exitPositions: Point[]): Point[] {
+            const switchPositions: Point[] = [];
+
+            // TODO Look at all exit positions and gather a list of all valid spaces that are a minmum distance away from all of them
+            // TODO This might look like getting all the valid spaces that are a min distance from one exit, then doing that for all of them and then filtering out any over down to what works for all of them
+            // TODO If no spaces satisfy the critera, just put it in a random valid space
+            const numSwitches = Math.ceil(1);
+            for (let i = 0; i < numSwitches; i++) {
+                // Check to see if there are any valid spaces left
+                if (validSpaces.length === 0) {
+                    break;
+                }
+
+                switchPositions.push(LevelUtils.spliceRandomValidPointWithMinDistance(
+                    validSpaces, 
+                    exitPositions[0], 
+                    levelOptions.minDistanceBetweenSwitchAndExit
+                ));
+            }
+            
+            return switchPositions;
         }
 
         function createTorchPositions(validSpaces: string[]): Point[] {

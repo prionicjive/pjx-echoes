@@ -23,6 +23,8 @@ import { LevelContext } from './LevelContext';
 import { LevelSkeleton } from './LevelSkeleton';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { Gate } from '../entities/Gate';
+import { Switch } from '../entities/Switch';
 
 export interface LevelOptions {
     renderer: PIXI.Renderer;
@@ -48,6 +50,8 @@ export class Level implements LevelContext {
     private renderer: PIXI.Renderer;
     private player: Player | null;
     private exits: Exit[];
+    private gates: Gate[];
+    private switches: Switch[];
     private torches: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
@@ -75,6 +79,8 @@ export class Level implements LevelContext {
         // Store references to the various level entities
         this.player = null;
         this.exits = [];
+        this.gates = [];
+        this.switches = [];
         this.torches = [];
         this.antiEntities = [];
         this.sentries = [];
@@ -88,17 +94,21 @@ export class Level implements LevelContext {
                 [...options.entitiesOptions.wallPositions],
                 options.containers.levelGeometryContainer
             );
-        }
-
-        // Create the player
-        this.player = this.createPlayer(
-            {...options.entitiesOptions.playerSpawnPosition},
-            options.containers
-        );        
+        }       
         
         // Create the other various entities
         this.exits = this.createExits(
             [...options.entitiesOptions.exitPositions], 
+            options.containers
+        );
+
+        this.gates = this.createGates(
+            [...options.entitiesOptions.gatePositions], 
+            options.containers
+        );
+
+        this.switches = this.createSwitches(
+            [...options.entitiesOptions.switchPositions], 
             options.containers
         );
 
@@ -115,6 +125,12 @@ export class Level implements LevelContext {
             [...options.entitiesOptions.sentryPositions], 
             options.containers
         );
+
+        // Lastly, create the player
+        this.player = this.createPlayer(
+            {...options.entitiesOptions.playerSpawnPosition},
+            options.containers
+        ); 
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -141,7 +157,7 @@ export class Level implements LevelContext {
         const body = PhysicsUtils.createChainsBodyFromEdges(world, { 
             edges: this.edgesList, 
             edgeFixture: {
-                restitution: Config.Physics.Wall.restitution,
+                restitution: Config.Physics.Edge.restitution,
                 friction: 0,
                 filterCategoryBits: Config.Physics.Collision.categoryEdge,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer | Config.Physics.Collision.categorySentry
@@ -218,8 +234,6 @@ export class Level implements LevelContext {
         
         // 10. Add to container
         container.addChild(mapSprite);
-    
-        console.log(`Created tilemap with ${positions.length} tiles at (${bounds.minX},${bounds.minY})`);
     }
 
     private createPlayer(
@@ -255,6 +269,47 @@ export class Level implements LevelContext {
         }
 
         return exits;
+    }
+
+    private createGates(
+        positions: Point[], 
+        containers: LevelContainers
+    ): Gate[] {
+        const gates: Gate[] = [];
+        
+        for (const position of positions) {
+            const entity = new Gate({
+                spawnPoint: {...position},
+                containers: { containerForEntity: containers.entitiesContainer },
+                levelContext: this
+            });
+
+            gates.push(entity);
+        }
+
+        return gates;
+    }
+
+    private createSwitches(
+        positions: Point[], 
+        containers: LevelContainers
+    ): Switch[] {
+        const switches: Switch[] = [];
+        
+        for (const position of positions) {
+            const entity = new Switch({
+                spawnPoint: {...position},
+                containers: { 
+                    containerForEntity: containers.entitiesContainer,
+                    containerForParticleEffects: containers.preEntitiesContainer 
+                },
+                levelContext: this
+            });
+
+            switches.push(entity);
+        }
+
+        return switches;
     }
 
     private createTorches(
@@ -332,6 +387,8 @@ export class Level implements LevelContext {
             ...this.torches, 
             ...this.antiEntities, 
             ...this.exits,
+            ...this.gates,
+            ...this.switches,
             ...this.sentries
         ];
         
@@ -367,6 +424,12 @@ export class Level implements LevelContext {
             case Config.Exit.type:
                 this.exits = this.exits.filter((exit) => exit !== entity as Exit);
                 break;
+            case Config.Gate.type:
+                this.gates = this.gates.filter((gate) => gate !== entity as Gate);
+                break;
+            case Config.Switch.type:
+                this.switches = this.gates.filter((switchEntity) => switchEntity !== entity as Switch);
+                break;    
             case Config.Sentry.type:
                 this.sentries = this.sentries.filter((sentry) => sentry !== entity as Sentry);
                 break;
@@ -391,6 +454,16 @@ export class Level implements LevelContext {
             exit.destroy();
         });
         this.exits = [];
+
+        this.gates.forEach((gate) => {
+            gate.destroy();
+        });
+        this.gates = [];
+
+        this.switches.forEach((switchEntity) => {
+            switchEntity.destroy();
+        });
+        this.switches = [];
 
         this.sentries.forEach((sentry) => {
             sentry.destroy();
@@ -420,44 +493,5 @@ export class Level implements LevelContext {
     
     getPhysicsWorld(): planck.World {
         return this.physicsWorld;
-    }
-
-    cullNonVisibleObjects(screenBounds: { left: number; top: number; right: number; bottom: number }) {
-        // Cull non-visible level geometry
-        const levelGeometryObjects = this.containers.levelGeometryContainer.children;
-
-        let levelGeometryVisibleCount = 0;
-        for (const object of levelGeometryObjects) {
-            const x = object.x;
-            const y = object.y;
-
-            if (x > screenBounds.right || x < screenBounds.left || y > screenBounds.bottom || y < screenBounds.top) {
-                object.visible = false;
-            } else {
-                object.visible = true;
-                levelGeometryVisibleCount++;
-            }
-        }
-        
-        console.log("Level geometry total count: " + levelGeometryObjects.length);
-        console.log("Level geometry visible count: " + levelGeometryVisibleCount);
-
-        // Cull non-visible level geometry
-        const entitiesObjects = this.containers.entitiesContainer.children;
-
-        let entitiesVisibleCount = 0;
-        for (const object of entitiesObjects) {
-            const bounds = object.getBounds();
-
-            if (bounds.left > screenBounds.right || bounds.right < screenBounds.left || bounds.top > screenBounds.bottom || bounds.bottom < screenBounds.top) {
-                object.visible = false;
-            } else {
-                object.visible = true;
-                entitiesVisibleCount++;
-            }
-        }
-        
-        console.log("Entities total count: " + entitiesObjects.length);
-        console.log("Entities visible count: " + entitiesVisibleCount);
     }
 }

@@ -296,7 +296,7 @@ export class LevelUtils {
                     exitPosition: exitPos,
                     gatesPositions: gates,
                     switchPosition: switchPos,
-                    color: ColorUtils.getRandomColor()
+                    color: ColorUtils.getRandomColor(0.25, 0.66) // Pick a random color with at least 25% brightness
                 });
             }
             

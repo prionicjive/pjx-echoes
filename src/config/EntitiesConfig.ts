@@ -170,7 +170,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
                 filterMaskBits: Config.Physics.Collision.categoryPlayer,
             }
         },
-        particleEffect: ParticleEffectsConfig.SwitchRadiance,
+        particleEffect: ParticleEffectsConfig.SwitchEffect,
         light: LightsConfig.SwitchLight,
     }
 };

@@ -11,6 +11,7 @@ import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityType } from './types';
 import { ParticleEffect } from '../particles/ParticleEffect';
 import { EntityUtils } from '../utils/EntityUtils';
+import { ColorUtils } from '../utils/ColorUtils';
 
 export interface SwitchOptions {
     spawnPoint: Point,
@@ -21,6 +22,11 @@ export interface SwitchOptions {
 
 export class Switch extends BaseEntity {
     constructor(options: SwitchOptions) {
+        const baseColor = options.color;
+        //const complementaryColor = ColorUtils.getComplementary(baseColor);
+        const darkenedColor = ColorUtils.darken(baseColor, 0.2);
+        const lightenedColor = ColorUtils.lighten(baseColor, 0.2);
+
         // Create the sprite
         const sprite = SpriteUtils.createSprite({
             texture: PIXI.Texture.from(EntitiesConfig.Switch.sprite.texture),
@@ -28,7 +34,7 @@ export class Switch extends BaseEntity {
             y: options.spawnPoint.y * Config.PixelsPerMeter,
             width: EntitiesConfig.Switch.sprite.widthInMeters * Config.PixelsPerMeter,
             height: EntitiesConfig.Switch.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: options.color
+            color: baseColor
         });
 
         // Create static body
@@ -48,12 +54,21 @@ export class Switch extends BaseEntity {
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Switch.light! }
+            { 
+                ...EntitiesConfig.Switch.light!,
+                startColor: darkenedColor,
+                endColor: baseColor
+            }
         );
 
         // Create the particle effect and set initial position
         const particleEffect = new ParticleEffect({
             ...EntitiesConfig.Switch.particleEffect!,
+            particleOptions: {
+                ...EntitiesConfig.Switch.particleEffect!.particleOptions, 
+                startTint: new PIXI.Color(baseColor),
+                endTint: new PIXI.Color(lightenedColor),
+            }
         });
 
         super({

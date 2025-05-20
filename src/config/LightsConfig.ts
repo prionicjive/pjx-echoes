@@ -1,6 +1,6 @@
 import { LightOptions } from "../light/Light";
 
-export type LightType = 'PlayerLight' | 'SentryLight' | 'ExitLight' | 'TorchLight' | 'AntiLight';
+export type LightType = 'PlayerLight' | 'SentryLight' | 'ExitLight' | 'TorchLight' | 'AntiLight' | 'SwitchLight';
 
 export const LightsConfig: Record<LightType, LightOptions> = {
     PlayerLight: {
@@ -81,5 +81,20 @@ export const LightsConfig: Record<LightType, LightOptions> = {
         oscillateColorDurationVariance: 3,
         oscillateColorDelay: 0,
         oscillateColorDelayVariance: 1,
-    }    
+    },
+    SwitchLight: {
+        numRays: 360,
+        baseRadius: 5,
+        radiusVariance: 1,
+        baseAlpha: 0.5,
+        alphaVariance: 0.4,
+        startColor: 0x4556ff,
+        endColor: 0x0000ab,
+        flickerAlphaDuration: 0.5,
+        flickerAlphaDurationVariance: 2.5,
+        oscillateColorDuration: 1.5,
+        oscillateColorDurationVariance: 2,
+        oscillateColorDelay: 0,
+        oscillateColorDelayVariance: 2,
+    },
 }

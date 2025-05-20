@@ -15,7 +15,6 @@ import { Exit } from '../entities/Exit';
 import { Player } from '../entities/Player';
 import { Sentry } from '../entities/Sentry';
 import { Torch } from '../entities/Torch';
-import { EntityType } from '../entities/types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Point, Segment } from '../utils/types';
@@ -23,10 +22,15 @@ import { LevelContext } from './LevelContext';
 import { LevelSkeleton } from './LevelSkeleton';
 import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntitiesConfig } from '../config/EntitiesConfig';
+import { Gate } from '../entities/Gate';
+import { Switch } from '../entities/Switch';
+import { PhysicsManager } from '../physics/PhysicManager';
+import { ExitGroup } from './ExitGroup';
 
 export interface LevelOptions {
     renderer: PIXI.Renderer;
     physicsWorld: planck.World;
+    physicsManager: PhysicsManager;
     containers: LevelContainers;
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
@@ -48,12 +52,16 @@ export class Level implements LevelContext {
     private renderer: PIXI.Renderer;
     private player: Player | null;
     private exits: Exit[];
+    private exitGroups: Map<number, { exit: Exit; gates: Gate[]; switchEntity: Switch }> = new Map();
+    private gates: Gate[];
+    private switches: Switch[];
     private torches: Torch[];
     private antiEntities: Anti[];
     private sentries: Sentry[];
     private edgesList: Segment[];
     private dimensions: { width: number; height: number };
     private physicsWorld: planck.World;
+    private physicsManager: PhysicsManager;
     private containers: LevelContainers;
 
     constructor(
@@ -62,6 +70,7 @@ export class Level implements LevelContext {
         // Store LevelContext related things
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
+        this.physicsManager = options.physicsManager;
 
         // Store the renderer
         this.renderer = options.renderer;
@@ -75,46 +84,49 @@ export class Level implements LevelContext {
         // Store references to the various level entities
         this.player = null;
         this.exits = [];
+        this.gates = [];
+        this.switches = [];
         this.torches = [];
         this.antiEntities = [];
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(options.physicsWorld, options.containers.levelGeometryContainer);
+        this.createLevelEdges(options.physicsWorld, this.containers.levelGeometryContainer);
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.createVisibleWalls) {
             this.createTilemap(
                 [...options.entitiesOptions.wallPositions],
-                options.containers.levelGeometryContainer
+                this.containers.levelGeometryContainer
             );
-        }
+        }       
 
-        // Create the player
-        this.player = this.createPlayer(
-            {...options.entitiesOptions.playerSpawnPosition},
-            options.containers
-        );        
+        // Create the exit groups
+        this.createExitGroups(
+            [...options.entitiesOptions.exitGroups], 
+            this.containers
+        );
         
         // Create the other various entities
-        this.exits = this.createExits(
-            [...options.entitiesOptions.exitPositions], 
-            options.containers
-        );
-
         this.torches = this.createTorches(
             [...options.entitiesOptions.torchPositions], 
-            options.containers);
+            this.containers);
 
         this.antiEntities = this.createAntiEntities(
             [...options.entitiesOptions.antiPositions], 
-            options.containers
+            this.containers
         );
         
         this.sentries = this.createSentries(
             [...options.entitiesOptions.sentryPositions], 
-            options.containers
+            this.containers
         );
+
+        // Lastly, create the player
+        this.player = this.createPlayer(
+            {...options.entitiesOptions.playerSpawnPosition},
+            this.containers
+        ); 
     }
 
     private createLevelEdges(world: planck.World, container: PIXI.Container) {
@@ -141,7 +153,7 @@ export class Level implements LevelContext {
         const body = PhysicsUtils.createChainsBodyFromEdges(world, { 
             edges: this.edgesList, 
             edgeFixture: {
-                restitution: Config.Physics.Wall.restitution,
+                restitution: Config.Physics.Edge.restitution,
                 friction: 0,
                 filterCategoryBits: Config.Physics.Collision.categoryEdge,
                 filterMaskBits: Config.Physics.Collision.categoryPlayer | Config.Physics.Collision.categorySentry
@@ -218,8 +230,6 @@ export class Level implements LevelContext {
         
         // 10. Add to container
         container.addChild(mapSprite);
-    
-        console.log(`Created tilemap with ${positions.length} tiles at (${bounds.minX},${bounds.minY})`);
     }
 
     private createPlayer(
@@ -238,23 +248,65 @@ export class Level implements LevelContext {
         return entity;
     }
 
-    private createExits(
-        positions: Point[], 
-        containers: LevelContainers
-    ): Exit[] {
-        const exits: Exit[] = [];
-        
-        for (const position of positions) {
-            const entity = new Exit({
-                spawnPoint: {...position},
+    private createExitGroups(exitGroups: ExitGroup[], containers: LevelContainers) {
+        // Create exit groups
+        exitGroups.forEach(group => {
+            // Create exit
+            const exit = new Exit({
+                spawnPoint: {...group.exitPosition},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
             });
-
-            exits.push(entity);
-        }
-
-        return exits;
+            exit.body?.setUserData({ 
+                type: Config.Exit.type, 
+                entity: exit,
+                groupId: group.id
+            });
+            
+            // Create gates
+            const gates = group.gatesPositions.map(gatePos => {
+                const gate = new Gate({
+                    spawnPoint: {...gatePos},
+                    containers: { containerForEntity: containers.entitiesContainer },
+                    levelContext: this,
+                    color: group.color // Pass color to gate
+                });
+                gate.body?.setUserData({ 
+                    type: Config.Gate.type, 
+                    entity: gate,
+                    groupId: group.id
+                });
+                return gate;
+            });
+            
+            // Create switch
+            const switchEntity = new Switch({
+                spawnPoint: {...group.switchPosition},
+                containers: { 
+                    containerForEntity: containers.entitiesContainer,
+                    containerForParticleEffects: containers.preEntitiesContainer 
+                },
+                levelContext: this,
+                color: group.color // Pass color to switch
+            });
+            switchEntity.body?.setUserData({ 
+                type: Config.Switch.type, 
+                entity: switchEntity,
+                groupId: group.id
+            });
+            
+            // Store the entities to the proper slots of the exit group
+            this.exitGroups.set(group.id, {
+                exit,
+                gates,
+                switchEntity: switchEntity
+            });
+            
+            // Add the entities to the corresponding lists
+            this.exits.push(exit);
+            this.gates.push(...gates);
+            this.switches.push(switchEntity);
+        });
     }
 
     private createTorches(
@@ -332,6 +384,8 @@ export class Level implements LevelContext {
             ...this.torches, 
             ...this.antiEntities, 
             ...this.exits,
+            ...this.gates,
+            ...this.switches,
             ...this.sentries
         ];
         
@@ -341,23 +395,35 @@ export class Level implements LevelContext {
         });
     }
 
-    gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
+    // @ts-ignore
+    onSwitchPressed(groupId: number) {
+        const exitGroup = this.exitGroups.get(groupId);
+        if (!exitGroup) return;
+
+        // Gently destroy the switch
+        this.gentlyDestroyEntity(exitGroup.switchEntity);
+
+        // Instantly remove gates
+        for (const gate of exitGroup.gates) {
+            this.destroyEntity(gate);
+        }
+    }
+
+    gentlyDestroyEntity(entity: BaseEntity) {
         // Gently remove the entity
-        entity.gentlyDestroy();
-
-        this.removeEntity(type, entity);
+        entity.gentlyDestroy(this.physicsManager);
+        this.removeEntity(entity);
     }
 
-    destroyEntity(type: EntityType, entity: BaseEntity) {
+    destroyEntity(entity: BaseEntity) {
         // Instantly remove the entity
-        entity.destroy();
-
-        this.removeEntity(type, entity);
+        entity.destroy(this.physicsManager);
+        this.removeEntity(entity);
     }
 
-    private removeEntity(type: EntityType, entity: BaseEntity) {
+    private removeEntity(entity: BaseEntity) {
         // Now, remove the entity from the correct array
-        switch (type) {
+        switch (entity.type) {
             case Config.Torch.type:
                 this.torches = this.torches.filter((torch) => torch !== entity as Torch);
                 break;
@@ -367,6 +433,12 @@ export class Level implements LevelContext {
             case Config.Exit.type:
                 this.exits = this.exits.filter((exit) => exit !== entity as Exit);
                 break;
+            case Config.Gate.type:
+                this.gates = this.gates.filter((gate) => gate !== entity as Gate);
+                break;
+            case Config.Switch.type:
+                this.switches = this.gates.filter((switchEntity) => switchEntity !== entity as Switch);
+                break;    
             case Config.Sentry.type:
                 this.sentries = this.sentries.filter((sentry) => sentry !== entity as Sentry);
                 break;
@@ -375,27 +447,40 @@ export class Level implements LevelContext {
 
     destroy() {
         // Destroy all entities
-        this.player?.destroy();
+        this.player?.destroy(this.physicsManager);
 
         this.torches.forEach((torch) => {
-            torch.destroy();
+            torch.destroy(this.physicsManager);
         });
         this.torches = [];
 
         this.antiEntities.forEach((anti) => {
-            anti.destroy();
+            anti.destroy(this.physicsManager);
         });
         this.antiEntities = [];
 
         this.exits.forEach((exit) => {
-            exit.destroy();
+            exit.destroy(this.physicsManager);
         });
         this.exits = [];
 
+        this.gates.forEach((gate) => {
+            gate.destroy(this.physicsManager);
+        });
+        this.gates = [];
+
+        this.switches.forEach((switchEntity) => {
+            switchEntity.destroy(this.physicsManager);
+        });
+        this.switches = [];
+
         this.sentries.forEach((sentry) => {
-            sentry.destroy();
+            sentry.destroy(this.physicsManager);
         });
         this.sentries = [];
+
+        // Vanquish the exit groups
+        this.exitGroups = new Map();
     }
 
     getPlayer(): Player {
@@ -420,44 +505,5 @@ export class Level implements LevelContext {
     
     getPhysicsWorld(): planck.World {
         return this.physicsWorld;
-    }
-
-    cullNonVisibleObjects(screenBounds: { left: number; top: number; right: number; bottom: number }) {
-        // Cull non-visible level geometry
-        const levelGeometryObjects = this.containers.levelGeometryContainer.children;
-
-        let levelGeometryVisibleCount = 0;
-        for (const object of levelGeometryObjects) {
-            const x = object.x;
-            const y = object.y;
-
-            if (x > screenBounds.right || x < screenBounds.left || y > screenBounds.bottom || y < screenBounds.top) {
-                object.visible = false;
-            } else {
-                object.visible = true;
-                levelGeometryVisibleCount++;
-            }
-        }
-        
-        console.log("Level geometry total count: " + levelGeometryObjects.length);
-        console.log("Level geometry visible count: " + levelGeometryVisibleCount);
-
-        // Cull non-visible level geometry
-        const entitiesObjects = this.containers.entitiesContainer.children;
-
-        let entitiesVisibleCount = 0;
-        for (const object of entitiesObjects) {
-            const bounds = object.getBounds();
-
-            if (bounds.left > screenBounds.right || bounds.right < screenBounds.left || bounds.top > screenBounds.bottom || bounds.bottom < screenBounds.top) {
-                object.visible = false;
-            } else {
-                object.visible = true;
-                entitiesVisibleCount++;
-            }
-        }
-        
-        console.log("Entities total count: " + entitiesObjects.length);
-        console.log("Entities visible count: " + entitiesVisibleCount);
     }
 }

@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Config } from './Config';
 
-export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame';
+export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame' | 'SwitchEffect';
 
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {
@@ -73,6 +73,29 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
             endDirection: {x: 0, y: 0},
             startSpeed: 0,
             endSpeed: 0,
+        }
+    },
+    SwitchEffect: {
+        texturePath: Config.Textures.Particles.circleSoft,
+        emitPerSecond: 20,
+        maxParticles: 50,
+        emitAngle: 0,
+        spreadAmount: 360,
+        particleOptions: {
+            maxAge: 2,
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 0.75,
+            startScaleY: 0.75,
+            endScaleX: 0.25,
+            endScaleY: 0.25,
+            width: Config.Switch.width * Config.PixelsPerMeter,
+            height: Config.Switch.height * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(Config.Switch.color),
+            endTint: new PIXI.Color(Config.Switch.color), // TODO Just for test, should be configurable
+            endDirection: {x: 0, y: 0},
+            startSpeed: 33,
+            endSpeed: 13,
         }
     },
     Explosion: {

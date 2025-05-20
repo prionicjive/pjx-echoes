@@ -3,21 +3,23 @@ import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
 import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
-import { BaseEntity, EntityUserData } from '../entities/BaseEntity.ts';
+import { EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
-import { EntityType } from '../entities/types.ts';
 import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
+import { PhysicsManager } from '../physics/PhysicManager.ts';
 
 export class World {
     private app: PIXI.Application;
+    
+    // Physics related
+    private physicsManager: PhysicsManager | null = null;
     private world: planck.World | null = null;
-    private bodiesToDestroy: (planck.Body | null)[] = []; // Quirky need to destory bodies that are flagged as such inside contact callbacks
-  
+
     // Input related
     private inputManager: InputManager;
     
@@ -174,18 +176,13 @@ export class World {
         ParticleEffectManager.instance.removeAllEffects();
         
         // Remove all bodies / fixtures from Planck world
-        let body = this.world!.getBodyList();
-        let counter = 0;
-        while (body) {
-            const nextBody = body.getNext();
-            this.world!.destroyBody(body);
-            counter++;
-            body = nextBody;
-        }
-        this.bodiesToDestroy = [];
+        this.physicsManager?.destroy();
 
         // Remove any listeners
         this.world!.off('begin-contact', this.onBeginContact.bind(this));
+    
+        // Remove the physics manager
+        this.physicsManager = null;
     }
 
     private setUpWorld() {
@@ -196,14 +193,17 @@ export class World {
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
         // TODO Any other render-to-textures that need to be at the screen level and NOT on the world (As the camera there moves)?
 
-        // TODO This may be too drastic, but regenerate entire Planck world
+        // TODO This may be too drastic, but regenerate entire Planck world and the physics manager
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
         this.world.on('begin-contact', this.onBeginContact.bind(this));
+        this.physicsManager = new PhysicsManager(this.world);
 
         // Create a proceduarally generated level
         this.level = LevelUtils.createProcGenLevel(
             this.app.renderer,
-            this.world, {
+            this.world,
+            this.physicsManager,
+            {
                 bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,
                 preEntitiesContainer: this.preEntitiesContainer,
@@ -288,28 +288,28 @@ export class World {
             console.log("Player hit an edge!");
 
             // Access the manifold to get the contact points
-            const manifold = contact.getManifold();
-            if (manifold.pointCount > 0) {
-                const worldManifold = contact.getWorldManifold(null);
+            // const manifold = contact.getManifold();
+            // if (manifold.pointCount > 0) {
+            //     const worldManifold = contact.getWorldManifold(null);
 
-                if (!worldManifold) {
-                    return;
-                }
-                for (let i = 0; i < manifold.pointCount; i++) {
-                    const point = worldManifold.points[i]; // { x, y }
+            //     if (!worldManifold) {
+            //         return;
+            //     }
+            //     for (let i = 0; i < manifold.pointCount; i++) {
+            //         const point = worldManifold.points[i]; // { x, y }
 
-                    // This is where you spawn your sprite/particle
-                    console.log("Player/EdgeCollision point: ", point);
-                    // ParticleEffectManager.instance.playEffect(
-                    //     this.preEntitiesContainer, 
-                    //     "PlayerTrail", { 
-                    //         x: point.x * Config.PixelsPerMeter,
-                    //         y: point.y * Config.PixelsPerMeter 
-                    //     },
-                    //     3
-                    // );
-                }
-            }
+            //         // This is where you spawn your sprite/particle
+            //         console.log("Player/EdgeCollision point: ", point);
+            //         // ParticleEffectManager.instance.playEffect(
+            //         //     this.preEntitiesContainer, 
+            //         //     "PlayerTrail", { 
+            //         //         x: point.x * Config.PixelsPerMeter,
+            //         //         y: point.y * Config.PixelsPerMeter 
+            //         //     },
+            //         //     3
+            //         // );
+            //     }
+            // }
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
             (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
@@ -350,7 +350,7 @@ export class World {
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
                 this.player!.onPickup(sentryData.type);
-                this.gentlyDestroyEntity(sentryData.type, sentryData.entity);
+                this.level!.gentlyDestroyEntity(sentryData.entity);
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
@@ -365,7 +365,7 @@ export class World {
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
                 this.player!.onPickup(torchEntity.type);
-                this.gentlyDestroyEntity(torchEntity.type,torchEntity.entity);
+                this.level!.gentlyDestroyEntity(torchEntity.entity);
             }
         }else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
@@ -382,20 +382,19 @@ export class World {
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
                 this.player!.onPickup(antiEntity.type);
-                this.gentlyDestroyEntity(antiEntity.type, antiEntity.entity);
+                this.level!.gentlyDestroyEntity(antiEntity.entity);
             }
-        }
-    }
+        } else if (
+            (aData.type === Config.Player.type && bData.type === Config.Switch.type) ||
+            (aData.type === Config.Switch.type && bData.type === Config.Player.type)
+        ) {
+            // Press and remove swtich
+            console.log("Player pressed a switch!");
 
-    private gentlyDestroyEntity(type: EntityType, entity: BaseEntity) {
-        // Gently destroy the entity from the level
-        this.level!.gentlyDestroyEntity(type, entity);
-
-        // TODO Do any other additional destruction on the entity or its subsystems
-
-        // Lastly, flag the body of the entity for destruction (if it exists)
-        if (entity.body) {
-            this.bodiesToDestroy.push(entity.body);
+            const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
+            if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
+                this.level!.onSwitchPressed(switchEntity.groupId);
+            }
         }
     }
 
@@ -442,17 +441,15 @@ export class World {
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
-    update(deltaTime: number) {
-        // Destroy any bodies that need to be destroyed
-        this.processBodiesToDestroy();
-        
+    update(deltaTime: number) {    
         // Handle debugging input
         this.handleDebugInput();
 
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
 
-        // Step the physics
+        // Update and step the physics
+        this.physicsManager?.update();
         this.world!.step(deltaTime);
     
         // Update level 
@@ -470,15 +467,6 @@ export class World {
 
         // Update anything needed for post processing
         this.updatePostProcessing(deltaTime);
-    }
-
-    private processBodiesToDestroy() {
-        this.bodiesToDestroy.forEach(body => {
-            if (body) {
-                this.world!.destroyBody(body);
-            }
-        });
-        this.bodiesToDestroy = [];
     }
 
     private handleDebugInput() {

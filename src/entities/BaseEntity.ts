@@ -6,6 +6,7 @@ import { ParticleEffect } from '../particles/ParticleEffect';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
+import { PhysicsManager } from '../physics/PhysicManager';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -25,6 +26,7 @@ export interface EntityUserData {
     type: EntityType;
     entity?: BaseEntity;
     body?: planck.Body;
+    groupId?: number;
 }
 
 export abstract class BaseEntity {
@@ -71,13 +73,17 @@ export abstract class BaseEntity {
         }
     }
 
-    destroy() {
+    destroy(physicsManager: PhysicsManager) {
         // Instantly remove the sprite from the container
         this.containers.containerForEntity.removeChild(this.sprite);
 
-        // Destroy the body
+        // Gently destroy the body
         if (this.body && this.body.getWorld()) {
-            this.body.getWorld().destroyBody(this.body);
+            if (physicsManager) {
+                physicsManager.destroyBody(this.body);
+            } else {
+                this.body.getWorld().destroyBody(this.body);
+            }
         }
 
         // Immediately remove light from LightManager
@@ -91,13 +97,17 @@ export abstract class BaseEntity {
         }
     }
 
-    gentlyDestroy() {
+    gentlyDestroy(physicsManager: PhysicsManager) {
         // Instantly remove the sprite from the container
         this.containers.containerForEntity.removeChild(this.sprite);
 
         // Gently destroy the body
         if (this.body && this.body.getWorld()) {
-            this.body.getWorld().destroyBody(this.body);
+            if (physicsManager) {
+                physicsManager.destroyBody(this.body);
+            } else {
+                this.body.getWorld().destroyBody(this.body);
+            }
         }
 
         // Gently remove light from LightManager

@@ -15,7 +15,8 @@ import { EntityUtils } from '../utils/EntityUtils';
 export interface SwitchOptions {
     spawnPoint: Point,
     containers: EntityContainers,
-    levelContext: LevelContext
+    levelContext: LevelContext,
+    color: number
 }
 
 export class Switch extends BaseEntity {
@@ -27,7 +28,7 @@ export class Switch extends BaseEntity {
             y: options.spawnPoint.y * Config.PixelsPerMeter,
             width: EntitiesConfig.Switch.sprite.widthInMeters * Config.PixelsPerMeter,
             height: EntitiesConfig.Switch.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Switch.sprite.color
+            color: options.color
         });
 
         // Create static body

@@ -25,6 +25,7 @@ import { EntitiesConfig } from '../config/EntitiesConfig';
 import { Gate } from '../entities/Gate';
 import { Switch } from '../entities/Switch';
 import { PhysicsManager } from '../physics/PhysicManager';
+import { ExitGroup } from './ExitGroup';
 
 export interface LevelOptions {
     renderer: PIXI.Renderer;
@@ -51,6 +52,7 @@ export class Level implements LevelContext {
     private renderer: PIXI.Renderer;
     private player: Player | null;
     private exits: Exit[];
+    private exitGroups: Map<number, { exit: Exit; gates: Gate[]; switchEntity: Switch }> = new Map();
     private gates: Gate[];
     private switches: Switch[];
     private torches: Torch[];
@@ -98,23 +100,14 @@ export class Level implements LevelContext {
                 this.containers.levelGeometryContainer
             );
         }       
+
+        // Create the exit groups
+        this.createExitGroups(
+            [...options.entitiesOptions.exitGroups], 
+            this.containers
+        );
         
         // Create the other various entities
-        this.exits = this.createExits(
-            [...options.entitiesOptions.exitPositions], 
-            this.containers
-        );
-
-        this.gates = this.createGates(
-            [...options.entitiesOptions.gatePositions], 
-            this.containers
-        );
-
-        this.switches = this.createSwitches(
-            [...options.entitiesOptions.switchPositions], 
-            this.containers
-        );
-
         this.torches = this.createTorches(
             [...options.entitiesOptions.torchPositions], 
             this.containers);
@@ -255,64 +248,65 @@ export class Level implements LevelContext {
         return entity;
     }
 
-    private createExits(
-        positions: Point[], 
-        containers: LevelContainers
-    ): Exit[] {
-        const exits: Exit[] = [];
-        
-        for (const position of positions) {
-            const entity = new Exit({
-                spawnPoint: {...position},
+    private createExitGroups(exitGroups: ExitGroup[], containers: LevelContainers) {
+        // Create exit groups
+        exitGroups.forEach(group => {
+            // Create exit
+            const exit = new Exit({
+                spawnPoint: {...group.exitPosition},
                 containers: { containerForEntity: containers.entitiesContainer },
                 levelContext: this
             });
-
-            exits.push(entity);
-        }
-
-        return exits;
-    }
-
-    private createGates(
-        positions: Point[], 
-        containers: LevelContainers
-    ): Gate[] {
-        const gates: Gate[] = [];
-        
-        for (const position of positions) {
-            const entity = new Gate({
-                spawnPoint: {...position},
-                containers: { containerForEntity: containers.entitiesContainer },
-                levelContext: this
+            exit.body?.setUserData({ 
+                type: Config.Exit.type, 
+                entity: exit,
+                groupId: group.id
             });
-
-            gates.push(entity);
-        }
-
-        return gates;
-    }
-
-    private createSwitches(
-        positions: Point[], 
-        containers: LevelContainers
-    ): Switch[] {
-        const switches: Switch[] = [];
-        
-        for (const position of positions) {
-            const entity = new Switch({
-                spawnPoint: {...position},
+            
+            // Create gates
+            const gates = group.gatesPositions.map(gatePos => {
+                const gate = new Gate({
+                    spawnPoint: {...gatePos},
+                    containers: { containerForEntity: containers.entitiesContainer },
+                    levelContext: this,
+                    color: group.color // Pass color to gate
+                });
+                gate.body?.setUserData({ 
+                    type: Config.Gate.type, 
+                    entity: gate,
+                    groupId: group.id
+                });
+                return gate;
+            });
+            
+            // Create switch
+            const switchEntity = new Switch({
+                spawnPoint: {...group.switchPosition},
                 containers: { 
                     containerForEntity: containers.entitiesContainer,
                     containerForParticleEffects: containers.preEntitiesContainer 
                 },
-                levelContext: this
+                levelContext: this,
+                color: group.color // Pass color to switch
             });
-
-            switches.push(entity);
-        }
-
-        return switches;
+            switchEntity.body?.setUserData({ 
+                type: Config.Switch.type, 
+                entity: switchEntity,
+                groupId: group.id
+            });
+            
+            // Store the entities to the proper slots of the exit group
+            this.exitGroups.set(group.id, {
+                exit,
+                gates,
+                switchEntity: switchEntity
+            });
+            
+            // Add the entities to the corresponding lists
+            this.exits.push(exit);
+            this.gates.push(...gates);
+            this.switches.push(switchEntity);
+        });
     }
 
     private createTorches(
@@ -402,14 +396,15 @@ export class Level implements LevelContext {
     }
 
     // @ts-ignore
-    onSwitchPressed(pressedSwitch: BaseEntity) {
-        // Gently destroy the switches
-        for (const switchEntity of this.switches) {
-            this.gentlyDestroyEntity(switchEntity);
-        }
+    onSwitchPressed(groupId: number) {
+        const exitGroup = this.exitGroups.get(groupId);
+        if (!exitGroup) return;
+
+        // Gently destroy the switch
+        this.gentlyDestroyEntity(exitGroup.switchEntity);
 
         // Instantly remove gates
-        for (const gate of this.gates) {
+        for (const gate of exitGroup.gates) {
             this.destroyEntity(gate);
         }
     }
@@ -483,6 +478,9 @@ export class Level implements LevelContext {
             sentry.destroy(this.physicsManager);
         });
         this.sentries = [];
+
+        // Vanquish the exit groups
+        this.exitGroups = new Map();
     }
 
     getPlayer(): Player {

@@ -392,8 +392,8 @@ export class World {
             console.log("Player pressed a switch!");
 
             const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
-            if (switchEntity.entity) {
-                this.level!.onSwitchPressed(switchEntity.entity);
+            if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
+                this.level!.onSwitchPressed(switchEntity.groupId);
             }
         }
     }

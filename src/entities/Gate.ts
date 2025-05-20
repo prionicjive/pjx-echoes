@@ -12,7 +12,8 @@ import { EntityType } from './types';
 export interface GateOptions {
     spawnPoint: Point,
     containers: EntityContainers,
-    levelContext: LevelContext
+    levelContext: LevelContext,
+    color: number
 }
 
 export class Gate extends BaseEntity {
@@ -24,7 +25,7 @@ export class Gate extends BaseEntity {
             y: options.spawnPoint.y * Config.PixelsPerMeter,
             width: EntitiesConfig.Gate.sprite.widthInMeters * Config.PixelsPerMeter,
             height: EntitiesConfig.Gate.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Gate.sprite.color
+            color: options.color
         });
 
         // Create static body

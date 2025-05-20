@@ -26,6 +26,7 @@ export interface EntityUserData {
     type: EntityType;
     entity?: BaseEntity;
     body?: planck.Body;
+    groupId?: number;
 }
 
 export abstract class BaseEntity {

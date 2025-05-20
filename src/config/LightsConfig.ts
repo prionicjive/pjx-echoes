@@ -84,8 +84,8 @@ export const LightsConfig: Record<LightType, LightOptions> = {
     },
     SwitchLight: {
         numRays: 360,
-        baseRadius: 10,
-        radiusVariance: 2.5,
+        baseRadius: 5,
+        radiusVariance: 1,
         baseAlpha: 0.5,
         alphaVariance: 0.4,
         startColor: 0x4556ff,

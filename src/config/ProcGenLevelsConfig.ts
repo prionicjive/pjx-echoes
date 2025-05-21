@@ -40,7 +40,7 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
         minDistanceBetweenPlayerSpawnAndExit: 48,
         minDistanceBetweenSwitchAndExit: 32,
         minDistanceBetweenExits: 36,
-        radiusAroundExitForGates: 1,
+        radiusAroundExitForGates: 3,
         numExits: 3,
         torchChance: 0.00087,
         antiChance: 0.00065,

@@ -133,9 +133,6 @@ export class LevelUtils {
         ): ExitGroup[] {
             const exitGroups: ExitGroup[] = [];
             
-            // Create a working copy of open spaces
-            const availableSpaces = [...openSpaces];
-            
             // Helper to check if a point is too close to any existing point
             const isTooClose = (point: Point, points: Point[], minDistance: number): boolean => {
                 return points.some(p => 
@@ -145,20 +142,19 @@ export class LevelUtils {
             
             // Helper to remove a point from available spaces
             const removePoint = (point: Point) => {
-                const index = availableSpaces.indexOf(`${point.x},${point.y}`);
+                const index = openSpaces.indexOf(`${point.x},${point.y}`);
                 if (index !== -1) {
-                    availableSpaces.splice(index, 1);
+                    openSpaces.splice(index, 1);
                 }
             };
 
-            // Helper for finding positions around exit
-            const findPositionsAroundExit = (
+            // Helper for finding positions around exit (And making it impossible for entities to spawn within the confines)
+            const setupGatedAreaAroundExit = (
                 exitPos: Point,
                 radius: number,
                 availableSpaces: string[]
             ): Point[] => {
                 const positions: Point[] = [];
-                const candidates: Point[] = [];
                 
                 // Generate all possible positions in a circle around the exit
                 for (let y = -radius; y <= radius; y++) {
@@ -176,23 +172,16 @@ export class LevelUtils {
                             // Check if this position is in available spaces
                             const posStr = `${pos.x},${pos.y}`;
                             if (availableSpaces.includes(posStr)) {
-                                candidates.push(pos);
+                                removePoint(pos); // Remove the position from available spaces
+                                positions.push(pos);
                             }
+                        } else {
+                            removePoint({
+                                x: exitPos.x + x,
+                                y: exitPos.y + y
+                            });
                         }
                     }
-                }
-                
-                // Sort by distance to exit (closest first)
-                candidates.sort((a, b) => {
-                    const distA = Math.hypot(a.x - exitPos.x, a.y - exitPos.y);
-                    const distB = Math.hypot(b.x - exitPos.x, b.y - exitPos.y);
-                    return distA - distB;
-                });
-                
-                // Add a minimum of 16 gates (one per cardinal direction)
-                const maxGates = Math.min(16, candidates.length);
-                for (let i = 0; i < maxGates; i++) {
-                    positions.push(candidates[i]);
                 }
                 
                 return positions;
@@ -204,7 +193,7 @@ export class LevelUtils {
             
             // Place exits first
             for (let i = 0; i < levelOptions.numExits; i++) {
-                if (availableSpaces.length === 0) break;
+                if (openSpaces.length === 0) break;
                 
                 // Try to find a position that's far enough from player and other exits
                 let exitPos: Point | null = null;
@@ -213,9 +202,9 @@ export class LevelUtils {
                 // Try a few times to find a good position
                 for (let attempt = 0; attempt < 10; attempt++) {
                     const candidate = LevelUtils.getRandomValidPointWithMinDistance(
-                        availableSpaces,
+                        openSpaces,
                         playerSpawnPoint,
-                        levelOptions.minDistanceBetweenPlayerSpawnAndExit
+                        levelOptions.minDistanceBetweenPlayerSpawnAndExit || levelOptions.radiusAroundExitForGates + 1
                     );
                     
                     if (!isTooClose(candidate, exitPositions, levelOptions.minDistanceBetweenExits || 10)) {
@@ -230,24 +219,17 @@ export class LevelUtils {
                 
                 // If we couldn't find a good position, just take any position
                 if (!exitPos) {
-                    exitPos = LevelUtils.spliceRandomValidPoint(availableSpaces);
+                    exitPos = LevelUtils.spliceRandomValidPoint(openSpaces);
                 }
                 
                 if (!exitPos) break; // No more spaces
                 
                 // Create gates around the exit
-                const gates: Point[] = [];
-                const gatePositions: Point[] = findPositionsAroundExit(
+                const gatePositions: Point[] = setupGatedAreaAroundExit(
                     exitPos, 
                     levelOptions.radiusAroundExitForGates || 3,
-                    availableSpaces
+                    openSpaces
                 );
-                
-                // Remove gate positions from available spaces
-                gatePositions.forEach(p => {
-                    removePoint(p);
-                    gates.push(p);
-                });
                 
                 // Create switch position (must be outside gate radius)
                 let switchPos: Point | null = null;
@@ -257,7 +239,7 @@ export class LevelUtils {
                 // Try to find a position that's not too close to any exit
                 for (let attempt = 0; attempt < 20; attempt++) {
                     const candidate = LevelUtils.getRandomValidPointWithMinDistance(
-                        availableSpaces,
+                        openSpaces,
                         exitPos,
                         minSwitchDistance
                     );
@@ -294,7 +276,7 @@ export class LevelUtils {
                 exitGroups.push({
                     id: i,
                     exitPosition: exitPos,
-                    gatesPositions: gates,
+                    gatesPositions: gatePositions,
                     switchPosition: switchPos,
                     color: ColorUtils.getRandomColor(0.50, 0.87) // Pick a random color with at least 25% brightness
                 });

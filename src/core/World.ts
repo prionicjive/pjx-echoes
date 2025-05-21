@@ -276,7 +276,7 @@ export class World {
             (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
             (aData.type === Config.Exit.type && bData.type === Config.Player.type)
         ) {
-            console.log("Player reached exit tile!");
+            //console.log("Player reached exit tile!");
 
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
@@ -285,67 +285,71 @@ export class World {
             (aData.type === Config.Edges.type && bData.type === Config.Player.type)
         ) {
             // TODO Handle player hitting an edge
-            console.log("Player hit an edge!");
+            //console.log("Player hit an edge!");
+            if (Config.Debug.showCollisionMarkers) {
+                // Access the manifold to get the contact points
+                const manifold = contact.getManifold();
+                if (manifold.pointCount > 0) {
+                    const worldManifold = contact.getWorldManifold(null);
 
-            // Access the manifold to get the contact points
-            // const manifold = contact.getManifold();
-            // if (manifold.pointCount > 0) {
-            //     const worldManifold = contact.getWorldManifold(null);
+                    if (!worldManifold) {
+                        return;
+                    }
 
-            //     if (!worldManifold) {
-            //         return;
-            //     }
-            //     for (let i = 0; i < manifold.pointCount; i++) {
-            //         const point = worldManifold.points[i]; // { x, y }
+                    for (let i = 0; i < manifold.pointCount; i++) {
+                        const point = worldManifold.points[i]; // { x, y }
 
-            //         // This is where you spawn your sprite/particle
-            //         console.log("Player/EdgeCollision point: ", point);
-            //         // ParticleEffectManager.instance.playEffect(
-            //         //     this.preEntitiesContainer, 
-            //         //     "PlayerTrail", { 
-            //         //         x: point.x * Config.PixelsPerMeter,
-            //         //         y: point.y * Config.PixelsPerMeter 
-            //         //     },
-            //         //     3
-            //         // );
-            //     }
-            // }
+                        //console.log("Sentry/Edge Collision point: ", point);
+                        ParticleEffectManager.instance.playEffect(
+                            this.preEntitiesContainer, 
+                            "EdgeImpact", { 
+                                x: point.x * Config.PixelsPerMeter,
+                                y: point.y * Config.PixelsPerMeter 
+                            },
+                            5
+                        );
+                    }
+                }
+            }
         } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
             (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
         ) {
             // TODO Handle sentry hitting an edge
-            console.log("Sentry hit an edge!");
+            //console.log("Sentry hit an edge!");
 
-            // // Access the manifold to get the contact points
-            // const manifold = contact.getManifold();
-            // if (manifold.pointCount > 0) {
-            //     const worldManifold = contact.getWorldManifold(null);
+            if (Config.Debug.showCollisionMarkers) {
+                // Access the manifold to get the contact points
+                const manifold = contact.getManifold();
+                if (manifold.pointCount > 0) {
+                    const worldManifold = contact.getWorldManifold(null);
 
-            //     if (!worldManifold) {
-            //         return;
-            //     }
-            //     for (let i = 0; i < manifold.pointCount; i++) {
-            //         const point = worldManifold.points[i]; // { x, y }
+                    if (!worldManifold) {
+                        return;
+                    }
 
-            //         // This is where you spawn your sprite/particle
-            //         console.log("Sentry/EdgeCollision point: ", point);
-            //         // ParticleEffectManager.instance.playEffect(
-            //         //     this.preEntitiesContainer, 
-            //         //     "PlayerTrail", { 
-            //         //         x: point.x * Config.PixelsPerMeter,
-            //         //         y: point.y * Config.PixelsPerMeter 
-            //         //     },
-            //         //     3
-            //         // );
-            //     }
-            // }
+                    for (let i = 0; i < manifold.pointCount; i++) {
+                        const point = worldManifold.points[i]; // { x, y }
+
+                        //console.log("Sentry/Edge Collision point: ", point);
+                        ParticleEffectManager.instance.playEffect(
+                            this.preEntitiesContainer, 
+                            "EdgeImpact", { 
+                                x: point.x * Config.PixelsPerMeter,
+                                y: point.y * Config.PixelsPerMeter 
+                            },
+                            5
+                        );
+                    }
+                }
+            }
+
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
             (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
         ) {
             // Handle player hitting a sentry
-            console.log("Player hit a sentry!");
+            //console.log("Player hit a sentry!");
 
             const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
             if (sentryData.entity) {
@@ -360,24 +364,24 @@ export class World {
             (aData.type === Config.Torch.type && bData.type === Config.Player.type)
         ) {
             // Handle player hitting a torch
-            console.log("Player hit a torch!");
+            //console.log("Player hit a torch!");
 
             const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
             if (torchEntity.entity) {
                 this.player!.onPickup(torchEntity.type);
                 this.level!.gentlyDestroyEntity(torchEntity.entity);
             }
-        }else if (
+        } else if (
             (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
         ) {
             // TODO Handle a sentry hitting another sentry
-            console.log("Sentry hit another sentry!");
+            //console.log("Sentry hit another sentry!");
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
             (aData.type === Config.Anti.type && bData.type === Config.Player.type)
         ) {
             // Pick up and remove anti
-            console.log("Player picked up an anti!");
+            //console.log("Player picked up an anti!");
 
             const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
             if (antiEntity.entity) {
@@ -389,7 +393,7 @@ export class World {
             (aData.type === Config.Switch.type && bData.type === Config.Player.type)
         ) {
             // Press and remove swtich
-            console.log("Player pressed a switch!");
+            //console.log("Player pressed a switch!");
 
             const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
             if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
@@ -441,7 +445,7 @@ export class World {
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
-    update(deltaTime: number) {    
+    update(deltaTime: number) { 
         // Handle debugging input
         this.handleDebugInput();
 
@@ -479,6 +483,11 @@ export class World {
         // Toggle level geometry
         if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
             this.levelGeometryContainer.visible = !this.levelGeometryContainer.visible;
+        }
+
+        // Toggle new collision "markers"
+        if (this.inputManager.getKeysState().keys.get("3")?.justPressed) {
+            Config.Debug.showCollisionMarkers = !Config.Debug.showCollisionMarkers;
         }
     }
     

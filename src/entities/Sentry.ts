@@ -63,6 +63,9 @@ export class Sentry extends BaseEntity {
         // Set the initial position of the particle effect
         EntityUtils.syncEffectToSprite(this);
 
+        // Play the effect
+        this.particleEffect!.play();
+
         // Set an initial velocity if provided
         if( options.initialVelocity) {
             this.body!.setLinearVelocity(options.initialVelocity);

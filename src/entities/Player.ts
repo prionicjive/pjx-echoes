@@ -70,6 +70,9 @@ export class Player extends BaseEntity {
 
         // Set initial position
         EntityUtils.syncEffectToSprite(this);
+
+        // Play the effect
+        this.particleEffect!.play();
     }
 
     handleInput(

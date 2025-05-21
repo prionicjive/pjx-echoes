@@ -84,12 +84,14 @@ interface Particle {
 }
 
 export class ParticleEffect {
+    private _isPlaying: boolean = false;
 
     private timeElapsed: number = 0;
     private accum: number = 0;
     public container: Container;
     public template: ParticleOptions;
-    private particles: Particle[] = [];
+    private particlePool: Particle[] = [];
+    private activeParticles: Set<Particle> = new Set();
     private maxParticles: number;
     private position: Point = { x: 0, y: 0 }; // TODO Make a Point?
     private numAliveParticles: number = 0;
@@ -97,7 +99,7 @@ export class ParticleEffect {
     private emptyCallback?: () => void;
 
     // Behavioral properties of the effect
-    private duration?: number;
+    public duration?: number;
     private emitPerSecond: number;
     private emitAngle: number;
     private spreadAmount: number;
@@ -126,7 +128,7 @@ export class ParticleEffect {
             this.container.addChild(sprite);
 
             // Make a default particle, considering it will have its internals changed upon emission
-            this.particles.push({
+            this.particlePool.push({
                 sprite,
                 alive: false,
                 age: 0,
@@ -147,11 +149,6 @@ export class ParticleEffect {
                 height: 0,
             });
         }
-
-        // Start everything off by emitting a single particle
-        // with the assumption that the emit per second really
-        // wants something from the get-go
-        this.accum = 1 / this.emitPerSecond;
     }
 
     setPosition(x: number, y: number): void {
@@ -159,7 +156,52 @@ export class ParticleEffect {
         this.position.y = y;
     }
 
+    play() {
+      if (this._isPlaying) return;
+
+      this._isPlaying = true;
+      this.emissionStopped = false;
+      this.timeElapsed = 0;
+
+      // Start everything off by emitting a single particle
+      // with the assumption that the emit per second really
+      // wants something from the get-go
+      this._emitOne();
+
+      // Reset the accumulator to a random value between 0 and the emit interval
+      // This staggers the emissions for multiple effects
+      this.accum = Math.random() * (1 / this.emitPerSecond);
+    }
+
+    pause() {
+        this._isPlaying = false;
+    }
+
+    stop() {
+      // Stop the effect from playing
+      this._isPlaying = false;
+
+      // As a precaution, stop emission
+      this.stopEmission();
+
+      // Hide all active particles instead of removing them
+      this.activeParticles.forEach(particle => {
+        particle.sprite.visible = false;
+      });
+
+      // Clear out the active particles
+      this.activeParticles.clear();
+      this.numAliveParticles = 0;
+    }
+
+    isPlaying(): boolean {
+        return this._isPlaying;
+    }
+
     update(dt: number): void {
+        // If we're not playing, do nothing
+        if (!this._isPlaying) return;
+        
         // If there is a finite duration to be had, see if we've crossed that threshold and stop emission if need be
         if (this.duration !== undefined) {
             this.timeElapsed += dt;
@@ -188,9 +230,13 @@ export class ParticleEffect {
         } else if (this.emitAngle < 0) {
             this.emitAngle += 360;
         }
-        for (const particle of this.particles) {
-            if (!particle.alive) continue;
 
+        // For all active particles...
+        for (const particle of this.activeParticles) {
+            if (!particle.alive) {
+              this.activeParticles.delete(particle);
+              continue;
+            }
             particle.age += dt;
             const t = particle.age / particle.maxAge;
 
@@ -229,17 +275,16 @@ export class ParticleEffect {
     }
 
     destroy() {
-        this.container.removeChildren();
-        this.particles = [];
-
-        // Do any other cleanup needed
+      this.container.destroy({ children: true });
+      this.particlePool = [];
+      this.activeParticles.clear();
     }
 
     /**
      * Set a callback to be called when all particles are dead.
      * @param callback The callback to be called when all particles are dead.
      */
-    onEmpty(callback: () => void): void {
+    onEmpty(callback: (() => void) | undefined): void {
         this.emptyCallback = callback;
     }
 
@@ -248,43 +293,30 @@ export class ParticleEffect {
      */
     stopEmission(): void {
         this.emissionStopped = true;
-        this.emitPerSecond = 0;
     }
 
     private _emitOne(): void {
-        const particle = this.particles.find(p => !p.alive);
-        if (!particle) return;
+        const particle = this.getNextParticle();
+        if (!particle) {
+          return;
+        }
 
         // Ready the particle
         this.readyParticle(particle);
         this.numAliveParticles++;
     }
 
-    private applyVariance(base: number, variance?: Variance): number {
-        if (!variance) return base;
-        
-        if (variance.absolute) {
-            const min = variance.min ?? base;
-            const max = variance.max ?? base;
-            return MathUtils.getRandomFloat(min, max);
-        } else {
-            const min = variance.min ?? 1;
-            const max = variance.max ?? 1;
-            return base * MathUtils.getRandomFloat(min, max);
-        }
-    }
-
-    private applyColorVariance(color: Color, variance?: { r?: Variance, g?: Variance, b?: Variance }): Color {
-        if (!variance) return color;
-        
-        const [r, g, b] = color.toRgbArray();
-        
-        return new Color([
-            this.applyVariance(r, variance.r),
-            this.applyVariance(g, variance.g),
-            this.applyVariance(b, variance.b)
-        ]);
-    }
+    private getNextParticle(): Particle | null {
+      // Try to find a dead particle
+      for (const p of this.particlePool) {
+          if (!p.alive) {
+              p.alive = true;
+              this.activeParticles.add(p);
+              return p;
+          }
+      }
+      return null; // Pool exhausted
+  }
 
     private readyParticle(particle: Particle): void {
         particle.alive = true;
@@ -329,12 +361,39 @@ export class ParticleEffect {
 
         // Init the sprite
         const s = particle.sprite;
+
         s.visible = true;
         s.alpha = this.template.startAlpha;
         s.position.set(this.position.x, this.position.y);
         s.width = this.template.width * this.template.startScaleX;
         s.height = this.template.height * this.template.startScaleY;
         s.tint = this.template.startTint.toNumber();
+    }
+
+    private applyVariance(base: number, variance?: Variance): number {
+      if (!variance) return base;
+      
+      if (variance.absolute) {
+          const min = variance.min ?? base;
+          const max = variance.max ?? base;
+          return MathUtils.getRandomFloat(min, max);
+      } else {
+          const min = variance.min ?? 1;
+          const max = variance.max ?? 1;
+          return base * MathUtils.getRandomFloat(min, max);
+      }
+    }
+
+    private applyColorVariance(color: Color, variance?: { r?: Variance, g?: Variance, b?: Variance }): Color {
+        if (!variance) return color;
+        
+        const [r, g, b] = color.toRgbArray();
+        
+        return new Color([
+            this.applyVariance(r, variance.r),
+            this.applyVariance(g, variance.g),
+            this.applyVariance(b, variance.b)
+        ]);
     }
 
     private lerp(a: number, b: number, t: number): number {

@@ -81,6 +81,9 @@ export class Switch extends BaseEntity {
         });
 
         EntityUtils.syncEffectToSprite(this);
+
+        // Play the effect
+        this.particleEffect!.play();
     }
 
     // @ts-ignore

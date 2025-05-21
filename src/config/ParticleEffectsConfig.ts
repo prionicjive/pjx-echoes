@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { ParticleEffectOptions } from '../particles/ParticleEffect';
 import { Config } from './Config';
 
-export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame' | 'SwitchEffect';
+export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame' | 'SwitchEffect' | 'EdgeImpact';
 
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {
@@ -230,5 +230,28 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
             startSpeed: 200,
             endSpeed: 100
         }
-    }
+    },
+    EdgeImpact: {
+        texturePath: Config.Textures.Particles.circle, // Make sure this texture exists
+        emitPerSecond: 1, // Make sure this is high enough to see particles
+        maxParticles: 5,
+        emitAngle: 0,
+        spreadAmount: 0,
+        particleOptions: {
+            maxAge: 1, // Make sure this matches your duration
+            startAlpha: 1,
+            endAlpha: 0,
+            startScaleX: 0.5,
+            startScaleY: 0.5,
+            endScaleX: 1,
+            endScaleY: 1,
+            width: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            height: Config.Sentry.radius * 2 * Config.PixelsPerMeter,
+            startTint: new PIXI.Color(0xFF0000), // Bright color for visibility
+            endTint: new PIXI.Color(0xFF0000),
+            startSpeed: 0,
+            endSpeed: 0,
+            endDirection: { x: 0, y: 0 }
+        }
+    },
 };

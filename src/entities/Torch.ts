@@ -66,6 +66,9 @@ export class Torch extends BaseEntity {
 
         // Set the initial position of the particle effect
         EntityUtils.syncEffectToSprite(this);
+
+        // Play the effect
+        this.particleEffect!.play();
     }
 
     // @ts-ignore

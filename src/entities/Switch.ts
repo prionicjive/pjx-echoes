@@ -17,7 +17,8 @@ export interface SwitchOptions {
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext,
-    color: number
+    color: number,
+    groupId: number
 }
 
 export class Switch extends BaseEntity {
@@ -78,6 +79,13 @@ export class Switch extends BaseEntity {
             light,
             particleEffect,
             containers: options.containers
+        });
+
+        // Set user data for the body in a self-referential way
+        body.setUserData({ 
+            type: Config.Switch.type,
+            entity: this,
+            groupId: options.groupId
         });
 
         EntityUtils.syncEffectToSprite(this);

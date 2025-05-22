@@ -255,11 +255,7 @@ export class Level implements LevelContext {
             const exit = new Exit({
                 spawnPoint: {...group.exitPosition},
                 containers: { containerForEntity: containers.entitiesContainer },
-                levelContext: this
-            });
-            exit.body?.setUserData({ 
-                type: Config.Exit.type, 
-                entity: exit,
+                levelContext: this,
                 groupId: group.id
             });
             
@@ -269,13 +265,10 @@ export class Level implements LevelContext {
                     spawnPoint: {...gatePos},
                     containers: { containerForEntity: containers.entitiesContainer },
                     levelContext: this,
-                    color: group.color // Pass color to gate
-                });
-                gate.body?.setUserData({ 
-                    type: Config.Gate.type, 
-                    entity: gate,
+                    color: group.color, // Pass color to gate
                     groupId: group.id
                 });
+                
                 return gate;
             });
             
@@ -287,11 +280,7 @@ export class Level implements LevelContext {
                     containerForParticleEffects: containers.preEntitiesContainer 
                 },
                 levelContext: this,
-                color: group.color // Pass color to switch
-            });
-            switchEntity.body?.setUserData({ 
-                type: Config.Switch.type, 
-                entity: switchEntity,
+                color: group.color, // Pass color to switch
                 groupId: group.id
             });
             

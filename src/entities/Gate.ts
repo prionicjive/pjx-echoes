@@ -13,7 +13,8 @@ export interface GateOptions {
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext,
-    color: number
+    color: number,
+    groupId: number
 }
 
 export class Gate extends BaseEntity {
@@ -46,6 +47,13 @@ export class Gate extends BaseEntity {
             sprite,
             body,
             containers: options.containers
+        });
+
+        // Set user data for the body in a self-referential way
+        body.setUserData({ 
+            type: Config.Gate.type,
+            entity: this,
+            groupId: options.groupId
         });
     }
 

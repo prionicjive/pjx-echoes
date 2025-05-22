@@ -13,7 +13,8 @@ import { EntityType } from './types';
 export interface ExitOptions {
     spawnPoint: Point,
     containers: EntityContainers,
-    levelContext: LevelContext
+    levelContext: LevelContext,
+    groupId: number
 }
 
 export class Exit extends BaseEntity {
@@ -54,6 +55,12 @@ export class Exit extends BaseEntity {
             body,
             light,
             containers: options.containers
+        });
+
+        body.setUserData({ 
+            type: Config.Exit.type, 
+            entity: this,
+            groupId: options.groupId
         });
     }
 

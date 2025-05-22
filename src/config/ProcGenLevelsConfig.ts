@@ -1,6 +1,6 @@
 import { ProcGenLevelType } from "../level/types";
 
-export interface ProGenLevelOptions {
+export interface ProcGenLevelOptions {
     Dimensions: {
         width: number;
         height: number;
@@ -33,7 +33,7 @@ export interface DrunkardsWalkWithSmoothingOptions {
     smoothingSteps: number;
 }
 
-export const ProGenLevelsConfig: Record<ProcGenLevelType, ProGenLevelOptions> = {
+export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> = {
     Standard: {
         Dimensions: {
             width: 96,       // Width of the generated level (in grid units)

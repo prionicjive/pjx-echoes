@@ -8,7 +8,7 @@ import { MapUtils } from "./MapUtils";
 import * as PIXI from 'pixi.js';
 import { ExitGroup } from '../level/ExitGroup';
 import { ColorUtils } from './ColorUtils';
-import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProGenLevelOptions, ProGenLevelsConfig } from '../config/ProcGenLevelsConfig';
+import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProcGenLevelOptions, ProcGenLevelsConfig } from '../config/ProcGenLevelsConfig';
 
 export class LevelUtils {
     static createProcGenLevel(
@@ -21,7 +21,7 @@ export class LevelUtils {
         let map: number[][] = [];
         let openSpaces: string[] = [];
 
-        const levelOptions = ProGenLevelsConfig[procGenLevelType];
+        const levelOptions = ProcGenLevelsConfig[procGenLevelType];
         
         switch (levelOptions.MapGeneration.type) {
             case "DrunkardsWalkWithSmoothing":
@@ -71,7 +71,7 @@ export class LevelUtils {
     static createLevelSkeletonFromProcGenMap(
         map: number[][], 
         openSpaces: string[],
-        levelOptions: ProGenLevelOptions
+        levelOptions: ProcGenLevelOptions
     ): LevelSkeleton {
         const dimensions = {
             width: map[0].length,
@@ -124,7 +124,7 @@ export class LevelUtils {
         function createExitGroups(
             openSpaces: string[],
             playerSpawnPoint: Point,
-            levelOptions: ProGenLevelOptions
+            levelOptions: ProcGenLevelOptions
         ): ExitGroup[] {
             const exitGroups: ExitGroup[] = [];
             

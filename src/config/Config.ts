@@ -88,21 +88,24 @@ export const Config = {
         color: 0x039BDF,
         thickness: 3
     },
-    Textures: {
-        player: '/assets/textures/player.png', // Paths to texture assets
-        sentry: '/assets/textures/sentry.png',
-        wall: '/assets/textures/wall.png',
-        gate: '/assets/textures/gate.png',
-        switch: '/assets/textures/switch.png',
-        torch: '/assets/textures/torch.png',
-        exit: '/assets/textures/exit.png',
-        anti: '/assets/textures/anti.png',
-        block: '/assets/textures/block.png',
-        Particles: {
-            ring: '/assets/textures/particles/ring.png',
-            ringSoft: '/assets/textures/particles/ring_soft.png',
-            circle: '/assets/textures/particles/circle.png',
-            circleSoft: '/assets/textures/particles/circle_soft.png'
+    Spritesheet: {
+        path: '/assets/spritesheets/sprites.json',
+        Textures: {
+            player: 'player.png',
+            sentry: 'sentry.png',
+            wall: 'wall.png',
+            gate: 'gate.png',
+            switch: 'switch.png',
+            torch: 'torch.png',
+            exit: 'exit.png',
+            anti: 'anti.png',
+            block: 'block.png',
+            Particles: {
+                ring: 'particles/ring.png',
+                ringSoft: 'particles/ring_soft.png',
+                circle: 'particles/circle.png',
+                circleSoft: 'particles/circle_soft.png'
+            }
         }
     },
     Movement: {
@@ -122,6 +125,7 @@ export const Config = {
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
     Debug: {
+        showDebugText: false,
         createVisibleEdges: true,
         createVisibleWalls: true,
         showLevelGeometry: true,

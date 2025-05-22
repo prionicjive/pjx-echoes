@@ -69,23 +69,20 @@ export class Game {
      * @returns {Promise<void>}
      */
     async loadAssets() {
-        // Load textures
-        // TODO Refactor how assets are fetched
-        await PIXI.Assets.load(Config.Textures.player);
-        await PIXI.Assets.load(Config.Textures.sentry);
-        await PIXI.Assets.load(Config.Textures.wall);
-        await PIXI.Assets.load(Config.Textures.exit);
-        await PIXI.Assets.load(Config.Textures.gate);
-        await PIXI.Assets.load(Config.Textures.switch);
-        await PIXI.Assets.load(Config.Textures.torch); 
-        await PIXI.Assets.load(Config.Textures.torch); 
-        await PIXI.Assets.load(Config.Textures.anti);
-        await PIXI.Assets.load(Config.Textures.block);
+        // Load spritesheet and related textures
+        await PIXI.Assets.load(Config.Spritesheet.path);
 
-        await PIXI.Assets.load(Config.Textures.Particles.ring);
-        await PIXI.Assets.load(Config.Textures.Particles.ringSoft);
-        await PIXI.Assets.load(Config.Textures.Particles.circle);
-        await PIXI.Assets.load(Config.Textures.Particles.circleSoft);
+        // Load fonts
+        PIXI.Assets.addBundle("fonts", [
+            {
+                alias: "Jersey10",
+                src: "/assets/fonts/Jersey10.ttf"
+            }, {
+                alias: "UbuntuMono",
+                src: "/assets/fonts/UbuntuMono.ttf"
+            }
+        ]);
+        await PIXI.Assets.loadBundle("fonts");
     }
 
     /**

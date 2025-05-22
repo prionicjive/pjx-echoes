@@ -1,5 +1,7 @@
-export interface ProGenLevelOptions {
-    dimensions: {
+import { ProcGenLevelType } from "../level/types";
+
+export interface ProcGenLevelOptions {
+    Dimensions: {
         width: number;
         height: number;
     }; 
@@ -11,9 +13,10 @@ export interface ProGenLevelOptions {
     torchChance: number;
     antiChance: number;
     sentryChance: number;
-    mapGeneration: {
+    seed?: string | number; // Optional seed for deterministic generation
+    MapGeneration: {
         type: MapGenerationType;
-        options: CellularAutomataOptions | DrunkardsWalkWithSmoothingOptions;
+        Options: CellularAutomataOptions | DrunkardsWalkWithSmoothingOptions;
     };
 }
 
@@ -31,23 +34,24 @@ export interface DrunkardsWalkWithSmoothingOptions {
     smoothingSteps: number;
 }
 
-export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
+export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> = {
     Standard: {
-        dimensions: {
+        //seed: "n5n034mzvk96m77bz8bst3",
+        Dimensions: {
             width: 96,       // Width of the generated level (in grid units)
             height: 96
         },
         minDistanceBetweenPlayerSpawnAndExit: 48,
         minDistanceBetweenSwitchAndExit: 32,
         minDistanceBetweenExits: 36,
-        radiusAroundExitForGates: 1,
+        radiusAroundExitForGates: 3,
         numExits: 3,
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0052,
-        mapGeneration: {   
+        MapGeneration: {   
             type: 'DrunkardsWalkWithSmoothing',
-            options: {
+            Options: {
                 percentOpen: 0.55, // Try 0.10–0.18 for lots of small caves
                 maxWalkers: 18, // Try 10-20 walkers
                 walkerLifetime: 70, // Try 30-80
@@ -55,22 +59,23 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
             }
         } 
     },
-    Simple: {     
-        dimensions: {
+    Simple: { 
+        //seed: "h43pe25ithdf1mkwzbvj",    
+        Dimensions: {
             width: 42,       // Width of the generated level (in grid units)
             height: 42
         },
         minDistanceBetweenPlayerSpawnAndExit: 21,
         minDistanceBetweenSwitchAndExit: 12,
         minDistanceBetweenExits: 10,
-        radiusAroundExitForGates: 1,
+        radiusAroundExitForGates: 2,
         numExits: 2,
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0095,
-        mapGeneration: {   
+        MapGeneration: {   
             type: 'CellularAutomata',
-            options: {
+            Options: {
                 wallChance: 0.45, // Chance that any given space is a wall
                 smoothingSteps: 4 // How many times to smooth the map
             }

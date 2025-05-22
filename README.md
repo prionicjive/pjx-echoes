@@ -5,7 +5,8 @@ An exploration game rooted in navigating the unknown and unseen.
 [Playable via Netlify](https://pjx-echoes.netlify.app/)
 
 ## Features
-- Map / maze generation with rooms / caves, utilizing Drunkard's Walk algorithm (modified with Cellular Automata)
+- Map / maze generation with caves, utilizing Drunkard's Walk algorithm (modified with Cellular Automata)
+- Level generation is now seeded for the map itself as well as entities, exits, gates and switches spawned within
 - Player impulse movement via Planck physics
 - Generation of a new map / maze upon reaching a exit tile
 - Soft follow camera when world is larger than single screen, with dead zone
@@ -15,6 +16,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Homegrown particle effect for things such as trails (among other things)
 - Post processing effects (Such as CRT and Bloom)
 - Swipe gesture movement on touch devices
+- Debug mode for toggling lights, world geometry and debug information
 
 ## Tech Stack
 
@@ -70,13 +72,10 @@ npm run build
 
 ## TODOs
 
-- More entity types and interactions
-- Gates, switches and keys
 - Loading maze from file (Ex. Tiled Map)
-- LIDAR for Player
+- LIDAR for player
 - Music
 - Cordova support
-- Spatial partitioning
 - Minimalistic UI
 
 ## Contributing

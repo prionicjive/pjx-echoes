@@ -34,6 +34,7 @@ export interface LevelOptions {
     containers: LevelContainers;
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
+    seed: string;
 }
 
 export interface LevelContainers {
@@ -63,6 +64,7 @@ export class Level implements LevelContext {
     private physicsWorld: planck.World;
     private physicsManager: PhysicsManager;
     private containers: LevelContainers;
+    private seed: string;
 
     constructor(
         options: LevelOptions
@@ -71,6 +73,9 @@ export class Level implements LevelContext {
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
         this.physicsManager = options.physicsManager;
+
+        // Store the seed
+        this.seed = options.seed;
 
         // Store the renderer
         this.renderer = options.renderer;
@@ -255,11 +260,7 @@ export class Level implements LevelContext {
             const exit = new Exit({
                 spawnPoint: {...group.exitPosition},
                 containers: { containerForEntity: containers.entitiesContainer },
-                levelContext: this
-            });
-            exit.body?.setUserData({ 
-                type: Config.Exit.type, 
-                entity: exit,
+                levelContext: this,
                 groupId: group.id
             });
             
@@ -269,13 +270,10 @@ export class Level implements LevelContext {
                     spawnPoint: {...gatePos},
                     containers: { containerForEntity: containers.entitiesContainer },
                     levelContext: this,
-                    color: group.color // Pass color to gate
-                });
-                gate.body?.setUserData({ 
-                    type: Config.Gate.type, 
-                    entity: gate,
+                    color: group.color, // Pass color to gate
                     groupId: group.id
                 });
+                
                 return gate;
             });
             
@@ -287,11 +285,7 @@ export class Level implements LevelContext {
                     containerForParticleEffects: containers.preEntitiesContainer 
                 },
                 levelContext: this,
-                color: group.color // Pass color to switch
-            });
-            switchEntity.body?.setUserData({ 
-                type: Config.Switch.type, 
-                entity: switchEntity,
+                color: group.color, // Pass color to switch
                 groupId: group.id
             });
             
@@ -485,6 +479,10 @@ export class Level implements LevelContext {
 
     getPlayer(): Player {
         return this.player!;
+    }
+
+    getSeed(): string {
+        return this.seed;
     }
 
     getDimensions(): { width: number; height: number } {

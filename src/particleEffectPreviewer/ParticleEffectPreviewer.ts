@@ -70,10 +70,7 @@ export class ParticleEffectPreviewer {
         // Load textures
         // TODO Refactor how assets are fetched
 
-        await PIXI.Assets.load(Config.Textures.Particles.ring);
-        await PIXI.Assets.load(Config.Textures.Particles.ringSoft);
-        await PIXI.Assets.load(Config.Textures.Particles.circle);
-        await PIXI.Assets.load(Config.Textures.Particles.circleSoft);
+        await PIXI.Assets.load(Config.Spritesheet.path);
     }
 
     /**

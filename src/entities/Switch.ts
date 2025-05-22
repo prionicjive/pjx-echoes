@@ -17,7 +17,8 @@ export interface SwitchOptions {
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext,
-    color: number
+    color: number,
+    groupId: number
 }
 
 export class Switch extends BaseEntity {
@@ -37,20 +38,20 @@ export class Switch extends BaseEntity {
             color: baseColor
         });
 
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Switch.body!,
-                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
-            }
-        );
-
-        // Construct a static light
         const center = {
             x: options.spawnPoint.x + Config.Switch.width / 2,
             y: options.spawnPoint.y + Config.Switch.height / 2
         };
 
+        // Create static body
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Switch.body!,
+                position: new planck.Vec2(center.x, center.y)
+            }
+        );
+
+        // Construct a static light
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),
@@ -78,6 +79,13 @@ export class Switch extends BaseEntity {
             light,
             particleEffect,
             containers: options.containers
+        });
+
+        // Set user data for the body in a self-referential way
+        body.setUserData({ 
+            type: Config.Switch.type,
+            entity: this,
+            groupId: options.groupId
         });
 
         EntityUtils.syncEffectToSprite(this);

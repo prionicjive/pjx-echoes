@@ -39,11 +39,16 @@ export class Player extends BaseEntity {
             color: EntitiesConfig.Player.sprite.color
         });
 
+        const center = {
+            x: options.spawnPoint.x + Config.Player.radius,
+            y: options.spawnPoint.y + Config.Player.radius
+        };
+
         // Create dynamic body
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Player.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Player.radius, options.spawnPoint.y + Config.Player.radius)
+                position: new planck.Vec2(center.x, center.y)
             }
         );
 

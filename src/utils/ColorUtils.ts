@@ -225,4 +225,30 @@ export class ColorUtils {
         color.b = Math.min(255, Math.max(0, color.b * factor));
         return this.rgbToHex(color.r, color.g, color.b);
     }
+
+    /**
+     * Returns an array of 16 visually distinct colors with good contrast
+     * @returns Array of hex color numbers
+     */
+    public static getDistinctColors(): number[] {
+        // These are hand-picked colors that are visually distinct
+        return [
+            0xFF5252, // Red
+            0x7C4DFF, // Deep Purple
+            0x448AFF, // Blue
+            0x00B8D4, // Cyan
+            0x00BFA5, // Teal
+            0x64DD17, // Light Green
+            0xFFD600, // Yellow
+            0xFF6D00, // Orange
+            0xE91E63, // Pink
+            0x9C27B0, // Purple
+            0x3D5AFE, // Indigo
+            0x00B8D4, // Light Blue
+            0x1DE9B6, // Teal 200
+            0x76FF03, // Lime
+            0xFFC400, // Amber
+            0xFF3D00  // Deep Orange
+        ];
+    }
 }

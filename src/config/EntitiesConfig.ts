@@ -23,14 +23,17 @@ export interface EntityPreset {
 export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     Sentry: {
         sprite: {
-            texture: Config.Textures.sentry,
+            texture: Config.Spritesheet.Textures.sentry,
             widthInMeters: Config.Sentry.radius * 2,
             heightInMeters: Config.Sentry.radius * 2,
             color: Config.Sentry.color
         },
         body: {
             type: 'dynamic',
-            circle: { radius: Config.Sentry.radius },
+            shape: { 
+                type: 'circle', 
+                radius: Config.Sentry.radius 
+            },
             fixture: {
                 friction: 0,
                 density: 1,
@@ -47,14 +50,17 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Player: {
         sprite: {
-            texture: Config.Textures.player,
+            texture: Config.Spritesheet.Textures.player,
             widthInMeters: Config.Player.radius * 2,
             heightInMeters: Config.Player.radius * 2,
             color: Config.Player.color
         },
         body: {
             type: 'dynamic',
-            circle: { radius: Config.Player.radius },
+            shape: { 
+                type: 'circle', 
+                radius: Config.Player.radius 
+            },
             fixture: {
                 friction: 0,
                 density: 1,
@@ -75,14 +81,18 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Anti: {
         sprite: {
-            texture: Config.Textures.anti,
+            texture: Config.Spritesheet.Textures.anti,
             widthInMeters: Config.Anti.width,
             heightInMeters: Config.Anti.height,
             color: Config.Anti.color
         },
         body: {
             type: 'static',
-            box: { width: Config.Anti.width, height: Config.Anti.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Anti.width, 
+                height: Config.Anti.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryAnti,
@@ -93,14 +103,18 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Torch: {
         sprite: {
-            texture: Config.Textures.torch,
+            texture: Config.Spritesheet.Textures.torch,
             widthInMeters: Config.Torch.width,
             heightInMeters: Config.Torch.height,
             color: Config.Torch.color
         },
         body: {
             type: 'static',
-            box: { width: Config.Torch.width, height: Config.Torch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Torch.width, 
+                height: Config.Torch.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryTorch,
@@ -112,14 +126,18 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Exit: {
         sprite: {
-            texture: Config.Textures.exit,
+            texture: Config.Spritesheet.Textures.exit,
             widthInMeters: Config.Exit.width,
             heightInMeters: Config.Exit.height,
             color: Config.Exit.color
         },
         body: {
             type: 'static',
-            box: { width: Config.Exit.width, height: Config.Exit.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Exit.width, 
+                height: Config.Exit.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryExit,
@@ -130,7 +148,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Wall: {
         sprite: {
-            texture: Config.Textures.block,
+            texture: Config.Spritesheet.Textures.block,
             widthInMeters: Config.Wall.width,
             heightInMeters: Config.Wall.height,
             color: Config.Wall.color
@@ -138,14 +156,18 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Gate: {
         sprite: {
-            texture: Config.Textures.gate,
+            texture: Config.Spritesheet.Textures.gate,
             widthInMeters: Config.Gate.width,
             heightInMeters: Config.Gate.height,
             color: Config.Gate.color
         },
         body: {
             type: 'static',
-            box: { width: Config.Switch.width, height: Config.Switch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Switch.width, 
+                height: Config.Switch.height 
+            },
             fixture: {
                 restitution: Config.Physics.Gate.restitution,
                 friction: 0,
@@ -156,14 +178,18 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Switch: {
         sprite: {
-            texture: Config.Textures.switch,
+            texture: Config.Spritesheet.Textures.switch,
             widthInMeters: Config.Switch.width,
             heightInMeters: Config.Switch.height,
             color: Config.Switch.color
         },
         body: {
             type: 'static',
-            box: { width: Config.Switch.width, height: Config.Switch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Switch.width, 
+                height: Config.Switch.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categorySwitch,

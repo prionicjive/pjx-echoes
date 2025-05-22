@@ -3,7 +3,7 @@ import { Point } from '../utils/types';
 import { MathUtils } from '../utils/MathUtils';
 
 export interface ParticleEffectOptions {
-    texturePath: string;
+    texture: string;
     maxParticles?: number;
     emitPerSecond?: number;
     duration?: number;
@@ -120,7 +120,7 @@ export class ParticleEffect {
 
         for (let i = 0; i < this.maxParticles; i++) {
 
-            const sprite = Sprite.from(options.texturePath);
+            const sprite = Sprite.from(options.texture);
             sprite.visible = false;
             sprite.anchor.set(0.5); // TODO May we want a different anchor somepoint in the future?
 

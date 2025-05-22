@@ -60,7 +60,7 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
         } 
     },
     Simple: { 
-        // seed: "z3x6jz0mxy9agln3q7s0nl",    
+        //seed: "h43pe25ithdf1mkwzbvj",    
         Dimensions: {
             width: 42,       // Width of the generated level (in grid units)
             height: 42

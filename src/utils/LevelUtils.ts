@@ -87,6 +87,10 @@ export class LevelUtils {
 
         const wallPositions = gatherWallPositions(map);
         const playerSpawnPosition = createPlayerSpawnPosition(openSpaces, rng); // Pass the RNG instance
+
+        if (!playerSpawnPosition) {
+            throw new Error("Failed to create player spawn position - Pack up your bags and go home, there's nothing to be done here!");
+        }
         
         // Create exit groups
         const exitGroups: ExitGroup[] = createExitGroups(
@@ -125,7 +129,7 @@ export class LevelUtils {
             return wallPositions;
         }
 
-        function createPlayerSpawnPosition(validSpaces: string[], rng: RandomGenerator): Point {
+        function createPlayerSpawnPosition(validSpaces: string[], rng: RandomGenerator): Point | null {
             return LevelUtils.spliceRandomValidPoint(validSpaces, rng); // Pass the RNG instance
         }
 
@@ -136,6 +140,8 @@ export class LevelUtils {
             rng: RandomGenerator
         ): ExitGroup[] {
             const exitGroups: ExitGroup[] = [];
+            const exitPositions: Point[] = [];
+            const allGatedAreas: Point[] = [];
             
             // Helper to check if a point is too close to any existing point
             const isTooClose = (point: Point, points: Point[], minDistance: number): boolean => {
@@ -150,6 +156,14 @@ export class LevelUtils {
                 if (index !== -1) {
                     openSpaces.splice(index, 1);
                 }
+            };
+
+            // Helper to check if a point is in any gated area
+            const isInGatedArea = (point: Point): boolean => {
+                return allGatedAreas.some(gatePos => 
+                    Math.abs(gatePos.x - point.x) <= levelOptions.radiusAroundExitForGates && 
+                    Math.abs(gatePos.y - point.y) <= levelOptions.radiusAroundExitForGates
+                );
             };
 
             // Helper for finding positions around exit (And making it impossible for entities to spawn within the confines)
@@ -194,14 +208,19 @@ export class LevelUtils {
             // ===============================================================
             // ===============================================================
             // ===============================================================
-            
-            // Place exits first
+
+            // First pass: Place all exits and their gates
+            const exitData: Array<{
+                exitPos: Point;
+                gatePositions: Point[];
+            }> = [];
+                    
+                    // Place exits first
             for (let i = 0; i < levelOptions.numExits; i++) {
                 if (openSpaces.length === 0) break;
                 
                 // Try to find a position that's far enough from player and other exits
                 let exitPos: Point | null = null;
-                const exitPositions = exitGroups.map(g => g.exitPosition);
                 
                 // Try a few times to find a good position
                 for (let attempt = 0; attempt < 10; attempt++) {
@@ -209,82 +228,104 @@ export class LevelUtils {
                         openSpaces,
                         playerSpawnPoint,
                         levelOptions.minDistanceBetweenPlayerSpawnAndExit || levelOptions.radiusAroundExitForGates + 1,
-                        rng // Pass the RNG instance
+                        rng
                     );
                     
+                    // If no valid space within min distance could be found, break
+                    if (!candidate) {
+                        break;
+                    }
+
                     if (!isTooClose(candidate, exitPositions, levelOptions.minDistanceBetweenExits || 10)) {
                         exitPos = candidate;
-                        
-                        // Remove exit position from available spaces
-                        removePoint(exitPos);
-                        
                         break;
                     }
                 }
                 
                 // If we couldn't find a good position, just take any position
                 if (!exitPos) {
-                    exitPos = LevelUtils.spliceRandomValidPoint(openSpaces, rng); // Pass the RNG instance
+                    exitPos = LevelUtils.spliceRandomValidPoint(openSpaces, rng);
                 }
                 
                 if (!exitPos) break; // No more spaces
-                
+
                 // Create gates around the exit
-                const gatePositions: Point[] = setupGatedAreaAroundExit(
+                const gatePositions = setupGatedAreaAroundExit(
                     exitPos, 
                     levelOptions.radiusAroundExitForGates || 3,
                     openSpaces
                 );
-                
-                // Create switch position (must be outside gate radius)
+
+                // Store the exit and its gates
+                exitData.push({
+                    exitPos,
+                    gatePositions
+                });
+
+                // Track all gated positions
+                allGatedAreas.push(...gatePositions);
+                exitPositions.push(exitPos);
+            }
+
+            // Second pass: Place switches for each exit
+            for (let i = 0; i < exitData.length; i++) {
+                const data = exitData[i];
+                const { exitPos, gatePositions } = data;
                 let switchPos: Point | null = null;
-                let candidatePositions: Point[] = [];
-                const minSwitchDistance = levelOptions.minDistanceBetweenSwitchAndExit || 5;
                 
-                // Try to find a position that's not too close to any exit
+                // Try to find a position for the switch that's not in any gated area
                 for (let attempt = 0; attempt < 20; attempt++) {
                     const candidate = LevelUtils.getRandomValidPointWithMinDistance(
                         openSpaces,
                         exitPos,
-                        minSwitchDistance,
-                        rng // Pass the RNG instance
+                        levelOptions.minDistanceBetweenSwitchAndExit || 5,
+                        rng
                     );
-                    
-                    // If the candidate is valid and hasn't already been tested...
-                    if (candidate && !candidatePositions.some(p => p.x === candidate.x && p.y === candidate.y)) {
-                        candidatePositions.push(candidate);
-                        // Check if it's not too close to any other exit
-                        const tooClose = exitGroups.some(group => 
-                            Math.hypot(
-                                group.exitPosition.x - candidate.x, 
-                                group.exitPosition.y - candidate.y
-                            ) < (levelOptions.radiusAroundExitForGates || 3)
-                        );
-                        
-                        if (!tooClose) {
-                            switchPos = candidate;
-                            
-                            // Remove switch position from available spaces
-                            removePoint(switchPos);
-                            
-                            break;
-                        }
+
+                    // If no valid space within min distance could be found, break
+                    if (!candidate) {
+                        break;
+                    }
+
+                    // Check if the candidate is in any gated area
+                    if (!isInGatedArea(candidate)) {
+                        switchPos = candidate;
+                        removePoint(switchPos);
+                        break;
                     }
                 }
-                
-                // If we couldn't find a good position, skip this exit group
+
+                // If we couldn't find a good position, just take any position
                 if (!switchPos) {
-                    console.warn(`Could not place switch for exit at ${exitPos.x},${exitPos.y}. Removing exit group.`);
+                    // Find any open space that's not in a gated area
+                    const validSpaces = openSpaces.filter(space => {
+                        const [x, y] = space.split(',').map(Number);
+                        return !isInGatedArea({x, y});
+                    });
+
+                    if (validSpaces.length > 0) {
+                        const randomIndex = rng.nextInt(validSpaces.length);
+                        const validSpace = validSpaces[randomIndex];
+                        const [x, y] = validSpace.split(',').map(Number);
+                        switchPos = {x, y};
+                        removePoint(switchPos);
+                    } else {
+                        // Last resort: just take any open space
+                        switchPos = LevelUtils.spliceRandomValidPoint(openSpaces, rng);
+                    }
+                }
+
+                // If no switch position could be found, forget about the whole exit group
+                if (!switchPos) {
                     continue;
                 }
-                
-                // Create the exit group
+
                 exitGroups.push({
                     id: i,
                     exitPosition: exitPos,
                     gatesPositions: gatePositions,
                     switchPosition: switchPos,
-                    color: ColorUtils.getRandomColor(0.50, 0.87) // Pick a random color
+                    color: ColorUtils.getRandomColor(0.50, 0.87)
                 });
             }
             
@@ -298,11 +339,12 @@ export class LevelUtils {
             const numTorches = Math.ceil(validSpaces.length * levelOptions.torchChance);
             for (let i = 0; i < numTorches; i++) {
                 // Check to see if there are any valid spaces left
-                if (validSpaces.length === 0) {
+                const validSpace = LevelUtils.spliceRandomValidPoint(validSpaces, rng)
+                if (!validSpace) {
                     break;
                 }
 
-                torchPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
+                torchPositions.push(validSpace);
             }
             
             return torchPositions;
@@ -315,11 +357,12 @@ export class LevelUtils {
             const numAntis = Math.ceil(validSpaces.length * levelOptions.antiChance);
             for (let i = 0; i < numAntis; i++) {
                 // Check to see if there are any valid spaces left
-                if (validSpaces.length === 0) {
+                const validSpace = LevelUtils.spliceRandomValidPoint(validSpaces, rng)
+                if (!validSpace) {
                     break;
                 }
 
-                antiPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
+                antiPositions.push(validSpace);
             }
             
             return antiPositions;
@@ -332,21 +375,25 @@ export class LevelUtils {
             const numSentries = Math.ceil(validSpaces.length * levelOptions.sentryChance);
             for (let i = 0; i < numSentries; i++) {
                 // Check to see if there are any valid spaces left
-                if (validSpaces.length === 0) {
+                const validSpace = LevelUtils.spliceRandomValidPoint(validSpaces, rng)
+                if (!validSpace) {
                     break;
                 }
 
-                sentryPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
+                sentryPositions.push(validSpace);
             }
             
             return sentryPositions;
         }
     }
 
-    static spliceRandomValidPoint(validSpaces: string[], rng: RandomGenerator): Point {
+    static spliceRandomValidPoint(validSpaces: string[], rng: RandomGenerator): Point | null {
         // Splice a valid space from the array
         const randomIndex = rng.nextInt(validSpaces.length);
         const validSpace = validSpaces.splice(randomIndex, 1)[0];
+        
+        if (!validSpace) return null;
+
         const [validX, validY]: string[] = validSpace.split(",");
         return { x: Number(validX), y: Number(validY) };
     }
@@ -356,7 +403,7 @@ export class LevelUtils {
         startPoint: Point,
         minDistance: number,
         rng: RandomGenerator
-    ): Point{
+    ): Point | null{
         // Filter validSpaces by min distance
         const farSpaces = validSpaces.filter((space) => {
             const [x, y] = space.split(',').map(Number);
@@ -371,6 +418,8 @@ export class LevelUtils {
 
         // Randomly choose a space from the pool
         const validSpace = pool[rng.nextInt(pool.length)];
+        if (!validSpace) return null;
+
         const [x, y] = validSpace.split(',').map(Number);
         return { x, y };
     }

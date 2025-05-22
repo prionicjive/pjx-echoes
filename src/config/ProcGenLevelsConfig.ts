@@ -13,6 +13,7 @@ export interface ProcGenLevelOptions {
     torchChance: number;
     antiChance: number;
     sentryChance: number;
+    seed?: string | number; // Optional seed for deterministic generation
     MapGeneration: {
         type: MapGenerationType;
         Options: CellularAutomataOptions | DrunkardsWalkWithSmoothingOptions;
@@ -35,6 +36,7 @@ export interface DrunkardsWalkWithSmoothingOptions {
 
 export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> = {
     Standard: {
+        //seed: "n5n034mzvk96m77bz8bst3",
         Dimensions: {
             width: 96,       // Width of the generated level (in grid units)
             height: 96
@@ -57,7 +59,8 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
             }
         } 
     },
-    Simple: {     
+    Simple: { 
+        // seed: "z3x6jz0mxy9agln3q7s0nl",    
         Dimensions: {
             width: 42,       // Width of the generated level (in grid units)
             height: 42
@@ -65,7 +68,7 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
         minDistanceBetweenPlayerSpawnAndExit: 21,
         minDistanceBetweenSwitchAndExit: 12,
         minDistanceBetweenExits: 10,
-        radiusAroundExitForGates: 1,
+        radiusAroundExitForGates: 15,
         numExits: 2,
         torchChance: 0.00087,
         antiChance: 0.00065,

@@ -9,6 +9,7 @@ import * as PIXI from 'pixi.js';
 import { ExitGroup } from '../level/ExitGroup';
 import { ColorUtils } from './ColorUtils';
 import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProcGenLevelOptions, ProcGenLevelsConfig } from '../config/ProcGenLevelsConfig';
+import { RandomGenerator } from './RandomGenerator';
 
 export class LevelUtils {
     static createProcGenLevel(
@@ -22,6 +23,8 @@ export class LevelUtils {
         let openSpaces: string[] = [];
 
         const levelOptions = ProcGenLevelsConfig[procGenLevelType];
+        const rng = new RandomGenerator(levelOptions.seed);
+        console.log("Generating level with seed: " + rng.seed);
         
         switch (levelOptions.MapGeneration.type) {
             case "DrunkardsWalkWithSmoothing":
@@ -32,7 +35,8 @@ export class LevelUtils {
                     drunkardsWalkOptions.percentOpen,
                     drunkardsWalkOptions.maxWalkers,
                     drunkardsWalkOptions.walkerLifetime,
-                    drunkardsWalkOptions.smoothingSteps
+                    drunkardsWalkOptions.smoothingSteps,
+                    rng // Pass the RNG instance
                 ));
             break;
             case "CellularAutomata":
@@ -41,7 +45,8 @@ export class LevelUtils {
                     levelOptions.Dimensions.width,
                     levelOptions.Dimensions.height,
                     cellularAutomataOptions.wallChance,
-                    cellularAutomataOptions.smoothingSteps
+                    cellularAutomataOptions.smoothingSteps,
+                    rng // Pass the RNG instance
                 ));
             break;
         }
@@ -50,7 +55,7 @@ export class LevelUtils {
         const edgesList = MapUtils.createMergedEdgesFromTilemap(map);
         
         // Get the entities options
-        const entitiesOptions = LevelUtils.createLevelSkeletonFromProcGenMap(map, openSpaces, levelOptions);
+        const entitiesOptions = LevelUtils.createLevelSkeletonFromProcGenMap(map, openSpaces, levelOptions, rng); // Pass the RNG instance
 
         // Construct the level with all entities, including player
         return new Level({
@@ -64,14 +69,16 @@ export class LevelUtils {
                 entitiesContainer: containers.entitiesContainer
             }, 
             edgesList,
-            entitiesOptions
+            entitiesOptions,
+            seed: rng.seed
         });
     }
     
     static createLevelSkeletonFromProcGenMap(
         map: number[][], 
         openSpaces: string[],
-        levelOptions: ProcGenLevelOptions
+        levelOptions: ProcGenLevelOptions,
+        rng: RandomGenerator
     ): LevelSkeleton {
         const dimensions = {
             width: map[0].length,
@@ -79,18 +86,19 @@ export class LevelUtils {
         };
 
         const wallPositions = gatherWallPositions(map);
-        const playerSpawnPosition = createPlayerSpawnPosition(openSpaces);
+        const playerSpawnPosition = createPlayerSpawnPosition(openSpaces, rng); // Pass the RNG instance
         
         // Create exit groups
         const exitGroups: ExitGroup[] = createExitGroups(
             openSpaces, 
             playerSpawnPosition, 
-            levelOptions
+            levelOptions,
+            rng // Pass the RNG instance
         );
 
-        const torchPositions = createTorchPositions(openSpaces);
-        const antiPositions = createAntiPositions(openSpaces);
-        const sentryPositions = createSentryPositions(openSpaces);
+        const torchPositions = createTorchPositions(openSpaces, rng); // Pass the RNG instance
+        const antiPositions = createAntiPositions(openSpaces, rng); // Pass the RNG instance
+        const sentryPositions = createSentryPositions(openSpaces, rng); // Pass the RNG instance
 
         return { 
             dimensions,
@@ -117,14 +125,15 @@ export class LevelUtils {
             return wallPositions;
         }
 
-        function createPlayerSpawnPosition(validSpaces: string[]): Point {
-            return LevelUtils.spliceRandomValidPoint(validSpaces);
+        function createPlayerSpawnPosition(validSpaces: string[], rng: RandomGenerator): Point {
+            return LevelUtils.spliceRandomValidPoint(validSpaces, rng); // Pass the RNG instance
         }
 
         function createExitGroups(
             openSpaces: string[],
             playerSpawnPoint: Point,
-            levelOptions: ProcGenLevelOptions
+            levelOptions: ProcGenLevelOptions,
+            rng: RandomGenerator
         ): ExitGroup[] {
             const exitGroups: ExitGroup[] = [];
             
@@ -199,7 +208,8 @@ export class LevelUtils {
                     const candidate = LevelUtils.getRandomValidPointWithMinDistance(
                         openSpaces,
                         playerSpawnPoint,
-                        levelOptions.minDistanceBetweenPlayerSpawnAndExit || levelOptions.radiusAroundExitForGates + 1
+                        levelOptions.minDistanceBetweenPlayerSpawnAndExit || levelOptions.radiusAroundExitForGates + 1,
+                        rng // Pass the RNG instance
                     );
                     
                     if (!isTooClose(candidate, exitPositions, levelOptions.minDistanceBetweenExits || 10)) {
@@ -214,7 +224,7 @@ export class LevelUtils {
                 
                 // If we couldn't find a good position, just take any position
                 if (!exitPos) {
-                    exitPos = LevelUtils.spliceRandomValidPoint(openSpaces);
+                    exitPos = LevelUtils.spliceRandomValidPoint(openSpaces, rng); // Pass the RNG instance
                 }
                 
                 if (!exitPos) break; // No more spaces
@@ -236,7 +246,8 @@ export class LevelUtils {
                     const candidate = LevelUtils.getRandomValidPointWithMinDistance(
                         openSpaces,
                         exitPos,
-                        minSwitchDistance
+                        minSwitchDistance,
+                        rng // Pass the RNG instance
                     );
                     
                     // If the candidate is valid and hasn't already been tested...
@@ -273,14 +284,14 @@ export class LevelUtils {
                     exitPosition: exitPos,
                     gatesPositions: gatePositions,
                     switchPosition: switchPos,
-                    color: ColorUtils.getRandomColor(0.50, 0.87) // Pick a random color with at least 25% brightness
+                    color: ColorUtils.getRandomColor(0.50, 0.87) // Pick a random color
                 });
             }
             
             return exitGroups;
         }
 
-        function createTorchPositions(validSpaces: string[]): Point[] {
+        function createTorchPositions(validSpaces: string[], rng: RandomGenerator): Point[] {
             const torchPositions: Point[] = [];
             
             // Randomly place torches in open spaces for the player to reach
@@ -291,13 +302,13 @@ export class LevelUtils {
                     break;
                 }
 
-                torchPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces));
+                torchPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
             }
             
             return torchPositions;
         }
 
-        function createAntiPositions(validSpaces: string[]): Point[] {
+        function createAntiPositions(validSpaces: string[], rng: RandomGenerator): Point[] {
             const antiPositions: Point[] = [];
             
             // Randomly place antis in open spaces for the player to reach
@@ -308,13 +319,13 @@ export class LevelUtils {
                     break;
                 }
 
-                antiPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces));
+                antiPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
             }
             
             return antiPositions;
         }
 
-        function createSentryPositions(validSpaces: string[]): Point[] {
+        function createSentryPositions(validSpaces: string[], rng: RandomGenerator): Point[] {
             const sentryPositions: Point[] = [];
             
             // Randomly place sentries in open spaces for the player to reach
@@ -325,16 +336,16 @@ export class LevelUtils {
                     break;
                 }
 
-                sentryPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces));
+                sentryPositions.push(LevelUtils.spliceRandomValidPoint(validSpaces, rng)); // Pass the RNG instance
             }
             
             return sentryPositions;
         }
     }
 
-    static spliceRandomValidPoint(validSpaces: string[]): Point {
+    static spliceRandomValidPoint(validSpaces: string[], rng: RandomGenerator): Point {
         // Splice a valid space from the array
-        const randomIndex = Math.floor(Math.random() * validSpaces.length);
+        const randomIndex = rng.nextInt(validSpaces.length);
         const validSpace = validSpaces.splice(randomIndex, 1)[0];
         const [validX, validY]: string[] = validSpace.split(",");
         return { x: Number(validX), y: Number(validY) };
@@ -343,7 +354,8 @@ export class LevelUtils {
     static getRandomValidPointWithMinDistance(
         validSpaces: string[],
         startPoint: Point,
-        minDistance: number
+        minDistance: number,
+        rng: RandomGenerator
     ): Point{
         // Filter validSpaces by min distance
         const farSpaces = validSpaces.filter((space) => {
@@ -358,7 +370,7 @@ export class LevelUtils {
         const pool = farSpaces.length > 0 ? farSpaces : validSpaces;
 
         // Randomly choose a space from the pool
-        const validSpace = pool[Math.floor(Math.random() * pool.length)];
+        const validSpace = pool[rng.nextInt(pool.length)];
         const [x, y] = validSpace.split(',').map(Number);
         return { x, y };
     }

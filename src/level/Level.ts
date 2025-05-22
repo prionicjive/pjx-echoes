@@ -34,6 +34,7 @@ export interface LevelOptions {
     containers: LevelContainers;
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
+    seed: string;
 }
 
 export interface LevelContainers {
@@ -63,6 +64,7 @@ export class Level implements LevelContext {
     private physicsWorld: planck.World;
     private physicsManager: PhysicsManager;
     private containers: LevelContainers;
+    private seed: string;
 
     constructor(
         options: LevelOptions
@@ -71,6 +73,9 @@ export class Level implements LevelContext {
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
         this.physicsManager = options.physicsManager;
+
+        // Store the seed
+        this.seed = options.seed;
 
         // Store the renderer
         this.renderer = options.renderer;
@@ -474,6 +479,10 @@ export class Level implements LevelContext {
 
     getPlayer(): Player {
         return this.player!;
+    }
+
+    getSeed(): string {
+        return this.seed;
     }
 
     getDimensions(): { width: number; height: number } {

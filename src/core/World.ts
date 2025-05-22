@@ -243,7 +243,7 @@ export class World {
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            "Standard"
+            "Simple"
         );
         
         // Get the player - our "first class" entity
@@ -702,7 +702,8 @@ export class World {
                          `Player (World): [${Math.floor(this.player!.sprite.x)}, ${Math.floor(this.player!.sprite.y)}]\n` +
                          `Player (Current Tile): [${Math.floor(this.player!.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player!.sprite.y / Config.PixelsPerMeter)}]\n` +
                          `Camera Offset: [${Math.floor(this.worldContainer.x)}, ${Math.floor(this.worldContainer.y)}]\n` +
-                         `Levels Completed: ${this.numLevelsCompleted}`;
+                         `Levels Completed: ${this.numLevelsCompleted}\n` +
+                         `Seed: ${this.level!.getSeed()}`;
     }
 
     /**

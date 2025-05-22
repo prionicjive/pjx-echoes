@@ -1,6 +1,6 @@
 import { Point, Segment } from "../utils/types";
 import * as planck from 'planck';
-
+import { RandomGenerator } from './RandomGenerator';
 
 // MapUtils.ts
 /**
@@ -31,9 +31,16 @@ export class MapUtils {
      * @param {number} mapHeight - Height of the map in tiles.
      * @param {number} wallChance - Probability (0-1) that a tile starts as a wall.
      * @param {number} smoothingSteps - Number of smoothing iterations to run.
+     * @param {RandomGenerator} rng - Optional random number generator
      * @returns {MapData} The generated map and list of open spaces.
      */
-    static generateFromCellularAutomata(mapWidth: number, mapHeight: number, wallChance: number, smoothingSteps: number): MapData {
+    static generateFromCellularAutomata(
+        mapWidth: number, 
+        mapHeight: number, 
+        wallChance: number, 
+        smoothingSteps: number,
+        rng: RandomGenerator = new RandomGenerator()
+    ): MapData {
         // Helper to generate, smooth, and connect the map
         function generateMap(): MapData {
             let map: number[][] = [];
@@ -46,7 +53,7 @@ export class MapUtils {
                     if (x === 0 || y === 0 || x === mapWidth - 1 || y === mapHeight - 1) {
                         map[y][x] = 1; // Border walls
                     } else {
-                        map[y][x] = Math.random() < wallChance ? 1 : 0; // 1 = Wall, 0 = Open
+                        map[y][x] = rng.chance(wallChance) ? 1 : 0; // 1 = Wall, 0 = Open
                     }
                 }
             }
@@ -132,7 +139,8 @@ export class MapUtils {
         mapWidth: number,
         mapHeight: number,
         percentOpen: number = 0.35,
-        maxWalkers: number = 1
+        maxWalkers: number = 1,
+        rng: RandomGenerator = new RandomGenerator()
     ): MapData {
         // Initialize all walls
         const map: number[][] = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(1));
@@ -161,7 +169,7 @@ export class MapUtils {
                 const dirs = [
                     [0, -1], [0, 1], [-1, 0], [1, 0]
                 ];
-                const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+                const [dx, dy] = dirs[rng.nextInt(dirs.length)];
                 let nx = walker.x + dx;
                 let ny = walker.y + dy;
                 // Clamp to bounds (leave 1-tile border)
@@ -185,6 +193,7 @@ export class MapUtils {
      * @param {number} maxWalkers
      * @param {number} walkerLifetime - How many steps each walker takes before respawn.
      * @param {number} smoothingSteps - How many smoothing passes to run.
+     * @param {RandomGenerator} rng - Optional random number generator
      * @returns {MapData}
      */
     static generateFromDrunkardsWalkWithSmoothing(
@@ -193,7 +202,8 @@ export class MapUtils {
         percentOpen: number = 0.15,
         maxWalkers: number = 10,
         walkerLifetime: number = 60,
-        smoothingSteps: number = 2
+        smoothingSteps: number = 2,
+        rng: RandomGenerator = new RandomGenerator()
     ): MapData {
         // 1. Drunkard's Walk with many small caves
         const map: number[][] = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(1));
@@ -204,8 +214,8 @@ export class MapUtils {
         let walkers: { x: number, y: number, steps: number }[] = [];
         for (let i = 0; i < maxWalkers; i++) {
             walkers.push({
-                x: Math.floor(Math.random() * (mapWidth - 2)) + 1,
-                y: Math.floor(Math.random() * (mapHeight - 2)) + 1,
+                x: rng.nextInt(mapWidth - 2) + 1,
+                y: rng.nextInt(mapHeight - 2) + 1,
                 steps: 0
             });
         }
@@ -221,7 +231,7 @@ export class MapUtils {
                 const dirs = [
                     [0, -1], [0, 1], [-1, 0], [1, 0]
                 ];
-                const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+                const [dx, dy] = dirs[rng.nextInt(dirs.length)];
                 let nx = Math.max(1, Math.min(mapWidth - 2, walker.x + dx));
                 let ny = Math.max(1, Math.min(mapHeight - 2, walker.y + dy));
                 walker.x = nx;
@@ -231,8 +241,8 @@ export class MapUtils {
                     // Respawn at a random wall tile
                     let found = false;
                     for (let tries = 0; tries < 100 && !found; tries++) {
-                        const rx = Math.floor(Math.random() * (mapWidth - 2)) + 1;
-                        const ry = Math.floor(Math.random() * (mapHeight - 2)) + 1;
+                        const rx = rng.nextInt(mapWidth - 2) + 1;
+                        const ry = rng.nextInt(mapHeight - 2) + 1;
                         if (map[ry][rx] === 1) {
                             walker.x = rx;
                             walker.y = ry;

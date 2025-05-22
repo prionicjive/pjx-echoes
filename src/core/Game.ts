@@ -71,6 +71,18 @@ export class Game {
     async loadAssets() {
         // Load spritesheet and related textures
         await PIXI.Assets.load(Config.Spritesheet.path);
+
+        // Load fonts
+        PIXI.Assets.addBundle("fonts", [
+            {
+                alias: "Jersey10",
+                src: "/assets/fonts/Jersey10.ttf"
+            }, {
+                alias: "UbuntuMono",
+                src: "/assets/fonts/UbuntuMono.ttf"
+            }
+        ]);
+        await PIXI.Assets.loadBundle("fonts");
     }
 
     /**

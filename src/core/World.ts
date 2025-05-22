@@ -51,10 +51,16 @@ export class World {
     // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
+    
+    // Debug text
+    private debugText!: PIXI.Text;
 
     // Need for viewport calculations
     private viewportWidth: number;
     private viewportHeight: number;
+
+    // Interesting stats to keep track of
+    private numLevelsCompleted: number = 0;
 
     constructor(app: PIXI.Application) {
         this.app = app;
@@ -74,6 +80,9 @@ export class World {
         // Create post-processing
         // TODO Find out how to dynamically alter these
         this.initializePostProcessingFilters();
+
+        // Initialize debug text
+        this.initializeDebugText();
 
         // TODO Handle additional setup if needed
 
@@ -140,6 +149,29 @@ export class World {
         this.worldContainer.filters = [this.bloomFilter, this.crtFilter];
     }
 
+    private initializeDebugText() {
+        if(!this.app) {
+            return;
+        }
+
+        this.debugText = new PIXI.Text({
+            style: {
+                fontFamily: 'UbuntuMono', // or any system font
+                fontSize: 16,
+                fill: 0xffffff,
+                dropShadow: {
+                    color: 0x000000,
+                    blur: 4,
+                    angle: 0,
+                    distance: 2,
+                    alpha: 1
+                }
+            }
+        });
+
+        this.debugText.position.set(10, 10); // Position in top-left with some padding
+    }   
+
     private init() {
         // Basically, set up a new world!
         this.setUpWorld();
@@ -187,6 +219,9 @@ export class World {
     private setUpWorld() {
         // Add empty containers in the proper order / heiarchy, then we can add directly to the containers as needed
         this.setUpContainersInOrder();
+
+        // Add the debug text to the UI container
+        this.uiContainer.addChild(this.debugText);
 
         // Add the sprite that contains the render texture of the light map, to be draw sort of below everything else
         this.lightsContainer.addChild(this.lightmapSprite); // Do the lightmap before any of the other world entities are processed / rendered
@@ -276,7 +311,9 @@ export class World {
             (aData.type === Config.Exit.type && bData.type === Config.Player.type)
         ) {
             //console.log("Player reached exit tile!");
-
+            
+            // TODO Show a "Level Complete" screen
+            this.numLevelsCompleted++;
             // Regenerate the world by reset game to reinitialize everything
             this.reset();
         } else if (
@@ -470,18 +507,31 @@ export class World {
 
         // Update anything needed for post processing
         this.updatePostProcessing(deltaTime);
+
+        // Update debug text
+        if (Config.Debug.showDebugText) {
+            this.updateDebugText();
+        }
     }
 
     private handleDebugInput() {
         // Process any debugging input
 
+        // Toggle debug text
+        if (this.inputManager.getKeysState().keys.get("`")?.justPressed) {
+            Config.Debug.showDebugText = !Config.Debug.showDebugText;
+            this.debugText.visible = Config.Debug.showDebugText;
+        }
+
         // Toggle lights
         if (this.inputManager.getKeysState().keys.get("1")?.justPressed) {
-            this.lightsContainer.visible = !this.lightsContainer.visible;
+            Config.Debug.showLights = !Config.Debug.showLights;
+            this.lightsContainer.visible = Config.Debug.showLights;
         }
         // Toggle level geometry
         if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
-            this.levelGeometryContainer.visible = !this.levelGeometryContainer.visible;
+            Config.Debug.showLevelGeometry = !Config.Debug.showLevelGeometry;
+            this.levelGeometryContainer.visible = Config.Debug.showLevelGeometry;
         }
 
         // Toggle new collision "markers"
@@ -643,6 +693,16 @@ export class World {
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
     
         // TODO Update any other filters
+    }
+
+    private updateDebugText() {
+        if (!this.debugText) return;
+        
+        this.debugText.text = `FPS: ${Math.round(PIXI.Ticker.shared.FPS)}\n` +
+                         `Player (World): [${Math.floor(this.player!.sprite.x)}, ${Math.floor(this.player!.sprite.y)}]\n` +
+                         `Player (Current Tile): [${Math.floor(this.player!.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player!.sprite.y / Config.PixelsPerMeter)}]\n` +
+                         `Camera Offset: [${Math.floor(this.worldContainer.x)}, ${Math.floor(this.worldContainer.y)}]\n` +
+                         `Levels Completed: ${this.numLevelsCompleted}`;
     }
 
     /**

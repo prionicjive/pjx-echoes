@@ -125,6 +125,7 @@ export const Config = {
         instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
     },
     Debug: {
+        showDebugText: false,
         createVisibleEdges: true,
         createVisibleWalls: true,
         showLevelGeometry: true,

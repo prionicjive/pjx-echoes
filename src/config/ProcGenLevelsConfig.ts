@@ -1,5 +1,7 @@
+import { ProcGenLevelType } from "../level/types";
+
 export interface ProGenLevelOptions {
-    dimensions: {
+    Dimensions: {
         width: number;
         height: number;
     }; 
@@ -11,9 +13,9 @@ export interface ProGenLevelOptions {
     torchChance: number;
     antiChance: number;
     sentryChance: number;
-    mapGeneration: {
+    MapGeneration: {
         type: MapGenerationType;
-        options: CellularAutomataOptions | DrunkardsWalkWithSmoothingOptions;
+        Options: CellularAutomataOptions | DrunkardsWalkWithSmoothingOptions;
     };
 }
 
@@ -31,9 +33,9 @@ export interface DrunkardsWalkWithSmoothingOptions {
     smoothingSteps: number;
 }
 
-export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
+export const ProGenLevelsConfig: Record<ProcGenLevelType, ProGenLevelOptions> = {
     Standard: {
-        dimensions: {
+        Dimensions: {
             width: 96,       // Width of the generated level (in grid units)
             height: 96
         },
@@ -45,9 +47,9 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0052,
-        mapGeneration: {   
+        MapGeneration: {   
             type: 'DrunkardsWalkWithSmoothing',
-            options: {
+            Options: {
                 percentOpen: 0.55, // Try 0.10–0.18 for lots of small caves
                 maxWalkers: 18, // Try 10-20 walkers
                 walkerLifetime: 70, // Try 30-80
@@ -56,7 +58,7 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
         } 
     },
     Simple: {     
-        dimensions: {
+        Dimensions: {
             width: 42,       // Width of the generated level (in grid units)
             height: 42
         },
@@ -68,9 +70,9 @@ export const ProGenLevelsConfig: Record<string, ProGenLevelOptions> = {
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0095,
-        mapGeneration: {   
+        MapGeneration: {   
             type: 'CellularAutomata',
-            options: {
+            Options: {
                 wallChance: 0.45, // Chance that any given space is a wall
                 smoothingSteps: 4 // How many times to smooth the map
             }

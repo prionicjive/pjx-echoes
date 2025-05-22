@@ -1,5 +1,5 @@
 import * as planck from 'planck';
-import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, MapGenerationType, ProGenLevelOptions } from "../config/ProcGenLevelsConfig";
+import { ProcGenLevelType } from "../level/types";
 import { Level, LevelContainers } from "../level/Level";
 import { LevelSkeleton } from "../level/LevelSkeleton";
 import { PhysicsManager } from "../physics/PhysicManager";
@@ -8,6 +8,7 @@ import { MapUtils } from "./MapUtils";
 import * as PIXI from 'pixi.js';
 import { ExitGroup } from '../level/ExitGroup';
 import { ColorUtils } from './ColorUtils';
+import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProGenLevelOptions, ProGenLevelsConfig } from '../config/ProcGenLevelsConfig';
 
 export class LevelUtils {
     static createProcGenLevel(
@@ -15,25 +16,19 @@ export class LevelUtils {
         world: planck.World,
         physicsManager: PhysicsManager,
         containers: LevelContainers,
-        levelOptions: ProGenLevelOptions
+        procGenLevelType: ProcGenLevelType
     ) {
-        // Regenerate level and place player and exit tiles
-        // const { map: levelMap, openSpaces} = MapUtils.generateFromCellularAutomata(
-        //     Config.LevelDimensions.width, 
-        //     Config.LevelDimensions.height,
-        //     Config.MapGeneration.CellularAutomata.wallChance,
-        //     Config.MapGeneration.CellularAutomata.smoothingSteps
-        // );
-
         let map: number[][] = [];
         let openSpaces: string[] = [];
+
+        const levelOptions = ProGenLevelsConfig[procGenLevelType];
         
-        switch (levelOptions.mapGeneration.type as MapGenerationType) {
+        switch (levelOptions.MapGeneration.type) {
             case "DrunkardsWalkWithSmoothing":
-                const drunkardsWalkOptions = levelOptions.mapGeneration.options as DrunkardsWalkWithSmoothingOptions;
+                const drunkardsWalkOptions = levelOptions.MapGeneration.Options as DrunkardsWalkWithSmoothingOptions;
                 ({ map, openSpaces } = MapUtils.generateFromDrunkardsWalkWithSmoothing(
-                    levelOptions.dimensions.width,
-                    levelOptions.dimensions.height,
+                    levelOptions.Dimensions.width,
+                    levelOptions.Dimensions.height,
                     drunkardsWalkOptions.percentOpen,
                     drunkardsWalkOptions.maxWalkers,
                     drunkardsWalkOptions.walkerLifetime,
@@ -41,10 +36,10 @@ export class LevelUtils {
                 ));
             break;
             case "CellularAutomata":
-                const cellularAutomataOptions = levelOptions.mapGeneration.options as CellularAutomataOptions;
+                const cellularAutomataOptions = levelOptions.MapGeneration.Options as CellularAutomataOptions;
                 ({ map, openSpaces } = MapUtils.generateFromCellularAutomata(
-                    levelOptions.dimensions.width,
-                    levelOptions.dimensions.height,
+                    levelOptions.Dimensions.width,
+                    levelOptions.Dimensions.height,
                     cellularAutomataOptions.wallChance,
                     cellularAutomataOptions.smoothingSteps
                 ));

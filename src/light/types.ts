@@ -1,0 +1,1 @@
+export type LightType = 'PlayerLight' | 'SentryLight' | 'ExitLight' | 'TorchLight' | 'AntiLight' | 'SwitchLight';

@@ -1,0 +1,1 @@
+export type ParticleEffectType = 'SentryTrail' | 'PlayerTrail' | 'Explosion' | 'TorchRadiance' | 'BlueFlame' | 'SwitchEffect' | 'EdgeImpact';

@@ -2,7 +2,6 @@ import { BloomFilter, CRTFilter } from 'pixi-filters';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
-import { ProGenLevelsConfig } from '../config/ProcGenLevelsConfig.ts';
 import { EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
 import { InputManager } from '../input/InputManager.ts';
@@ -209,7 +208,7 @@ export class World {
                 preEntitiesContainer: this.preEntitiesContainer,
                 entitiesContainer: this.entitiesContainer
             },
-            ProGenLevelsConfig.Standard
+            "Standard"
         );
         
         // Get the player - our "first class" entity

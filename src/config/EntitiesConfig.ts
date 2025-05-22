@@ -23,7 +23,7 @@ export interface EntityPreset {
 export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     Sentry: {
         sprite: {
-            texture: Config.Textures.sentry,
+            texture: Config.Spritesheet.Textures.sentry,
             widthInMeters: Config.Sentry.radius * 2,
             heightInMeters: Config.Sentry.radius * 2,
             color: Config.Sentry.color
@@ -50,7 +50,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Player: {
         sprite: {
-            texture: Config.Textures.player,
+            texture: Config.Spritesheet.Textures.player,
             widthInMeters: Config.Player.radius * 2,
             heightInMeters: Config.Player.radius * 2,
             color: Config.Player.color
@@ -81,7 +81,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Anti: {
         sprite: {
-            texture: Config.Textures.anti,
+            texture: Config.Spritesheet.Textures.anti,
             widthInMeters: Config.Anti.width,
             heightInMeters: Config.Anti.height,
             color: Config.Anti.color
@@ -103,7 +103,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Torch: {
         sprite: {
-            texture: Config.Textures.torch,
+            texture: Config.Spritesheet.Textures.torch,
             widthInMeters: Config.Torch.width,
             heightInMeters: Config.Torch.height,
             color: Config.Torch.color
@@ -126,7 +126,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Exit: {
         sprite: {
-            texture: Config.Textures.exit,
+            texture: Config.Spritesheet.Textures.exit,
             widthInMeters: Config.Exit.width,
             heightInMeters: Config.Exit.height,
             color: Config.Exit.color
@@ -148,7 +148,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Wall: {
         sprite: {
-            texture: Config.Textures.block,
+            texture: Config.Spritesheet.Textures.block,
             widthInMeters: Config.Wall.width,
             heightInMeters: Config.Wall.height,
             color: Config.Wall.color
@@ -156,7 +156,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Gate: {
         sprite: {
-            texture: Config.Textures.gate,
+            texture: Config.Spritesheet.Textures.gate,
             widthInMeters: Config.Gate.width,
             heightInMeters: Config.Gate.height,
             color: Config.Gate.color
@@ -178,7 +178,7 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
     },
     Switch: {
         sprite: {
-            texture: Config.Textures.switch,
+            texture: Config.Spritesheet.Textures.switch,
             widthInMeters: Config.Switch.width,
             heightInMeters: Config.Switch.height,
             color: Config.Switch.color

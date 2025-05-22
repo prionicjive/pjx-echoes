@@ -6,7 +6,7 @@ import { ParticleEffectType } from '../particles/types';
 // Centralized particle effect configuration
 export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOptions> = {
     PlayerTrail: {
-        texturePath: Config.Textures.Particles.ringSoft,
+        texture: Config.Spritesheet.Textures.Particles.ringSoft,
         emitPerSecond: 30,
         maxParticles: 250,
         emitAngle: 0,
@@ -45,7 +45,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     SentryTrail: {
-        texturePath: Config.Textures.Particles.circleSoft,
+        texture: Config.Spritesheet.Textures.Particles.circleSoft,
         emitPerSecond: 10,
         maxParticles: 100,
         emitAngle: 0,
@@ -84,7 +84,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     TorchRadiance: {
-        texturePath: Config.Textures.Particles.ringSoft,
+        texture: Config.Spritesheet.Textures.Particles.ringSoft,
         emitPerSecond: 1,
         maxParticles: 10,
         emitAngle: 0,
@@ -123,7 +123,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     SwitchEffect: {
-        texturePath: Config.Textures.Particles.circleSoft,
+        texture: Config.Spritesheet.Textures.Particles.circleSoft,
         emitPerSecond: 20,
         maxParticles: 50,
         emitAngle: 0,
@@ -164,7 +164,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     Explosion: {
-        texturePath: Config.Textures.Particles.circleSoft,
+        texture: Config.Spritesheet.Textures.Particles.circleSoft,
         emitPerSecond: 20,
         maxParticles: 100,
         duration: 2,
@@ -206,7 +206,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     BlueFlame: {
-        texturePath: Config.Textures.Particles.circleSoft,
+        texture: Config.Spritesheet.Textures.Particles.circleSoft,
         emitPerSecond: 20,
         maxParticles: 100,
         emitAngle: 90,
@@ -231,7 +231,7 @@ export const ParticleEffectsConfig: Record<ParticleEffectType, ParticleEffectOpt
         }
     },
     EdgeImpact: {
-        texturePath: Config.Textures.Particles.circle, // Make sure this texture exists
+        texture: Config.Spritesheet.Textures.Particles.circle, // Make sure this texture exists
         emitPerSecond: 1, // Make sure this is high enough to see particles
         maxParticles: 5,
         emitAngle: 0,

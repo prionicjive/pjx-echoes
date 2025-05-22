@@ -11,6 +11,8 @@ import { ColorUtils } from './ColorUtils';
 import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProcGenLevelOptions, ProcGenLevelsConfig } from '../config/ProcGenLevelsConfig';
 import { RandomGenerator } from './RandomGenerator';
 
+const DISTINCT_COLORS = ColorUtils.getDistinctColors();
+
 export class LevelUtils {
     static createProcGenLevel(
         renderer: PIXI.Renderer,
@@ -320,12 +322,23 @@ export class LevelUtils {
                     continue;
                 }
 
+                // Get a random color from distinct colors (if any are left)
+                const result = DISTINCT_COLORS.splice(rng.nextInt(DISTINCT_COLORS.length), 1);
+                let color: number;
+                
+                if (result.length > 0) {
+                    color = result[0];
+                } else {
+                    // Otherwise, just take our chances on a completely random color
+                    color = ColorUtils.getRandomColor()
+                }
+                
                 exitGroups.push({
                     id: i,
                     exitPosition: exitPos,
                     gatesPositions: gatePositions,
                     switchPosition: switchPos,
-                    color: ColorUtils.getRandomColor(0.50, 0.87)
+                    color
                 });
             }
             

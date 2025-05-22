@@ -68,7 +68,7 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
         minDistanceBetweenPlayerSpawnAndExit: 21,
         minDistanceBetweenSwitchAndExit: 12,
         minDistanceBetweenExits: 10,
-        radiusAroundExitForGates: 15,
+        radiusAroundExitForGates: 2,
         numExits: 2,
         torchChance: 0.00087,
         antiChance: 0.00065,

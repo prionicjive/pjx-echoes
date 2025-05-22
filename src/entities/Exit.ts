@@ -28,20 +28,20 @@ export class Exit extends BaseEntity {
             color: EntitiesConfig.Exit.sprite.color
         });
 
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Exit.body!,
-                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
-            }
-        );
-
-        // Construct a static light
         const center = {
             x: options.spawnPoint.x + Config.Exit.width / 2,
             y: options.spawnPoint.y + Config.Exit.height / 2
         };
 
+        // Create static body
+        const body = PhysicsUtils.createBody(
+            options.levelContext.getPhysicsWorld(), {
+                ...EntitiesConfig.Exit.body!,
+                position: new planck.Vec2(center.x, center.y)
+            }
+        );
+
+        // Construct a static light
         const light = new StaticLight(
             center,
             options.levelContext.getEdgesList(),

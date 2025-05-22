@@ -30,7 +30,10 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'dynamic',
-            circle: { radius: Config.Sentry.radius },
+            shape: { 
+                type: 'circle', 
+                radius: Config.Sentry.radius 
+            },
             fixture: {
                 friction: 0,
                 density: 1,
@@ -54,7 +57,10 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'dynamic',
-            circle: { radius: Config.Player.radius },
+            shape: { 
+                type: 'circle', 
+                radius: Config.Player.radius 
+            },
             fixture: {
                 friction: 0,
                 density: 1,
@@ -82,7 +88,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'static',
-            box: { width: Config.Anti.width, height: Config.Anti.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Anti.width, 
+                height: Config.Anti.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryAnti,
@@ -100,7 +110,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'static',
-            box: { width: Config.Torch.width, height: Config.Torch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Torch.width, 
+                height: Config.Torch.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryTorch,
@@ -119,7 +133,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'static',
-            box: { width: Config.Exit.width, height: Config.Exit.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Exit.width, 
+                height: Config.Exit.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categoryExit,
@@ -145,7 +163,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'static',
-            box: { width: Config.Switch.width, height: Config.Switch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Switch.width, 
+                height: Config.Switch.height 
+            },
             fixture: {
                 restitution: Config.Physics.Gate.restitution,
                 friction: 0,
@@ -163,7 +185,11 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
         },
         body: {
             type: 'static',
-            box: { width: Config.Switch.width, height: Config.Switch.height },
+            shape: { 
+                type: 'box', 
+                width: Config.Switch.width, 
+                height: Config.Switch.height 
+            },
             fixture: {
                 isSensor: true,
                 filterCategoryBits: Config.Physics.Collision.categorySwitch,

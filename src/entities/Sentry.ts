@@ -31,11 +31,16 @@ export class Sentry extends BaseEntity {
             color: EntitiesConfig.Sentry.sprite.color
         });
 
+        const center = {
+            x: options.spawnPoint.x + Config.Sentry.radius,
+            y: options.spawnPoint.y + Config.Sentry.radius
+        };
+
         // Create dynamic body
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Sentry.body!,
-                position: new planck.Vec2(options.spawnPoint.x + Config.Sentry.radius, options.spawnPoint.y + Config.Sentry.radius)
+                position: new planck.Vec2(center.x, center.y)
             }
         );
 

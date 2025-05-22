@@ -28,11 +28,16 @@ export class Gate extends BaseEntity {
             color: options.color
         });
 
+        const center = {
+            x: options.spawnPoint.x + Config.Gate.width / 2,
+            y: options.spawnPoint.y + Config.Gate.height / 2
+        };
+
         // Create static body
         const body = PhysicsUtils.createBody(
             options.levelContext.getPhysicsWorld(), {
                 ...EntitiesConfig.Gate.body!,
-                position: new planck.Vec2(options.spawnPoint.x, options.spawnPoint.y)
+                position: new planck.Vec2(center.x, center.y)
             }
         );
 

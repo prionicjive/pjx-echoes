@@ -4,11 +4,17 @@ import { Segment } from './types';
 export interface CreateBodyOptions {
     type?: planck.BodyType; // 'static', 'dynamic', etc.
     position?: planck.Vec2;
-    // Only one of box or circle should be provided
-    box?: { width: number; height: number; center?: planck.Vec2; angle?: number };
-    circle?: { radius: number; center?: planck.Vec2 };
+    angle?: number; // Rotation in radians
     linearDamping?: number;
     fixture: planck.FixtureOpt;
+    shape: {
+        type: 'box' | 'circle';
+        // For box
+        width?: number;     // Full width
+        height?: number;    // Full height
+        // For circle
+        radius?: number;    // Alternative to width/height for circles
+    };
 }
 
 interface CreateLevelEdgesBodyOptions {
@@ -25,29 +31,44 @@ export class PhysicsUtils {
         world: planck.World,
         options: CreateBodyOptions
     ): planck.Body {
+        if (!options.position) {
+            throw new Error('Position is required for body creation');
+        }
+
         const body = world.createBody({
             type: options.type ?? 'static',
-            position: options.position ?? new planck.Vec2(0, 0),
+            position: options.position,
+            angle: options.angle ?? 0,
             linearDamping: options.linearDamping ?? 0
         });
 
-        if (options.box) {
+        if (options.shape.type === 'box') {
+            if (!options.shape.width || !options.shape.height) {
+                throw new Error('Width and height are required for box shape');
+            }
+            
+            // For boxes, we specify half-width and half-height
+            const hx = options.shape.width / 2;
+            const hy = options.shape.height / 2;
+            
             body.createFixture(
-                new planck.Box(
-                    options.box.width / 2,
-                    options.box.height / 2,
-                    options.box.center ?? new planck.Vec2(options.box.width / 2, options.box.height / 2),
-                    options.box.angle ?? 0
-                ),
+                new planck.Box(hx, hy),
                 options.fixture
             );
-        } else if (options.circle) {
+        } else { // circle
+            const radius = options.shape.radius ?? 
+                          (options.shape.width ? options.shape.width / 2 : 
+                          (options.shape.height ? options.shape.height / 2 : 
+                          undefined));
+            
+            if (!radius) {
+                throw new Error('Radius or width/height is required for circle shape');
+            }
+            
             body.createFixture(
-                new planck.Circle(options.circle.radius),
+                new planck.Circle(radius),
                 options.fixture
             );
-        } else {
-            throw new Error('Either box or circle options must be provided');
         }
 
         return body;

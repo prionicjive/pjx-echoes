@@ -37,7 +37,7 @@ An exploration game rooted in navigating the unknown and unseen.
 Clone the repository and install dependencies:
 
 ```sh
-git clone https://github.com/YOUR_USERNAME/pjx-echoes.git
+git clone https://github.com/prionicjive/pjx-echoes.git
 cd pjx-echoes
 npm install
 ```

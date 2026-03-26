@@ -217,6 +217,7 @@ export class World {
 
         // Remove any listeners
         this.world!.off('begin-contact', this.onBeginContactBound);
+        this.world = null;
     
         // Remove the physics manager
         this.physicsManager = null;

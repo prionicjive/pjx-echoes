@@ -60,6 +60,7 @@ export class Level implements LevelContext {
     private antiEntities: Anti[];
     private sentries: Sentry[];
     private edgesList: Segment[];
+    private edgesBody: planck.Body | null = null;
     private dimensions: { width: number; height: number };
     private physicsWorld: planck.World;
     private physicsManager: PhysicsManager;
@@ -96,7 +97,8 @@ export class Level implements LevelContext {
         this.sentries = [];
 
         // Create the edges collision data and (optionally) render it
-        this.createLevelEdges(options.physicsWorld, this.containers.levelGeometryContainer);
+        const { body: edgesBody } = this.createLevelEdges(options.physicsWorld, this.containers.levelGeometryContainer);
+        this.edgesBody = edgesBody;
 
         // Create each wall (If we determine that to be the case)
         if (Config.Debug.createVisibleWalls) {
@@ -443,6 +445,12 @@ export class Level implements LevelContext {
     }
 
     destroy() {
+        // Destroy the edges body
+        if (this.edgesBody && this.edgesBody.getWorld()) {
+            this.physicsManager.destroyBody(this.edgesBody);
+            this.edgesBody = null;
+        }
+
         // Destroy all entities
         this.player?.destroy(this.physicsManager);
 

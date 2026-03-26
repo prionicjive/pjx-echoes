@@ -308,14 +308,14 @@ export class MapUtils {
         let startX: number = Math.floor(mapWidth / 2);
         let startY: number = Math.floor(mapHeight / 2);
 
-        // If the center is a wall, find the nearest open space
+        // If the center is a wall, find the first open space
         if (map[startY][startX] === 1) {
-            for (let y = 0; y < mapHeight; y++) {
+            outer: for (let y = 0; y < mapHeight; y++) {
                 for (let x = 0; x < mapWidth; x++) {
                     if (map[y][x] === 0) {
                         startX = x;
                         startY = y;
-                        break;
+                        break outer;
                     }
                 }
             }

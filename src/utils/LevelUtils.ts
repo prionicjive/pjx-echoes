@@ -11,8 +11,6 @@ import { ColorUtils } from './ColorUtils';
 import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProcGenLevelOptions, ProcGenLevelsConfig } from '../config/ProcGenLevelsConfig';
 import { RandomGenerator } from './RandomGenerator';
 
-const DISTINCT_COLORS = ColorUtils.getDistinctColors();
-
 export class LevelUtils {
     static createProcGenLevel(
         renderer: PIXI.Renderer,
@@ -144,6 +142,7 @@ export class LevelUtils {
             const exitGroups: ExitGroup[] = [];
             const exitPositions: Point[] = [];
             const allGatedAreas: Point[] = [];
+            const distinctColors = ColorUtils.getDistinctColors();
             
             // Helper to check if a point is too close to any existing point
             const isTooClose = (point: Point, points: Point[], minDistance: number): boolean => {
@@ -175,6 +174,9 @@ export class LevelUtils {
                 availableSpaces: string[]
             ): Point[] => {
                 const positions: Point[] = [];
+
+                // Remove the exit tile itself so no other entity can spawn on it
+                removePoint(exitPos);
                 
                 // Generate all possible positions in a circle around the exit
                 for (let y = -radius; y <= radius; y++) {
@@ -323,7 +325,7 @@ export class LevelUtils {
                 }
 
                 // Get a random color from distinct colors (if any are left)
-                const result = DISTINCT_COLORS.splice(rng.nextInt(DISTINCT_COLORS.length), 1);
+                const result = distinctColors.splice(rng.nextInt(distinctColors.length), 1);
                 let color: number;
                 
                 if (result.length > 0) {

@@ -141,6 +141,8 @@ export class Light {
         // Draw mask
         this.mask.clear();
 
+        if (this.lightPoints.length === 0) return;
+
         this.mask.moveTo(0, 0);
         for (const pt of this.lightPoints) {
             this.mask.lineTo((pt.point.x * Config.PixelsPerMeter) - centerX, (pt.point.y * Config.PixelsPerMeter) - centerY);
@@ -158,6 +160,9 @@ export class Light {
     }
 
     public destroy() {
+        this.colorTween?.kill();
+        this.radiusTween?.kill();
+        this.alphaTween?.kill();
         this.mask?.destroy();
         this.sprite?.destroy();
     }
@@ -232,6 +237,11 @@ export class DynamicLight extends Light {
             duration,
             ease: "power1.out"
         });
+    }
+
+    public destroy() {
+        this.changeRadiusTween?.kill();
+        super.destroy();
     }
 
     private flickerAlpha() {

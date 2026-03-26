@@ -178,6 +178,8 @@ export class Player extends BaseEntity {
             velocityInMetersPerSecond.x * velocityInMetersPerSecond.x + velocityInMetersPerSecond.y * velocityInMetersPerSecond.y
         );
         
+        if (speedMetersPerSecond === 0) return;
+
         // Calculate the non-linear scale to boost and smooth flickers / swipes
         const nonlinearScale = Math.pow(
             speedMetersPerSecond, 

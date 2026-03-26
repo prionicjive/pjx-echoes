@@ -165,8 +165,8 @@ export const EntitiesConfig: Record<EntityType, EntityPreset> = {
             type: 'static',
             shape: { 
                 type: 'box', 
-                width: Config.Switch.width, 
-                height: Config.Switch.height 
+                width: Config.Gate.width, 
+                height: Config.Gate.height 
             },
             fixture: {
                 restitution: Config.Physics.Gate.restitution,

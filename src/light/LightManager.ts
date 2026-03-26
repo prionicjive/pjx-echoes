@@ -98,6 +98,7 @@ export class LightManager {
         }
 
         this.lights.clear();
+        this.pendingRemove.clear();
     }
 
     update() {

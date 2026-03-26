@@ -43,7 +43,7 @@ export class PhysicsUtils {
         });
 
         if (options.shape.type === 'box') {
-            if (!options.shape.width || !options.shape.height) {
+            if (options.shape.width === undefined || options.shape.height === undefined) {
                 throw new Error('Width and height are required for box shape');
             }
             
@@ -166,6 +166,7 @@ export class PhysicsUtils {
 
     static normalizeVector(vec: planck.Vec2): planck.Vec2 {
         const length = Math.hypot(vec.x, vec.y);
+        if (length === 0) return new planck.Vec2(0, 0);
         return new planck.Vec2(vec.x / length, vec.y / length);
     }
 

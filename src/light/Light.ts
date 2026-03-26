@@ -158,6 +158,9 @@ export class Light {
     }
 
     public destroy() {
+        this.colorTween?.kill();
+        this.radiusTween?.kill();
+        this.alphaTween?.kill();
         this.mask?.destroy();
         this.sprite?.destroy();
     }
@@ -232,6 +235,11 @@ export class DynamicLight extends Light {
             duration,
             ease: "power1.out"
         });
+    }
+
+    public destroy() {
+        this.changeRadiusTween?.kill();
+        super.destroy();
     }
 
     private flickerAlpha() {

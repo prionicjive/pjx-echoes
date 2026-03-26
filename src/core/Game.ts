@@ -50,7 +50,7 @@ export class Game {
         // TODO Handle additional setup if needed
 
         // Lastly, start the main loop
-        this.app.ticker.add(this.update.bind(this, this.app.ticker.deltaMS));
+        this.app.ticker.add((ticker) => this.update(ticker.deltaMS));
     }
 
     handleResize() {

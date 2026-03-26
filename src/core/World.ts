@@ -62,6 +62,12 @@ export class World {
     // Interesting stats to keep track of
     private numLevelsCompleted: number = 0;
 
+    // Deferred reset flag — set inside contact callbacks, acted on after world.step()
+    private pendingReset: boolean = false;
+
+    // Stored bound handler so the same reference is used for both on() and off()
+    private readonly onBeginContactBound = this.onBeginContact.bind(this);
+
     constructor(app: PIXI.Application) {
         this.app = app;
 
@@ -210,7 +216,7 @@ export class World {
         this.physicsManager?.destroy();
 
         // Remove any listeners
-        this.world!.off('begin-contact', this.onBeginContact.bind(this));
+        this.world!.off('begin-contact', this.onBeginContactBound);
     
         // Remove the physics manager
         this.physicsManager = null;
@@ -229,7 +235,7 @@ export class World {
 
         // TODO This may be too drastic, but regenerate entire Planck world and the physics manager
         this.world = new planck.World(new planck.Vec2(0, 0)); // No gravity
-        this.world.on('begin-contact', this.onBeginContact.bind(this));
+        this.world.on('begin-contact', this.onBeginContactBound);
         this.physicsManager = new PhysicsManager(this.world);
 
         // Create a proceduarally generated level
@@ -314,8 +320,7 @@ export class World {
             
             // TODO Show a "Level Complete" screen
             this.numLevelsCompleted++;
-            // Regenerate the world by reset game to reinitialize everything
-            this.reset();
+            this.pendingReset = true;
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
             (aData.type === Config.Edges.type && bData.type === Config.Player.type)
@@ -491,6 +496,13 @@ export class World {
         // Update and step the physics
         this.physicsManager?.update();
         this.world!.step(deltaTime);
+
+        // Check for a reset requested from inside a contact callback (must happen after world.step)
+        if (this.pendingReset) {
+            this.pendingReset = false;
+            this.reset();
+            return;
+        }
     
         // Update level 
         // (For player, dynamic entities, static entities with effect, dynamic geometry, etc)

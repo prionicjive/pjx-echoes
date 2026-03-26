@@ -394,6 +394,9 @@ export class Level implements LevelContext {
         const exitGroup = this.exitGroups.get(groupId);
         if (!exitGroup) return;
 
+        // Remove the group first to prevent re-triggering before entities are fully destroyed
+        this.exitGroups.delete(groupId);
+
         // Gently destroy the switch
         this.gentlyDestroyEntity(exitGroup.switchEntity);
 

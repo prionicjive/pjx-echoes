@@ -61,12 +61,13 @@ export class CollisionUtils {
         const s_dx = seg.b.x - seg.a.x;
         const s_dy = seg.b.y - seg.a.y;
 
-        // Calculate magnitudes for normalization and parallel check
+        // Calculate magnitudes for normalization
         const r_mag = Math.sqrt(r_dx * r_dx + r_dy * r_dy);
         const s_mag = Math.sqrt(s_dx * s_dx + s_dy * s_dy);
 
-        // Check if the ray and segment are parallel (no intersection)
-        if (r_dx / r_mag === s_dx / s_mag && r_dy / r_mag === s_dy / s_mag) {
+        // Check if the ray and segment are parallel via cross product (no intersection)
+        const cross = r_dx * s_dy - r_dy * s_dx;
+        if (Math.abs(cross) < 1e-10 * r_mag * s_mag) {
             return null;
         }
 

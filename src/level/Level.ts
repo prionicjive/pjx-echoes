@@ -431,7 +431,7 @@ export class Level implements LevelContext {
                 this.gates = this.gates.filter((gate) => gate !== entity as Gate);
                 break;
             case Config.Switch.type:
-                this.switches = this.gates.filter((switchEntity) => switchEntity !== entity as Switch);
+                this.switches = this.switches.filter((switchEntity) => switchEntity !== entity as Switch);
                 break;    
             case Config.Sentry.type:
                 this.sentries = this.sentries.filter((sentry) => sentry !== entity as Sentry);

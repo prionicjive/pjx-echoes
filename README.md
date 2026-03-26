@@ -4,26 +4,18 @@ An exploration game rooted in navigating the unknown and unseen.
 
 [Playable via Netlify](https://pjx-echoes.netlify.app/)
 
+> For a full technical deep-dive, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Features
-- Map / maze generation with caves, utilizing Drunkard's Walk algorithm (modified with Cellular Automata)
-- Level generation is now seeded for the map itself as well as entities, exits, gates and switches spawned within
-- Player impulse movement via Planck physics
-- Generation of a new map / maze upon reaching a exit tile
-- Soft follow camera when world is larger than single screen, with dead zone
-- Dynamic lighting system with raycasted light occlusion and support for mutliple lights
-- Edge calculation for light raycasting and level rendering
-- Dynamic scaling to take full advantage of the viewport while maintaining pixels per meter (No stretching)
-- Homegrown particle effect for things such as trails (among other things)
-- Post processing effects (Such as CRT and Bloom)
-- Swipe gesture movement on touch devices
-- Debug mode for toggling lights, world geometry and debug information
-
-## Tech Stack
-
-- **TypeScript** – Strongly typed JavaScript for scalable code
-- **PIXI.js** – Fast 2D WebGL rendering for graphics
-- **Planck.js** – 2D physics engine for realistic movement and collisions
-- **Vite** – Lightning-fast development server and build tool
+- Procedural cave generation via Drunkard's Walk (with Cellular Automata smoothing), fully seeded for reproducibility
+- Entities: torches (grow light), anti pickups (shrink light), sentries (bouncing enemies), gates, switches, and exits
+- Find and press a switch to unlock its paired exit — gates are removed and the path opens
+- Force/impulse-based player movement (pointer on desktop, swipe/flick on touch)
+- Dynamic lighting with raycasted occlusion, multiple simultaneous light sources, and flicker/color animation
+- Custom particle effects for trails, radiance, and impacts
+- Post-processing effects (CRT scanlines and Bloom)
+- Soft-follow camera with dead zone; dynamic viewport scaling without stretching
+- Debug mode for toggling lights, collision geometry, markers, and overlay text
 
 ## Getting Started
 
@@ -62,21 +54,15 @@ npm run dev -- --host
 npm run build
 ```
 
-## Project Structure
-
-- `src/core/` – Main game loop, camera, and input management
-- `src/entities/` – Player, level, and entity definitions
-- `src/utils/` – Map generation, math utilities, etc.
-- `assets/` – Sprites and textures
-- `index.html` – Entry point for the app
-
 ## TODOs
 
+- Toggle option so any game entity (even lights) is only visible when in non-occluded light
+- LIDAR effect emitted from player to light up edges of tiles
 - Loading maze from file (Ex. Tiled Map)
-- LIDAR for player
-- Music
-- Cordova support
-- Minimalistic UI
+- Minimalistic UI / HUD (number of levels cleared, current level time, level seed, number of items picked up, debug info)
+- BG Music
+- SFX when colliding or collecting pickups
+- Controller support
 
 ## Contributing
 

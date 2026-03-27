@@ -11,6 +11,7 @@ import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { PhysicsManager } from '../physics/PhysicManager.ts';
+import { LidarManager } from '../lidar/LidarManager.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -36,6 +37,7 @@ export class World {
     private preEntitiesContainer!: PIXI.Container;
     private entitiesContainer!: PIXI.Container;
     private postEntitiesContainer!: PIXI.Container;
+    private lidarContainer!: PIXI.Container;
     private fgContainer!: PIXI.Container; // Final world container / layer
     private uiContainer!: PIXI.Container; // Added lastly to the stage directly
 
@@ -52,6 +54,9 @@ export class World {
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
     
+    // LIDAR
+    private lidarManager: LidarManager = new LidarManager();
+
     // Debug text
     private debugText!: PIXI.Text;
 
@@ -106,6 +111,7 @@ export class World {
         this.preEntitiesContainer = new PIXI.Container();
         this.entitiesContainer = new PIXI.Container();
         this.postEntitiesContainer = new PIXI.Container();
+        this.lidarContainer = new PIXI.Container();
         this.fgContainer = new PIXI.Container(); // Final world container / layer
         
         this.uiContainer = new PIXI.Container(); // Added lastly to the stage directly
@@ -182,6 +188,7 @@ export class World {
         // Basically, set up a new world!
         this.setUpWorld();
     }
+
     /**
      * Resets the game state: clears containers, destroys physics bodies,
      * and generates a fresh level and player.
@@ -208,6 +215,9 @@ export class World {
 
         // Remove all lights
         LightManager.instance.removeAllLights();
+
+        // Remove LIDAR state
+        this.lidarManager.destroy();
 
         // Remove all effects
         ParticleEffectManager.instance.removeAllEffects();
@@ -272,6 +282,7 @@ export class World {
         this.postEntitiesContainer.removeChildren();        
         this.entitiesContainer.removeChildren();
         this.preEntitiesContainer.removeChildren();
+        this.lidarContainer.removeChildren();
         this.levelGeometryContainer.removeChildren();
         this.lightsContainer.removeChildren();
         this.bgContainer.removeChildren();
@@ -296,6 +307,7 @@ export class World {
         this.lightsContainer.visible = Config.Debug.showLights;
         this.worldContainer.addChild(this.lightsContainer); 
 
+        this.worldContainer.addChild(this.lidarContainer);
         this.worldContainer.addChild(this.preEntitiesContainer);
         this.worldContainer.addChild(this.entitiesContainer);
         this.worldContainer.addChild(this.postEntitiesContainer);
@@ -512,11 +524,17 @@ export class World {
         // Update particle effects
         ParticleEffectManager.instance.update(deltaTime);
 
+        // Update LIDAR
+        this.lidarManager.update(deltaTime);
+
         // Update camera
         this.updateCamera(deltaTime);
 
         // Update and render the lights
         this.updateAndRenderLights();
+
+        // Render LIDAR (uses camera offset, same as lights)
+        this.renderLidar();
 
         // Update anything needed for post processing
         this.updatePostProcessing(deltaTime);
@@ -550,6 +568,17 @@ export class World {
         // Toggle new collision "markers"
         if (this.inputManager.getKeysState().keys.get("3")?.justPressed) {
             Config.Debug.showCollisionMarkers = !Config.Debug.showCollisionMarkers;
+        }
+
+        // Fire LIDAR pulse
+        if (this.inputManager.getKeysState().keys.get(" ")?.justPressed) {
+            if (this.player && this.level) {
+                const playerPos = this.player.body!.getPosition();
+                this.lidarManager.fire(
+                    { x: playerPos.x, y: playerPos.y },
+                    this.level.getEdgesList()
+                );
+            }
         }
     }
     
@@ -648,13 +677,17 @@ export class World {
             // Keep camera inside the world edges
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
         }
-   
+
         // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
         this.counteractWorldTransform();
     }
 
     private counteractWorldTransform() {
         this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
+    }
+
+    private renderLidar() {
+        this.lidarManager.render(this.lidarContainer);
     }
 
     private updateAndRenderLights() {

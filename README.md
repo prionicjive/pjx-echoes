@@ -16,6 +16,7 @@ An exploration game rooted in navigating the unknown and unseen.
 - Post-processing effects (CRT scanlines and Bloom)
 - Soft-follow camera with dead zone; dynamic viewport scaling without stretching
 - Debug mode for toggling lights, collision geometry, markers, and overlay text
+- LIDAR effect emitted from player to light up edges of tiles
 
 ## Getting Started
 
@@ -57,7 +58,6 @@ npm run build
 ## TODOs
 
 - Toggle option so any game entity (even lights) is only visible when in non-occluded light
-- LIDAR effect emitted from player to light up edges of tiles
 - Loading maze from file (Ex. Tiled Map)
 - Minimalistic UI / HUD (number of levels cleared, current level time, level seed, number of items picked up, debug info)
 - BG Music

@@ -10,11 +10,13 @@ export interface GlowPoint {
 export class EdgeGlowSegment {
     readonly points: GlowPoint[];
     readonly triggerRadius: number;
+    readonly normal: { x: number; y: number }; // outward unit normal (toward open space)
     age: number = 0;
 
-    constructor(points: GlowPoint[], triggerRadius: number) {
+    constructor(points: GlowPoint[], triggerRadius: number, normal: { x: number; y: number }) {
         this.points = points;
         this.triggerRadius = triggerRadius;
+        this.normal = normal;
     }
 
     update(dt: number): void {
@@ -58,13 +60,19 @@ export class EdgeGlowSegment {
         const alpha = this.getAlpha();
         if (alpha <= 0) return;
 
+        // Shift outward by half the stroke width so the line sits on the wall
+        // face rather than inset into the tile
+        const offsetPx = LidarConfig.glowThickness * 0.5;
+        const ox = this.normal.x * offsetPx;
+        const oy = this.normal.y * offsetPx;
+
         for (let i = 0; i < this.points.length - 1; i++) {
             const a = this.points[i];
             const b = this.points[i + 1];
             const color = EdgeGlowSegment.lerpColor(a.color, b.color, 0.5);
 
-            gfx.moveTo(a.position.x * ppm, a.position.y * ppm);
-            gfx.lineTo(b.position.x * ppm, b.position.y * ppm);
+            gfx.moveTo(a.position.x * ppm + ox, a.position.y * ppm + oy);
+            gfx.lineTo(b.position.x * ppm + ox, b.position.y * ppm + oy);
             gfx.stroke({
                 width: LidarConfig.glowThickness,
                 color: color,

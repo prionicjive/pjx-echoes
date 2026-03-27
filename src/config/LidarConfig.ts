@@ -1,7 +1,7 @@
 // Centralized LIDAR pulse configuration
 export const LidarConfig = {
     // Expansion
-    expansionSpeed: 15,        // meters per second
+    expansionSpeed: 10,        // meters per second
     maxRadius: 25,             // meters — maximum reach
 
     // Raycasting
@@ -18,12 +18,13 @@ export const LidarConfig = {
     // Wavefront arc
     arcThickness: 2,           // px stroke width for the expanding arc
     arcAlpha: 0.8,             // base alpha of the arc
+    arcFadeStartRatio: 0.75,   // 0–1 fraction of maxRadius where arc alpha begins fading to 0
 
     // Arc fade-out (after reaching maxRadius)
-    fadeOutDuration: 2.0,      // seconds for the arc to fade after reaching max radius
+    fadeOutDuration: 0,        // seconds for the arc to fade after reaching max radius
 
     // Edge glow (persistent "scanner tag" segments)
-    glowThickness: 3,          // px stroke width for edge glows
+    glowThickness: 2,          // px stroke width for edge glows
     glowBaseAlpha: 1.0,        // base alpha when first activated
     glowDuration: 0,           // seconds before fade starts (0 = infinite / level lifetime)
     glowFadeDuration: 2.0,     // seconds for the fade-out (only used if glowDuration > 0)

@@ -135,6 +135,20 @@ export class LidarPulse {
             }
         }
 
+        // Computes the outward unit normal of a wall segment (pointing toward open space / origin)
+        const outwardNormal = (seg: Segment): { x: number; y: number } => {
+            const sdx = seg.b.x - seg.a.x;
+            const sdy = seg.b.y - seg.a.y;
+            const sLen = Math.sqrt(sdx * sdx + sdy * sdy);
+            if (sLen === 0) return { x: 0, y: -1 };
+            const n1x = -sdy / sLen;
+            const n1y =  sdx / sLen;
+            const midX = (seg.a.x + seg.b.x) / 2;
+            const midY = (seg.a.y + seg.b.y) / 2;
+            const dot = n1x * (this.origin.x - midX) + n1y * (this.origin.y - midY);
+            return dot >= 0 ? { x: n1x, y: n1y } : { x: -n1x, y: -n1y };
+        };
+
         // For each group, emit 2-point sub-segments per consecutive pair
         for (const group of groups) {
             const { seg, indices } = group;
@@ -155,7 +169,8 @@ export class LidarPulse {
                             { position: { x: ray.hitPoint.x - nx, y: ray.hitPoint.y - ny }, color },
                             { position: { x: ray.hitPoint.x + nx, y: ray.hitPoint.y + ny }, color },
                         ],
-                        ray.hitDistance
+                        ray.hitDistance,
+                        outwardNormal(seg)
                     ));
                 }
                 continue;
@@ -174,7 +189,8 @@ export class LidarPulse {
                         { position: { ...rayA.hitPoint }, color: colorA },
                         { position: { ...rayB.hitPoint }, color: colorB },
                     ],
-                    trigger
+                    trigger,
+                    outwardNormal(seg)
                 ));
             }
         }
@@ -258,7 +274,14 @@ export class LidarPulse {
         this.arcGraphics.clear();
 
         const color = LidarPulse.sampleGradient(this.currentRadius / LidarConfig.maxRadius);
-        const alpha = LidarConfig.arcAlpha * this.fadeAlpha;
+
+        // Distance-based fade: lerp arcAlpha → 0 once radius passes arcFadeStartRatio
+        const ratio = this.currentRadius / LidarConfig.maxRadius;
+        const fadeStart = LidarConfig.arcFadeStartRatio;
+        const distAlpha = ratio < fadeStart
+            ? 1.0
+            : 1.0 - (ratio - fadeStart) / (1.0 - fadeStart);
+        const alpha = LidarConfig.arcAlpha * distAlpha * this.fadeAlpha;
 
         if (alpha <= 0 || radiusPx <= 0) {
             this.arcGraphics.x = worldX;

@@ -128,7 +128,7 @@ export const Config = {
         showDebugText: false,
         createVisibleEdges: true,
         createVisibleWalls: true,
-        showLevelGeometry: true,
+        showLevelGeometry: false,
         showCollisionMarkers: false,
         showLights: true,
     }

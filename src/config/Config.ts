@@ -131,5 +131,10 @@ export const Config = {
         showLevelGeometry: false,
         showCollisionMarkers: false,
         showLights: true,
+        onlyDisplayInPlayerView: true,
+    },
+    Mask: {
+        fillColor: 0xffffff,
+        fillAlpha: 1,
     }
 };

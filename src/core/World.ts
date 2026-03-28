@@ -12,6 +12,7 @@ import { LevelUtils } from '../utils/LevelUtils.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { PhysicsManager } from '../physics/PhysicManager.ts';
 import { LidarManager } from '../lidar/LidarManager.ts';
+import { Point } from '../utils/types';
 
 export class World {
     private app: PIXI.Application;
@@ -54,6 +55,15 @@ export class World {
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
     
+    // Player view mode masking
+    private entityContainerGroup!: PIXI.Container;
+    private playerViewMask!: PIXI.Graphics;
+    private playerLightPolygonMask!: PIXI.Graphics; // Used to mask non-player lights in the lightmap
+    
+    // Cache for optimizing mask updates
+    private lastPlayerPos: Point = { x: -999, y: -999 };
+    private lastPlayerRadius: number = -1;
+
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
 
@@ -113,6 +123,9 @@ export class World {
         this.postEntitiesContainer = new PIXI.Container();
         this.lidarContainer = new PIXI.Container();
         this.fgContainer = new PIXI.Container(); // Final world container / layer
+        this.entityContainerGroup = new PIXI.Container(); // Groups pre/main/post entity containers for unified masking
+        this.playerViewMask = new PIXI.Graphics();
+        this.playerLightPolygonMask = new PIXI.Graphics(); // For masking non-player lights in the lightmap
         
         this.uiContainer = new PIXI.Container(); // Added lastly to the stage directly
     }
@@ -258,7 +271,8 @@ export class World {
                 bgContainer: this.bgContainer,
                 levelGeometryContainer: this.levelGeometryContainer,
                 preEntitiesContainer: this.preEntitiesContainer,
-                entitiesContainer: this.entitiesContainer
+                entitiesContainer: this.entitiesContainer,
+                postEntitiesContainer: this.postEntitiesContainer
             },
             "Standard"
         );
@@ -282,6 +296,15 @@ export class World {
         this.postEntitiesContainer.removeChildren();        
         this.entitiesContainer.removeChildren();
         this.preEntitiesContainer.removeChildren();
+
+        // Clear player view masks before tearing down
+        this.entityContainerGroup.mask = null;
+        this.entityContainerGroup.removeChildren();
+        this.playerViewMask.clear();
+        this.playerViewMask.destroy();
+        this.playerLightPolygonMask.clear();
+        this.playerLightPolygonMask.destroy();
+
         this.lidarContainer.removeChildren();
         this.levelGeometryContainer.removeChildren();
         this.lightsContainer.removeChildren();
@@ -308,9 +331,15 @@ export class World {
         this.worldContainer.addChild(this.lightsContainer); 
 
         this.worldContainer.addChild(this.lidarContainer);
-        this.worldContainer.addChild(this.preEntitiesContainer);
-        this.worldContainer.addChild(this.entitiesContainer);
-        this.worldContainer.addChild(this.postEntitiesContainer);
+
+        // Group the three entity layers so a single mask can be applied to all of them
+        this.entityContainerGroup.addChild(this.preEntitiesContainer);
+        this.entityContainerGroup.addChild(this.entitiesContainer);
+        this.entityContainerGroup.addChild(this.postEntitiesContainer);
+        this.playerViewMask.clear();
+        this.entityContainerGroup.addChild(this.playerViewMask);
+        this.worldContainer.addChild(this.entityContainerGroup);
+
         this.worldContainer.addChild(this.fgContainer); // End of world containers / layers
         
         this.app.stage.addChild(this.uiContainer); // Added lastly to the stage directly
@@ -412,7 +441,7 @@ export class World {
             }
 
             // Disable the contact to prevent the sentry from physically reacting with the player
-            contact.setEnabled(false)
+            contact.setEnabled(false);
         } else if (
             (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
             (aData.type === Config.Torch.type && bData.type === Config.Player.type)
@@ -533,6 +562,9 @@ export class World {
         // Update and render the lights
         this.updateAndRenderLights();
 
+        // Apply/clear the player-view mask on entity containers (must run after lights update the polygon)
+        this.updatePlayerViewMask();
+
         // Render LIDAR (uses camera offset, same as lights)
         this.renderLidar();
 
@@ -568,6 +600,15 @@ export class World {
         // Toggle new collision "markers"
         if (this.inputManager.getKeysState().keys.get("3")?.justPressed) {
             Config.Debug.showCollisionMarkers = !Config.Debug.showCollisionMarkers;
+        }
+
+        // Toggle player view mode (entities only visible inside the player's light polygon)
+        if (this.inputManager.getKeysState().keys.get("4")?.justPressed) {
+            Config.Debug.onlyDisplayInPlayerView = !Config.Debug.onlyDisplayInPlayerView;
+            if (!Config.Debug.onlyDisplayInPlayerView) {
+                this.entityContainerGroup.mask = null;
+                this.playerViewMask.clear();
+            }
         }
 
         // Fire LIDAR pulse
@@ -686,6 +727,47 @@ export class World {
         this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
     }
 
+    private updatePlayerViewMask(): void {
+        if (!Config.Debug.onlyDisplayInPlayerView || !this.player?.light) {
+            return;
+        }
+
+        const currentPos = this.player.light.getPosition();
+        const currentRadius = this.player.light.radius;
+        
+        // Only update mask if player position or radius changed
+        if (this.lastPlayerPos.x === currentPos.x && 
+            this.lastPlayerPos.y === currentPos.y && 
+            this.lastPlayerRadius === currentRadius) {
+            return;
+        }
+
+        const lightPoints = this.player.light.getLightPoints();
+        if (!lightPoints || lightPoints.length < 3) return;
+
+        const ppm = Config.PixelsPerMeter;
+
+        // Update cache
+        this.lastPlayerPos = { ...currentPos };
+        this.lastPlayerRadius = currentRadius;
+
+        this.playerViewMask.clear();
+        this.playerViewMask.moveTo(
+            lightPoints[0].point.x * ppm,
+            lightPoints[0].point.y * ppm
+        );
+        for (let i = 1; i < lightPoints.length; i++) {
+            this.playerViewMask.lineTo(
+                lightPoints[i].point.x * ppm,
+                lightPoints[i].point.y * ppm
+            );
+        }
+        this.playerViewMask.closePath();
+        this.playerViewMask.fill({ color: Config.Mask.fillColor, alpha: Config.Mask.fillAlpha });
+
+        this.entityContainerGroup.mask = this.playerViewMask;
+    }
+
     private renderLidar() {
         this.lidarManager.render(this.lidarContainer);
     }
@@ -709,23 +791,95 @@ export class World {
         // Clear the lightmap container
         this.tempLightmapContainer.removeChildren();
 
-        // Render all lights to the lightmap container using LightManager
-        LightUtils.renderLightsBatch(
-            LightManager.instance.getAllLights(),
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
+        // Split rendering into two passes when player view mode is active
+        if (Config.Debug.onlyDisplayInPlayerView && this.player?.light) {
+            // === PASS 1: Render player light (unmasked) ===
+            const playerLight = this.player.light;
+            LightUtils.renderLightsBatch(
+                [playerLight],
+                cameraOffset, screenBounds, this.tempLightmapContainer
+            );
 
-       // Render all lights in the container to the render texture (lightmap)
-       this.app.renderer.render({
-            container: this.transparentBgRect,
-            target: this.lightmapTexture,
-            clear: true
-        });
-        this.app.renderer.render({
-            container: this.tempLightmapContainer, 
-            target: this.lightmapTexture, 
-            clear: false
-        });
+            // Render player light to texture (clear=true)
+            this.app.renderer.render({
+                container: this.transparentBgRect,
+                target: this.lightmapTexture,
+                clear: true
+            });
+            this.app.renderer.render({
+                container: this.tempLightmapContainer,
+                target: this.lightmapTexture,
+                clear: false
+            });
+
+            // === PASS 2: Render overlapping non-player lights, masked to player's visible polygon ===
+            const playerPos = playerLight.getPosition();
+            const playerRadius = playerLight.radius;
+            const lightPoints = playerLight.getLightPoints();
+            if (!lightPoints || lightPoints.length < 3) return;
+            
+            const polygon = lightPoints.map(p => p.point);
+            const overlappingLights = LightManager.instance.getAllLights().filter(light => {
+                if (light.id === playerLight.id) return false; // already rendered
+                const lp = light.getPosition();
+                const dx = lp.x - playerPos.x;
+                const dy = lp.y - playerPos.y;
+                return (dx * dx + dy * dy) < (playerRadius + light.radius) * (playerRadius + light.radius);
+            });
+
+            if (overlappingLights.length > 0 && polygon.length >= 3) {
+                // Build mask polygon in screen space (same space as tempLightmapContainer)
+                this.playerLightPolygonMask.clear();
+                this.playerLightPolygonMask.moveTo(
+                    polygon[0].x * Config.PixelsPerMeter - cameraOffset.x,
+                    polygon[0].y * Config.PixelsPerMeter - cameraOffset.y
+                );
+                for (let i = 1; i < polygon.length; i++) {
+                    this.playerLightPolygonMask.lineTo(
+                        polygon[i].x * Config.PixelsPerMeter - cameraOffset.x,
+                        polygon[i].y * Config.PixelsPerMeter - cameraOffset.y
+                    );
+                }
+                this.playerLightPolygonMask.closePath();
+                this.playerLightPolygonMask.fill({ color: Config.Mask.fillColor, alpha: Config.Mask.fillAlpha });
+
+                // Apply mask to tempLightmapContainer for this pass
+                const prevMask = this.tempLightmapContainer.mask;
+                this.tempLightmapContainer.mask = this.playerLightPolygonMask;
+
+                // Render overlapping lights (clear=false to overlay on player light)
+                this.tempLightmapContainer.removeChildren();
+                LightUtils.renderLightsBatch(
+                    overlappingLights,
+                    cameraOffset, screenBounds, this.tempLightmapContainer
+                );
+                this.app.renderer.render({
+                    container: this.tempLightmapContainer,
+                    target: this.lightmapTexture,
+                    clear: false
+                });
+
+                // Restore previous mask (should be null)
+                this.tempLightmapContainer.mask = prevMask;
+            }
+        } else {
+            // Normal mode: render all lights unmasked
+            LightUtils.renderLightsBatch(
+                LightManager.instance.getAllLights(),
+                cameraOffset, screenBounds, this.tempLightmapContainer
+            );
+
+            this.app.renderer.render({
+                container: this.transparentBgRect,
+                target: this.lightmapTexture,
+                clear: true
+            });
+            this.app.renderer.render({
+                container: this.tempLightmapContainer,
+                target: this.lightmapTexture,
+                clear: false
+            });
+        }
 
         // Process any lights that exited fading out after all updates/renders
         LightManager.instance.processPendingRemovals();

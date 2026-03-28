@@ -140,6 +140,27 @@ export class CollisionUtils {
         return closestIntersection;
     } 
     
+    /**
+     * Tests whether a point lies inside a polygon using the ray-casting algorithm.
+     * @param point The point to test (world meters).
+     * @param polygon Ordered array of polygon vertices (world meters).
+     */
+    static isPointInPolygon(point: Point, polygon: Point[]): boolean {
+        const n = polygon.length;
+        if (n < 3) return false;
+        let inside = false;
+        const px = point.x;
+        const py = point.y;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
     static isSegmentInBounds(segment: Segment, bounds: { minX: number; maxX: number; minY: number; maxY: number }) {
         const minX = Math.min(segment.a.x, segment.b.x);
         const maxX = Math.max(segment.a.x, segment.b.x);

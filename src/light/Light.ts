@@ -174,6 +174,10 @@ export class Light {
     public getPosition(): Point {
         return {...this.pos};
     }
+
+    public getLightPoints(): { point: Point; angle: number }[] {
+        return this.lightPoints;
+    }
 }
 
 export class DynamicLight extends Light {

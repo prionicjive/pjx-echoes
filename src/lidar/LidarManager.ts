@@ -92,8 +92,6 @@ export class LidarManager {
         }
         this.activeGlows = [];
         this.edgeGlowGraphics.destroy();
-        this.edgeGlowGraphics = new PIXI.Graphics();
-        this.edgeGlowGraphics.blendMode = 'add';
         this.cooldownTimer = 0;
     }
 }

@@ -48,6 +48,7 @@ export class RandomGenerator {
      * Get a random element from an array
      */
     choice<T>(array: T[]): T {
+        if (array.length === 0) throw new Error('RandomGenerator.choice: array must not be empty');
         return array[this.nextInt(array.length)];
     }
     

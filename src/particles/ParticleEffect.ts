@@ -184,8 +184,9 @@ export class ParticleEffect {
       // As a precaution, stop emission
       this.stopEmission();
 
-      // Hide all active particles instead of removing them
+      // Hide all active particles and mark them dead so the pool can reuse them
       this.activeParticles.forEach(particle => {
+        particle.alive = false;
         particle.sprite.visible = false;
       });
 
@@ -258,14 +259,13 @@ export class ParticleEffect {
             s.x += directionX * speed * dt;
             s.y += directionY * speed * dt;
 
-            // Update alpha, scale and tint
-            // TODO Change to leverage what might now exist at the particle level
-            s.alpha = this.lerp(this.template.startAlpha, this.template.endAlpha, t);
-            const scaleX = this.lerp(this.template.startScaleX, this.template.endScaleX, t);
-            const scaleY = this.lerp(this.template.startScaleY, this.template.endScaleY, t);
-            s.width = this.template.width * scaleX;
-            s.height = this.template.height * scaleY;
-            s.tint = this.lerpColor(this.template.startTint, this.template.endTint, t);
+            // Update alpha, scale and tint using per-particle variance values
+            s.alpha = this.lerp(particle.startAlpha, particle.endAlpha, t);
+            const scaleX = this.lerp(particle.startScaleX, particle.endScaleX, t);
+            const scaleY = this.lerp(particle.startScaleY, particle.endScaleY, t);
+            s.width = particle.width * scaleX;
+            s.height = particle.height * scaleY;
+            s.tint = this.lerpColor(particle.startTint, particle.endTint, t);
         }
 
         // If the emission has stopped and all particles are dead, call the callback
@@ -359,15 +359,15 @@ export class ParticleEffect {
         particle.width = this.applyVariance(this.template.width, this.template.widthVariance);
         particle.height = this.applyVariance(this.template.height, this.template.heightVariance);
 
-        // Init the sprite
+        // Init the sprite using the per-particle variance values computed above
         const s = particle.sprite;
 
         s.visible = true;
-        s.alpha = this.template.startAlpha;
+        s.alpha = particle.startAlpha;
         s.position.set(this.position.x, this.position.y);
-        s.width = this.template.width * this.template.startScaleX;
-        s.height = this.template.height * this.template.startScaleY;
-        s.tint = this.template.startTint.toNumber();
+        s.width = particle.width * particle.startScaleX;
+        s.height = particle.height * particle.startScaleY;
+        s.tint = particle.startTint.toNumber();
     }
 
     private applyVariance(base: number, variance?: Variance): number {

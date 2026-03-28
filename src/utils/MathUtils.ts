@@ -3,7 +3,7 @@ export class MathUtils {
         // Ensure min and max are integers
         min = Math.ceil(min);
         max = Math.floor(max);
-        // Generate random integer in the range [min, max]
+        // Generate random integer in the range [min, max)
         return Math.floor(Math.random() * (max - min)) + min;
     }
 

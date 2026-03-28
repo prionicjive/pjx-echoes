@@ -244,10 +244,15 @@ export class LidarPulse {
         }
 
         if (this.phase === 'fading') {
-            this.fadeAlpha -= dt / LidarConfig.fadeOutDuration;
-            if (this.fadeAlpha <= 0) {
+            if (LidarConfig.fadeOutDuration <= 0) {
                 this.fadeAlpha = 0;
                 this.phase = 'dead';
+            } else {
+                this.fadeAlpha -= dt / LidarConfig.fadeOutDuration;
+                if (this.fadeAlpha <= 0) {
+                    this.fadeAlpha = 0;
+                    this.phase = 'dead';
+                }
             }
         }
     }

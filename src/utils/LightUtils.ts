@@ -32,11 +32,13 @@ export class LightUtils {
         const points: { point: Point, angle: number }[] = [];
     
         // For each ray, find the closest intersection with any segment
-        for (const ray of rays) {
+        for (let i = 0; i < rays.length; i++) {
+            const ray = rays[i];
+            const angle = (i / numRays) * Math.PI * 2;
             const hit = CollisionUtils.findClosestIntersection(ray, segments, lightRadius);
             if (hit) {
                 // Store the intersection point along with its angle from the origin
-                points.push({ point: hit.point, angle: Math.atan2(hit.point.y - point.y, hit.point.x - point.x) });
+                points.push({ point: hit.point, angle: angle });
             }
         }
 
@@ -91,6 +93,8 @@ export class LightUtils {
     }
 
     static isLightOnScreen(light: Light, screenLeft: number, screenTop: number, screenRight: number, screenBottom: number): boolean {
+        if (!light.sprite) return false;
+        
         const x = light.sprite.x;
         const y = light.sprite.y;
         const r = light.radius * Config.PixelsPerMeter; // If radius is in meters

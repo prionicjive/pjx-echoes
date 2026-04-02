@@ -66,7 +66,8 @@ export class LevelUtils {
                 bgContainer: containers.bgContainer,
                 levelGeometryContainer: containers.levelGeometryContainer,
                 preEntitiesContainer: containers.preEntitiesContainer,
-                entitiesContainer: containers.entitiesContainer
+                entitiesContainer: containers.entitiesContainer,
+                postEntitiesContainer: containers.postEntitiesContainer
             }, 
             edgesList,
             entitiesOptions,

@@ -65,6 +65,11 @@ export class CollisionUtils {
         const r_mag = Math.sqrt(r_dx * r_dx + r_dy * r_dy);
         const s_mag = Math.sqrt(s_dx * s_dx + s_dy * s_dy);
 
+        // Check for invalid ray or segment (zero length)
+        if (r_mag === 0 || s_mag === 0) {
+            return null;
+        }
+
         // Check if the ray and segment are parallel via cross product (no intersection)
         const cross = r_dx * s_dy - r_dy * s_dx;
         if (Math.abs(cross) < 1e-10 * r_mag * s_mag) {
@@ -78,13 +83,14 @@ export class CollisionUtils {
 
         // Intersection occurs if t > 0 (in front of the ray) and 0 <= u <= 1 (on the segment)
         if (t > 0 && u >= 0 && u <= 1) {
-            if (t * r_mag <= maxDistance) {
+            const actualDistance = t * r_mag;
+            if (actualDistance <= maxDistance) {
             return {
                 point: { 
                     x: r_px + r_dx * t, 
                     y: r_py + r_dy * t 
                 },
-                distance: t
+                distance: actualDistance
             };
             }
         }
@@ -140,6 +146,27 @@ export class CollisionUtils {
         return closestIntersection;
     } 
     
+    /**
+     * Tests whether a point lies inside a polygon using the ray-casting algorithm.
+     * @param point The point to test (world meters).
+     * @param polygon Ordered array of polygon vertices (world meters).
+     */
+    static isPointInPolygon(point: Point, polygon: Point[]): boolean {
+        const n = polygon.length;
+        if (n < 3) return false;
+        let inside = false;
+        const px = point.x;
+        const py = point.y;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
     static isSegmentInBounds(segment: Segment, bounds: { minX: number; maxX: number; minY: number; maxY: number }) {
         const minX = Math.min(segment.a.x, segment.b.x);
         const maxX = Math.max(segment.a.x, segment.b.x);

@@ -42,6 +42,7 @@ export interface LevelContainers {
     levelGeometryContainer: PIXI.Container;
     preEntitiesContainer: PIXI.Container;
     entitiesContainer: PIXI.Container;
+    postEntitiesContainer: PIXI.Container;
 }
 
 /**
@@ -316,7 +317,7 @@ export class Level implements LevelContext {
                 spawnPoint: {...position},
                 containers: { 
                     containerForEntity: containers.entitiesContainer,
-                    containerForParticleEffects: containers.bgContainer
+                    containerForParticleEffects: containers.preEntitiesContainer
                 },
                 levelContext: this
             });
@@ -358,7 +359,7 @@ export class Level implements LevelContext {
                 spawnPoint: {...position}, 
                 containers: {
                     containerForEntity: containers.entitiesContainer,
-                    containerForParticleEffects: containers.preEntitiesContainer,
+                    containerForParticleEffects: containers.postEntitiesContainer,
                 },
                 initialVelocity,
                 levelContext: this

@@ -62,6 +62,31 @@ export class Light {
             throw new Error("Light cannot be instantiated directly");
         }
 
+        // Validate input parameters
+        if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
+            throw new Error("Invalid position: pos must be a Point with x and y number properties");
+        }
+        
+        if (!Array.isArray(collisionData)) {
+            throw new Error("Invalid collisionData: must be an array of Segments");
+        }
+        
+        if (!options || typeof options !== 'object') {
+            throw new Error("Invalid options: must be a valid LightOptions object");
+        }
+        
+        if (options.baseRadius <= 0 || !isFinite(options.baseRadius)) {
+            throw new Error("Invalid baseRadius: must be a positive finite number");
+        }
+        
+        if (options.baseAlpha < 0 || options.baseAlpha > 1 || !isFinite(options.baseAlpha)) {
+            throw new Error("Invalid baseAlpha: must be between 0 and 1");
+        }
+        
+        if (options.numRays <= 0 || !Number.isInteger(options.numRays)) {
+            throw new Error("Invalid numRays: must be a positive integer");
+        }
+
         this.pos = pos;
         this.collisionData = collisionData;
         this.lightPoints = [];
@@ -326,6 +351,30 @@ export class StaticLight extends Light {
         // Build out the light points in world space (Meters)
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
         this.lightPoints = LightUtils.buildLightPolygon(pos, nearbyEdges, this.options.numRays, this.radius);
+        
+        // Ensure we always have at least some light points (fallback to circle)
+        if (this.lightPoints.length === 0) {
+            this.lightPoints = this.generateFallbackLightPoints(pos);
+        }
+    }
+
+    // Generate fallback light points as a circle when no intersections are found
+    private generateFallbackLightPoints(pos: Point): { point: Point; angle: number }[] {
+        const points: { point: Point; angle: number }[] = [];
+        const numPoints = Math.min(this.options.numRays, 36); // Use fewer points for fallback
+        
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i / numPoints) * Math.PI * 2;
+            points.push({
+                point: {
+                    x: pos.x + Math.cos(angle) * this.radius,
+                    y: pos.y + Math.sin(angle) * this.radius
+                },
+                angle: angle
+            });
+        }
+        
+        return points;
     }
 
     public update(pos: Point | null = null) {

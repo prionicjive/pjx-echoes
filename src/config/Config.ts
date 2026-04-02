@@ -130,7 +130,8 @@ export const Config = {
         createVisibleWalls: true,
         showLevelGeometry: false,
         showCollisionMarkers: false,
-        showLights: true
+        showLights: true,
+        onlyDisplayInPlayerView: false,
     },
     Mask: {
         fillColor: 0xffffff,

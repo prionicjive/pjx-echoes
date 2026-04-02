@@ -58,6 +58,11 @@ export class World {
     private entityContainerGroup!: PIXI.Container;
     private playerViewMask!: PIXI.Graphics;
     private playerLightPolygonMask!: PIXI.Graphics;
+    
+    // Polygon caching for performance
+    private cachedPlayerPolygon: { point: { x: number, y: number }, angle: number }[] | null = null;
+    private lastPlayerLightUpdate: number = 0;
+    private maskPolygonDirty: boolean = true;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
@@ -71,6 +76,10 @@ export class World {
 
     // Interesting stats to keep track of
     private numLevelsCompleted: number = 0;
+    
+    // Performance metrics for debugging
+    private maskUpdateTime: number = 0;
+    private lightRenderTime: number = 0;
 
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
@@ -598,9 +607,7 @@ export class World {
         if (this.inputManager.getKeysState().keys.get("4")?.justPressed) {
             Config.Debug.onlyDisplayInPlayerView = !Config.Debug.onlyDisplayInPlayerView;
             if (!Config.Debug.onlyDisplayInPlayerView) {
-                this.entityContainerGroup.mask = null;
-                this.playerViewMask.clear();
-                this.playerLightPolygonMask.clear();
+                this.clearAllMasks();
             }
         }
 
@@ -721,13 +728,60 @@ export class World {
     }
 
     private updatePlayerViewMask(): void {
-        if (!Config.Debug.onlyDisplayInPlayerView || !this.player?.light) {
+        const start = performance.now();
+        
+        if (!this.validatePlayerViewMode()) {
+            this.clearEntityMask();
+            this.maskUpdateTime = performance.now() - start;
             return;
         }
 
-        const lightPoints = this.player.light.getLightPoints();
-        if (lightPoints.length < 3) return;
+        const lightPoints = this.getCachedPlayerPolygon();
+        if (lightPoints.length < 3) {
+            this.clearEntityMask();
+            this.maskUpdateTime = performance.now() - start;
+            return;
+        }
 
+        this.drawWorldSpaceMask(lightPoints);
+        this.entityContainerGroup.mask = this.playerViewMask;
+        
+        this.maskUpdateTime = performance.now() - start;
+    }
+
+    private validatePlayerViewMode(): boolean {
+        return Config.Debug?.onlyDisplayInPlayerView === true && 
+               this.player?.light !== null;
+    }
+
+    private clearEntityMask(): void {
+        this.entityContainerGroup.mask = null;
+    }
+
+    private clearAllMasks(): void {
+        this.entityContainerGroup.mask = null;
+        this.playerViewMask.clear();
+        this.playerLightPolygonMask.clear();
+        this.cachedPlayerPolygon = null;
+        this.maskPolygonDirty = true;
+    }
+
+    private getCachedPlayerPolygon(): { point: { x: number, y: number }, angle: number }[] {
+        if (!this.player?.light) return [];
+        
+        // Use a simple timestamp-based cache invalidation
+        const currentUpdate = Date.now();
+        if (this.cachedPlayerPolygon && this.lastPlayerLightUpdate === currentUpdate) {
+            return this.cachedPlayerPolygon;
+        }
+        
+        this.cachedPlayerPolygon = this.player.light.getLightPoints();
+        this.lastPlayerLightUpdate = currentUpdate;
+        this.maskPolygonDirty = true;
+        return this.cachedPlayerPolygon;
+    }
+
+    private drawWorldSpaceMask(lightPoints: { point: { x: number, y: number }, angle: number }[]): void {
         const ppm = Config.PixelsPerMeter;
 
         this.playerViewMask.clear();
@@ -743,8 +797,6 @@ export class World {
         }
         this.playerViewMask.closePath();
         this.playerViewMask.fill({ color: 0xffffff, alpha: 1 });
-
-        this.entityContainerGroup.mask = this.playerViewMask;
     }
 
     private renderLidar() {
@@ -752,6 +804,8 @@ export class World {
     }
 
     private updateAndRenderLights() {
+        const start = performance.now();
+        
         // Update all lights
         LightManager.instance.update();
 
@@ -767,97 +821,134 @@ export class World {
             bottom: -this.worldContainer.y + this.viewportHeight
         };
 
-        // Clear the lightmap container
+        // Clear the lightmap container once
         this.tempLightmapContainer.removeChildren();
 
         // Split rendering into two passes when player view mode is active
         if (Config.Debug.onlyDisplayInPlayerView && this.player?.light) {
-            // === PASS 1: Render player light (unmasked) ===
-            const playerLight = this.player.light;
-            LightUtils.renderLightsBatch(
-                [playerLight],
-                cameraOffset, screenBounds, this.tempLightmapContainer
-            );
-
-            this.app.renderer.render({
-                container: this.transparentBgRect,
-                target: this.lightmapTexture,
-                clear: true
-            });
-            this.app.renderer.render({
-                container: this.tempLightmapContainer,
-                target: this.lightmapTexture,
-                clear: false
-            });
-
-            // === PASS 2: Render overlapping non-player lights, masked to player's visible polygon ===
-            const playerPos = playerLight.getPosition();
-            const playerRadius = playerLight.radius;
-            const polygon = playerLight.getLightPoints().map(p => p.point);
-            const overlappingLights = LightManager.instance.getAllLights().filter(light => {
-                if (light.id === playerLight.id) return false; // already rendered
-                const lp = light.getPosition();
-                const dx = lp.x - playerPos.x;
-                const dy = lp.y - playerPos.y;
-                return (dx * dx + dy * dy) < (playerRadius + light.radius) * (playerRadius + light.radius);
-            });
-
-            if (overlappingLights.length > 0 && polygon.length >= 3) {
-                const ppm = Config.PixelsPerMeter;
-
-                // Build mask polygon in screen space (same space as tempLightmapContainer)
-                this.playerLightPolygonMask.clear();
-                this.playerLightPolygonMask.moveTo(
-                    polygon[0].x * ppm - cameraOffset.x,
-                    polygon[0].y * ppm - cameraOffset.y
-                );
-                for (let i = 1; i < polygon.length; i++) {
-                    this.playerLightPolygonMask.lineTo(
-                        polygon[i].x * ppm - cameraOffset.x,
-                        polygon[i].y * ppm - cameraOffset.y
-                    );
-                }
-                this.playerLightPolygonMask.closePath();
-                this.playerLightPolygonMask.fill({ color: 0xffffff, alpha: 1 });
-
-                // Apply mask to tempLightmapContainer for this pass
-                this.tempLightmapContainer.removeChildren();
-                this.tempLightmapContainer.addChild(this.playerLightPolygonMask);
-                this.tempLightmapContainer.mask = this.playerLightPolygonMask;
-
-                LightUtils.renderLightsBatch(
-                    overlappingLights,
-                    cameraOffset, screenBounds, this.tempLightmapContainer
-                );
-                this.app.renderer.render({
-                    container: this.tempLightmapContainer,
-                    target: this.lightmapTexture,
-                    clear: false
-                });
-
-                // Restore mask
-                this.tempLightmapContainer.mask = null;
-            }
+            this.renderPlayerViewModeLights(cameraOffset, screenBounds);
         } else {
-            // Normal mode: render all lights unmasked
-            LightUtils.renderLightsBatch(
-                LightManager.instance.getAllLights(),
-                cameraOffset, screenBounds, this.tempLightmapContainer
-            );
-
-            this.app.renderer.render({
-                container: this.transparentBgRect,
-                target: this.lightmapTexture,
-                clear: true
-            });
-            this.app.renderer.render({
-                container: this.tempLightmapContainer,
-                target: this.lightmapTexture,
-                clear: false
-            });
+            this.renderNormalLights(cameraOffset, screenBounds);
         }
-
+        
+        this.lightRenderTime = performance.now() - start;
+        
         // Process any lights that exited fading out after all updates/renders
+        this.processPendingLightRemovals();
+    }
+
+    private renderPlayerViewModeLights(
+        cameraOffset: { x: number; y: number },
+        screenBounds: { left: number; top: number; right: number; bottom: number }
+    ): void {
+        if (!this.player?.light) return;
+        
+        // === PASS 1: Render player light (unmasked) ===
+        const playerLight = this.player.light;
+        LightUtils.renderLightsBatch(
+            [playerLight],
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
+
+        this.app.renderer.render({
+            container: this.transparentBgRect,
+            target: this.lightmapTexture,
+            clear: true
+        });
+        this.app.renderer.render({
+            container: this.tempLightmapContainer,
+            target: this.lightmapTexture,
+            clear: false
+        });
+
+        // === PASS 2: Render overlapping non-player lights, masked to player's visible polygon ===
+        const playerPos = playerLight.getPosition();
+        const playerRadius = playerLight.radius;
+        const polygon = this.getCachedPlayerPolygon().map(p => p.point);
+        const overlappingLights = LightManager.instance.getAllLights().filter(light => {
+            if (light.id === playerLight.id) return false; // already rendered
+            const lp = light.getPosition();
+            const dx = lp.x - playerPos.x;
+            const dy = lp.y - playerPos.y;
+            return (dx * dx + dy * dy) < (playerRadius + light.radius) * (playerRadius + light.radius);
+        });
+
+        if (overlappingLights.length > 0 && polygon.length >= 3) {
+            this.drawScreenSpaceMask(polygon, cameraOffset);
+            this.renderMaskedLights(overlappingLights, cameraOffset, screenBounds);
+        }
+    }
+
+    private renderNormalLights(
+        cameraOffset: { x: number; y: number },
+        screenBounds: { left: number; top: number; right: number; bottom: number }
+    ): void {
+        // Normal mode: render all lights unmasked
+        LightUtils.renderLightsBatch(
+            LightManager.instance.getAllLights(),
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
+
+        this.app.renderer.render({
+            container: this.transparentBgRect,
+            target: this.lightmapTexture,
+            clear: true
+        });
+        this.app.renderer.render({
+            container: this.tempLightmapContainer,
+            target: this.lightmapTexture,
+            clear: false
+        });
+    }
+
+    private drawScreenSpaceMask(
+        polygon: { x: number, y: number }[],
+        cameraOffset: { x: number; y: number }
+    ): void {
+        const ppm = Config.PixelsPerMeter;
+
+        // Build mask polygon in screen space (same space as tempLightmapContainer)
+        this.playerLightPolygonMask.clear();
+        this.playerLightPolygonMask.moveTo(
+            polygon[0].x * ppm - cameraOffset.x,
+            polygon[0].y * ppm - cameraOffset.y
+        );
+        for (let i = 1; i < polygon.length; i++) {
+            this.playerLightPolygonMask.lineTo(
+                polygon[i].x * ppm - cameraOffset.x,
+                polygon[i].y * ppm - cameraOffset.y
+            );
+        }
+        this.playerLightPolygonMask.closePath();
+        this.playerLightPolygonMask.fill({ color: 0xffffff, alpha: 1 });
+
+        // Apply mask to tempLightmapContainer for this pass
+        this.tempLightmapContainer.removeChildren();
+        this.tempLightmapContainer.addChild(this.playerLightPolygonMask);
+        this.tempLightmapContainer.mask = this.playerLightPolygonMask;
+    }
+
+    private renderMaskedLights(
+        overlappingLights: any[],
+        cameraOffset: { x: number; y: number },
+        screenBounds: { left: number; top: number; right: number; bottom: number }
+    ): void {
+        LightUtils.renderLightsBatch(
+            overlappingLights,
+            cameraOffset, screenBounds, this.tempLightmapContainer
+        );
+        this.app.renderer.render({
+            container: this.tempLightmapContainer,
+            target: this.lightmapTexture,
+            clear: false
+        });
+
+        // Restore mask
+        this.tempLightmapContainer.mask = null;
+    }
+
+    // Process any lights that exited fading out after all updates/renders
+    private processPendingLightRemovals(): void {
         LightManager.instance.processPendingRemovals();
     }
     
@@ -879,7 +970,9 @@ export class World {
                          `Player (Current Tile): [${Math.floor(this.player!.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player!.sprite.y / Config.PixelsPerMeter)}]\n` +
                          `Camera Offset: [${Math.floor(this.worldContainer.x)}, ${Math.floor(this.worldContainer.y)}]\n` +
                          `Levels Completed: ${this.numLevelsCompleted}\n` +
-                         `Seed: ${this.level!.getSeed()}`;
+                         `Seed: ${this.level!.getSeed()}\n` +
+                         `Mask Update Time: ${this.maskUpdateTime.toFixed(2)}ms\n` +
+                         `Light Render Time: ${this.lightRenderTime.toFixed(2)}ms`;
     }
 
     /**

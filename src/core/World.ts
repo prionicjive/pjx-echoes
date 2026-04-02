@@ -62,7 +62,6 @@ export class World {
     // Polygon caching for performance
     private cachedPlayerPolygon: { point: { x: number, y: number }, angle: number }[] | null = null;
     private lastPlayerLightUpdate: number = 0;
-    private maskPolygonDirty: boolean = true;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
@@ -763,7 +762,6 @@ export class World {
         this.playerViewMask.clear();
         this.playerLightPolygonMask.clear();
         this.cachedPlayerPolygon = null;
-        this.maskPolygonDirty = true;
     }
 
     private getCachedPlayerPolygon(): { point: { x: number, y: number }, angle: number }[] {
@@ -777,7 +775,6 @@ export class World {
         
         this.cachedPlayerPolygon = this.player.light.getLightPoints();
         this.lastPlayerLightUpdate = currentUpdate;
-        this.maskPolygonDirty = true;
         return this.cachedPlayerPolygon;
     }
 

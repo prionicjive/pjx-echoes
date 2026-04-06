@@ -13,6 +13,7 @@ import { LightUtils } from '../utils/LightUtils.ts';
 import { PhysicsManager } from '../physics/PhysicManager.ts';
 import { LidarManager } from '../lidar/LidarManager.ts';
 import { DebugOverlay } from './DebugOverlay.ts';
+import { MaskingSystem } from './MaskingSystem.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -59,10 +60,7 @@ export class World {
     private entityContainerGroup!: PIXI.Container;
     private playerViewMask!: PIXI.Graphics;
     private playerLightPolygonMask!: PIXI.Graphics;
-    
-    // Polygon caching for performance
-    private cachedPlayerPolygon: { point: { x: number, y: number }, angle: number }[] | null = null;
-    private lastPlayerLightUpdate: number = 0;
+    private maskingSystem!: MaskingSystem;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
@@ -96,7 +94,14 @@ export class World {
 
         // Instantiate the various PIXI containers
         this.initializeContainers();
-        
+
+        // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
+        this.maskingSystem = new MaskingSystem(
+            this.playerViewMask,
+            this.playerLightPolygonMask,
+            this.entityContainerGroup
+        );
+
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
@@ -123,7 +128,7 @@ export class World {
                 maskUpdateTime: this.maskUpdateTime,
                 lightRenderTime: this.lightRenderTime,
             }),
-            (enabled: boolean) => { if (!enabled) this.clearAllMasks(); },
+            (enabled: boolean) => { if (!enabled) this.maskingSystem.clearAllMasks(); },
             () => this.level?.getEdgesList() ?? []
         );
 
@@ -243,6 +248,7 @@ export class World {
 
     private tearDownWorld() {
         // Null out mutable references in subsystems before any destruction
+        this.maskingSystem.setPlayer(null);
         this.debugOverlay.setPlayer(null);
         this.debugOverlay.setLevel(null);
 
@@ -307,6 +313,7 @@ export class World {
         this.player = this.level.getPlayer();
 
         // Propagate mutable references to subsystems
+        this.maskingSystem.setPlayer(this.player);
         this.debugOverlay.setPlayer(this.player);
         this.debugOverlay.setLevel(this.level);
 
@@ -590,7 +597,8 @@ export class World {
         this.updateAndRenderLights();
 
         // Apply/clear the player-view mask on entity containers (must run after lights update the polygon)
-        this.updatePlayerViewMask();
+        this.maskingSystem.updatePlayerViewMask();
+        this.maskUpdateTime = this.maskingSystem.getMaskUpdateTime();
 
         // Render LIDAR (uses camera offset, same as lights)
         this.renderLidar();
@@ -708,76 +716,6 @@ export class World {
         this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
     }
 
-    private updatePlayerViewMask(): void {
-        const start = performance.now();
-        
-        if (!this.validatePlayerViewMode()) {
-            this.clearEntityMask();
-            this.maskUpdateTime = performance.now() - start;
-            return;
-        }
-
-        const lightPoints = this.getCachedPlayerPolygon();
-        if (lightPoints.length < 3) {
-            this.clearEntityMask();
-            this.maskUpdateTime = performance.now() - start;
-            return;
-        }
-
-        this.drawWorldSpaceMask(lightPoints);
-        this.entityContainerGroup.mask = this.playerViewMask;
-        
-        this.maskUpdateTime = performance.now() - start;
-    }
-
-    private validatePlayerViewMode(): boolean {
-        return Config.Debug?.onlyDisplayInPlayerView === true && 
-               this.player?.light !== null;
-    }
-
-    private clearEntityMask(): void {
-        this.entityContainerGroup.mask = null;
-    }
-
-    private clearAllMasks(): void {
-        this.entityContainerGroup.mask = null;
-        this.playerViewMask.clear();
-        this.playerLightPolygonMask.clear();
-        this.cachedPlayerPolygon = null;
-    }
-
-    private getCachedPlayerPolygon(): { point: { x: number, y: number }, angle: number }[] {
-        if (!this.player?.light) return [];
-        
-        // Use a simple timestamp-based cache invalidation
-        const currentUpdate = Date.now();
-        if (this.cachedPlayerPolygon && this.lastPlayerLightUpdate === currentUpdate) {
-            return this.cachedPlayerPolygon;
-        }
-        
-        this.cachedPlayerPolygon = this.player.light.getLightPoints();
-        this.lastPlayerLightUpdate = currentUpdate;
-        return this.cachedPlayerPolygon;
-    }
-
-    private drawWorldSpaceMask(lightPoints: { point: { x: number, y: number }, angle: number }[]): void {
-        const ppm = Config.PixelsPerMeter;
-
-        this.playerViewMask.clear();
-        this.playerViewMask.moveTo(
-            lightPoints[0].point.x * ppm,
-            lightPoints[0].point.y * ppm
-        );
-        for (let i = 1; i < lightPoints.length; i++) {
-            this.playerViewMask.lineTo(
-                lightPoints[i].point.x * ppm,
-                lightPoints[i].point.y * ppm
-            );
-        }
-        this.playerViewMask.closePath();
-        this.playerViewMask.fill({ color: 0xffffff, alpha: 1 });
-    }
-
     private renderLidar() {
         this.lidarManager.render(this.lidarContainer);
     }
@@ -843,7 +781,7 @@ export class World {
         // === PASS 2: Render overlapping non-player lights, masked to player's visible polygon ===
         const playerPos = playerLight.getPosition();
         const playerRadius = playerLight.radius;
-        const polygon = this.getCachedPlayerPolygon().map(p => p.point);
+        const polygon = (this.player?.light?.getLightPoints() ?? []).map(p => p.point);
         const overlappingLights = LightManager.instance.getAllLights().filter(light => {
             if (light.id === playerLight.id) return false; // already rendered
             const lp = light.getPosition();

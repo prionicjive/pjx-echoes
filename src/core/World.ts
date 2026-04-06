@@ -14,6 +14,7 @@ import { PhysicsManager } from '../physics/PhysicManager.ts';
 import { LidarManager } from '../lidar/LidarManager.ts';
 import { DebugOverlay } from './DebugOverlay.ts';
 import { MaskingSystem } from './MaskingSystem.ts';
+import { CameraManager } from './CameraManager.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -61,6 +62,7 @@ export class World {
     private playerViewMask!: PIXI.Graphics;
     private playerLightPolygonMask!: PIXI.Graphics;
     private maskingSystem!: MaskingSystem;
+    private cameraManager!: CameraManager;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
@@ -100,6 +102,13 @@ export class World {
             this.playerViewMask,
             this.playerLightPolygonMask,
             this.entityContainerGroup
+        );
+
+        // Initialize camera manager (depends on containers from initializeContainers)
+        this.cameraManager = new CameraManager(
+            this.worldContainer,
+            this.lightsContainer,
+            () => ({ width: this.viewportWidth, height: this.viewportHeight })
         );
 
         // Set up viewport dimensions (Will change on resize)
@@ -248,6 +257,8 @@ export class World {
 
     private tearDownWorld() {
         // Null out mutable references in subsystems before any destruction
+        this.cameraManager.setPlayer(null);
+        this.cameraManager.setLevel(null);
         this.maskingSystem.setPlayer(null);
         this.debugOverlay.setPlayer(null);
         this.debugOverlay.setLevel(null);
@@ -313,12 +324,14 @@ export class World {
         this.player = this.level.getPlayer();
 
         // Propagate mutable references to subsystems
+        this.cameraManager.setPlayer(this.player);
+        this.cameraManager.setLevel(this.level);
         this.maskingSystem.setPlayer(this.player);
         this.debugOverlay.setPlayer(this.player);
         this.debugOverlay.setLevel(this.level);
 
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();
+        this.cameraManager.instantlyCenterCamera();
     }
 
     private tearDownEntities() {
@@ -520,45 +533,6 @@ export class World {
     }
 
     /**
-     * Instantly centers the camera on the player or the level, depending on which is smaller.
-     * Used at game start to avoid jarring camera jumps.
-     */
-    private instantlyCenterCamera() {
-        // If the level is smaller than the screen, center it. Otherwise, center on the player.
-        if (!this.player || !this.worldContainer) return;
-
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
-
-        // Center if level is smaller than screen
-        if (levelWidthInPixels <= screenWidth) {
-            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterX = this.viewportWidth / 2;
-            const targetX = -this.player.sprite.x + screenCenterX;
-            this.worldContainer.x += (targetX - this.worldContainer.x);
-
-            // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
-         }
-
-        if (levelHeightInPixels <= screenHeight) {
-            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterY = this.viewportHeight / 2;
-            const targetY = -this.player.sprite.y + screenCenterY;
-            this.worldContainer.y += (targetY - this.worldContainer.y);
-
-            // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
-        }
-    }
-
-    /**
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
@@ -591,7 +565,7 @@ export class World {
         this.lidarManager.update(deltaTime);
 
         // Update camera
-        this.updateCamera(deltaTime);
+        this.cameraManager.updateCamera(deltaTime);
 
         // Update and render the lights
         this.updateAndRenderLights();
@@ -633,87 +607,6 @@ export class World {
 
         // Reset flags
         this.inputManager.update();
-    }
-
-     /**
-     * Handles camera movement each frame, using soft-follow logic and dead zone.
-     */
-     private updateCamera(deltaTime: number) {
-        // If the level is smaller than the screen, keep it centered.
-        // Otherwise, use soft-follow logic with a dead zone to track the player.
-
-        // Smooth camera follow
-        if (!this.player || !this.player.sprite || !this.worldContainer) return;
-
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
-
-        // Center on x-axis if level is narrower than screen
-        if (levelWidthInPixels <= screenWidth) {
-            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterX = this.viewportWidth / 2;
-
-            // World coordinates of screen center
-            const cameraX = -this.worldContainer.x;
-
-            // Get ball position relative to camera center
-            const offsetX = this.player.sprite.x - cameraX;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveX = 0;
-
-            if (offsetX < screenCenterX - Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX - Config.Camera.DeadZone.width / 2);
-            } else if (offsetX > screenCenterX + Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX + Config.Camera.DeadZone.width / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
-            this.worldContainer.x -= moveX * Config.Camera.lerpFactor * deltaTime;
-
-            // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
-        }
-
-        // Center on y-axis if level is shorter than screen
-        if (levelHeightInPixels <= screenHeight) {
-            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterY = this.viewportHeight / 2;
-            
-            // World coordinates of screen center
-            const cameraY = -this.worldContainer.y;
-
-            // Get ball position relative to camera center
-            const offsetY = this.player.sprite.y - cameraY;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveY = 0;
-
-            if (offsetY < screenCenterY - Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY - Config.Camera.DeadZone.height / 2);
-            } else if (offsetY > screenCenterY + Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY + Config.Camera.DeadZone.height / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
-            this.worldContainer.y -= moveY * Config.Camera.lerpFactor * deltaTime;
-            
-            // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
-        }
-
-        // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
-        this.counteractWorldTransform();
-    }
-
-    private counteractWorldTransform() {
-        this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
     }
 
     private renderLidar() {
@@ -895,7 +788,7 @@ export class World {
         this.resizeTexturesAndGraphicalElements(width, height);
     
         // Optionally, recenter camera or update camera logic
-        this.instantlyCenterCamera();
+        this.cameraManager.instantlyCenterCamera();
     }
 
     private resizeTexturesAndGraphicalElements(width: number, height: number) {

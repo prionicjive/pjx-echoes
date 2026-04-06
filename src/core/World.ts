@@ -2,7 +2,6 @@ import { BloomFilter, CRTFilter } from 'pixi-filters';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
-import { EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
 import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
@@ -15,6 +14,7 @@ import { DebugOverlay } from './DebugOverlay.ts';
 import { MaskingSystem } from './MaskingSystem.ts';
 import { CameraManager } from './CameraManager.ts';
 import { LightRenderPipeline } from './LightRenderPipeline.ts';
+import { CollisionDispatcher } from './CollisionDispatcher.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -86,8 +86,10 @@ export class World {
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
 
-    // Stored bound handler so the same reference is used for both on() and off()
-    private readonly onBeginContactBound = this.onBeginContact.bind(this);
+    private collisionDispatcher!: CollisionDispatcher;
+    // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
+    private readonly onBeginContactBound = (contact: planck.Contact) =>
+        this.collisionDispatcher.handleContact(contact);
 
     constructor(app: PIXI.Application) {
         this.app = app;
@@ -97,6 +99,13 @@ export class World {
 
         // Instantiate the various PIXI containers
         this.initializeContainers();
+
+        // Initialize collision dispatcher (depends on preEntitiesContainer from initializeContainers)
+        this.collisionDispatcher = new CollisionDispatcher(
+            this.preEntitiesContainer,
+            () => { this.pendingReset = true; },
+            () => { this.numLevelsCompleted++; }
+        );
 
         // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
         this.maskingSystem = new MaskingSystem(
@@ -267,6 +276,8 @@ export class World {
 
     private tearDownWorld() {
         // Null out mutable references in subsystems before any destruction
+        this.collisionDispatcher.setPlayer(null);
+        this.collisionDispatcher.setLevel(null);
         this.cameraManager.setPlayer(null);
         this.cameraManager.setLevel(null);
         this.maskingSystem.setPlayer(null);
@@ -283,8 +294,8 @@ export class World {
         // Remove all lights
         LightManager.instance.removeAllLights();
 
-        // Remove LIDAR state
-        this.lidarManager.destroy();
+        // Reset LIDAR state (clears active pulses/glows without destroying the Graphics object)
+        this.lidarManager.reset();
 
         // Remove all effects
         ParticleEffectManager.instance.removeAllEffects();
@@ -335,6 +346,8 @@ export class World {
         this.player = this.level.getPlayer();
 
         // Propagate mutable references to subsystems
+        this.collisionDispatcher.setPlayer(this.player);
+        this.collisionDispatcher.setLevel(this.level);
         this.cameraManager.setPlayer(this.player);
         this.cameraManager.setLevel(this.level);
         this.maskingSystem.setPlayer(this.player);
@@ -404,146 +417,6 @@ export class World {
         this.app.stage.addChild(this.uiContainer); // Added lastly to the stage directly
     }
     
-    /**
-     * Handles collision events from Planck.js, such as the player reaching a exit tile
-     * or interacting with walls.
-     * @param {planck.Contact} contact - The collision contact event from Planck.js.
-     */
-    private onBeginContact(contact: planck.Contact) {
-        const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
-        const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
-
-        if (
-            (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
-            (aData.type === Config.Exit.type && bData.type === Config.Player.type)
-        ) {
-            //console.log("Player reached exit tile!");
-            
-            // TODO Show a "Level Complete" screen
-            this.numLevelsCompleted++;
-            this.pendingReset = true;
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Player.type)
-        ) {
-            // TODO Handle player hitting an edge
-            //console.log("Player hit an edge!");
-            if (Config.Debug.showCollisionMarkers) {
-                // Access the manifold to get the contact points
-                const manifold = contact.getManifold();
-                if (manifold.pointCount > 0) {
-                    const worldManifold = contact.getWorldManifold(null);
-
-                    if (!worldManifold) {
-                        return;
-                    }
-
-                    for (let i = 0; i < manifold.pointCount; i++) {
-                        const point = worldManifold.points[i]; // { x, y }
-
-                        //console.log("Sentry/Edge Collision point: ", point);
-                        ParticleEffectManager.instance.playEffect(
-                            this.preEntitiesContainer, 
-                            "EdgeImpact", { 
-                                x: point.x * Config.PixelsPerMeter,
-                                y: point.y * Config.PixelsPerMeter 
-                            },
-                            5
-                        );
-                    }
-                }
-            }
-        } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
-        ) {
-            // TODO Handle sentry hitting an edge
-            //console.log("Sentry hit an edge!");
-
-            if (Config.Debug.showCollisionMarkers) {
-                // Access the manifold to get the contact points
-                const manifold = contact.getManifold();
-                if (manifold.pointCount > 0) {
-                    const worldManifold = contact.getWorldManifold(null);
-
-                    if (!worldManifold) {
-                        return;
-                    }
-
-                    for (let i = 0; i < manifold.pointCount; i++) {
-                        const point = worldManifold.points[i]; // { x, y }
-
-                        //console.log("Sentry/Edge Collision point: ", point);
-                        ParticleEffectManager.instance.playEffect(
-                            this.preEntitiesContainer, 
-                            "EdgeImpact", { 
-                                x: point.x * Config.PixelsPerMeter,
-                                y: point.y * Config.PixelsPerMeter 
-                            },
-                            5
-                        );
-                    }
-                }
-            }
-
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
-            (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
-        ) {
-            // Handle player hitting a sentry
-            //console.log("Player hit a sentry!");
-
-            const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
-            if (sentryData.entity) {
-                this.player!.onPickup(sentryData.type);
-                this.level!.gentlyDestroyEntity(sentryData.entity);
-            }
-
-            // Disable the contact to prevent the sentry from physically reacting with the player
-            contact.setEnabled(false);
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
-            (aData.type === Config.Torch.type && bData.type === Config.Player.type)
-        ) {
-            // Handle player hitting a torch
-            //console.log("Player hit a torch!");
-
-            const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
-            if (torchEntity.entity) {
-                this.player!.onPickup(torchEntity.type);
-                this.level!.gentlyDestroyEntity(torchEntity.entity);
-            }
-        } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
-        ) {
-            // TODO Handle a sentry hitting another sentry
-            //console.log("Sentry hit another sentry!");
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
-            (aData.type === Config.Anti.type && bData.type === Config.Player.type)
-        ) {
-            // Pick up and remove anti
-            //console.log("Player picked up an anti!");
-
-            const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
-            if (antiEntity.entity) {
-                this.player!.onPickup(antiEntity.type);
-                this.level!.gentlyDestroyEntity(antiEntity.entity);
-            }
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Switch.type) ||
-            (aData.type === Config.Switch.type && bData.type === Config.Player.type)
-        ) {
-            // Press and remove swtich
-            //console.log("Player pressed a switch!");
-
-            const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
-            if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
-                this.level!.onSwitchPressed(switchEntity.groupId);
-            }
-        }
-    }
-
     /**
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.

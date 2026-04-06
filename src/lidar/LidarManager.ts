@@ -85,13 +85,20 @@ export class LidarManager {
         container.addChild(this.edgeGlowGraphics);
     }
 
-    destroy(): void {
+    /** Clears all active state between levels. Does not destroy the Graphics object. */
+    reset(): void {
         if (this.activePulse) {
             this.activePulse.destroy();
             this.activePulse = null;
         }
         this.activeGlows = [];
-        this.edgeGlowGraphics.destroy();
+        this.edgeGlowGraphics.clear();
         this.cooldownTimer = 0;
+    }
+
+    /** Full teardown — only call when the manager itself will no longer be used. */
+    destroy(): void {
+        this.reset();
+        this.edgeGlowGraphics.destroy();
     }
 }

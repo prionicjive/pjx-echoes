@@ -12,6 +12,7 @@ import { LevelUtils } from '../utils/LevelUtils.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 import { PhysicsManager } from '../physics/PhysicManager.ts';
 import { LidarManager } from '../lidar/LidarManager.ts';
+import { DebugOverlay } from './DebugOverlay.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -68,6 +69,7 @@ export class World {
 
     // Debug text
     private debugText!: PIXI.Text;
+    private debugOverlay!: DebugOverlay;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -107,6 +109,23 @@ export class World {
 
         // Initialize debug text
         this.initializeDebugText();
+
+        // Initialize debug overlay (depends on debugText, inputManager, lidarManager)
+        this.debugOverlay = new DebugOverlay(
+            this.debugText,
+            this.inputManager,
+            this.lightsContainer,
+            this.levelGeometryContainer,
+            this.lidarManager,
+            () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
+            () => ({
+                numLevelsCompleted: this.numLevelsCompleted,
+                maskUpdateTime: this.maskUpdateTime,
+                lightRenderTime: this.lightRenderTime,
+            }),
+            (enabled: boolean) => { if (!enabled) this.clearAllMasks(); },
+            () => this.level?.getEdgesList() ?? []
+        );
 
         // TODO Handle additional setup if needed
 
@@ -223,6 +242,10 @@ export class World {
     }
 
     private tearDownWorld() {
+        // Null out mutable references in subsystems before any destruction
+        this.debugOverlay.setPlayer(null);
+        this.debugOverlay.setLevel(null);
+
         // Tear down dynamic entities
         this.tearDownEntities();
         
@@ -283,8 +306,12 @@ export class World {
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();
 
+        // Propagate mutable references to subsystems
+        this.debugOverlay.setPlayer(this.player);
+        this.debugOverlay.setLevel(this.level);
+
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();      
+        this.instantlyCenterCamera();
     }
 
     private tearDownEntities() {
@@ -530,7 +557,7 @@ export class World {
      */
     update(deltaTime: number) { 
         // Handle debugging input
-        this.handleDebugInput();
+        this.debugOverlay.handleDebugInput();
 
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
@@ -573,55 +600,10 @@ export class World {
 
         // Update debug text
         if (Config.Debug.showDebugText) {
-            this.updateDebugText();
+            this.debugOverlay.updateDebugText();
         }
     }
 
-    private handleDebugInput() {
-        // Process any debugging input
-
-        // Toggle debug text
-        if (this.inputManager.getKeysState().keys.get("`")?.justPressed) {
-            Config.Debug.showDebugText = !Config.Debug.showDebugText;
-            this.debugText.visible = Config.Debug.showDebugText;
-        }
-
-        // Toggle lights
-        if (this.inputManager.getKeysState().keys.get("1")?.justPressed) {
-            Config.Debug.showLights = !Config.Debug.showLights;
-            this.lightsContainer.visible = Config.Debug.showLights;
-        }
-        // Toggle level geometry
-        if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
-            Config.Debug.showLevelGeometry = !Config.Debug.showLevelGeometry;
-            this.levelGeometryContainer.visible = Config.Debug.showLevelGeometry;
-        }
-
-        // Toggle new collision "markers"
-        if (this.inputManager.getKeysState().keys.get("3")?.justPressed) {
-            Config.Debug.showCollisionMarkers = !Config.Debug.showCollisionMarkers;
-        }
-
-        // Toggle player view mode (entities only visible inside the player's light polygon)
-        if (this.inputManager.getKeysState().keys.get("4")?.justPressed) {
-            Config.Debug.onlyDisplayInPlayerView = !Config.Debug.onlyDisplayInPlayerView;
-            if (!Config.Debug.onlyDisplayInPlayerView) {
-                this.clearAllMasks();
-            }
-        }
-
-        // Fire LIDAR pulse
-        if (this.inputManager.getKeysState().keys.get(" ")?.justPressed) {
-            if (this.player && this.level) {
-                const playerPos = this.player.body!.getPosition();
-                this.lidarManager.fire(
-                    { x: playerPos.x, y: playerPos.y },
-                    this.level.getEdgesList()
-                );
-            }
-        }
-    }
-    
     private updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 
@@ -957,19 +939,6 @@ export class World {
         this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
     
         // TODO Update any other filters
-    }
-
-    private updateDebugText() {
-        if (!this.debugText) return;
-        
-        this.debugText.text = `FPS: ${Math.round(PIXI.Ticker.shared.FPS)}\n` +
-                         `Player (World): [${Math.floor(this.player!.sprite.x)}, ${Math.floor(this.player!.sprite.y)}]\n` +
-                         `Player (Current Tile): [${Math.floor(this.player!.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player!.sprite.y / Config.PixelsPerMeter)}]\n` +
-                         `Camera Offset: [${Math.floor(this.worldContainer.x)}, ${Math.floor(this.worldContainer.y)}]\n` +
-                         `Levels Completed: ${this.numLevelsCompleted}\n` +
-                         `Seed: ${this.level!.getSeed()}\n` +
-                         `Mask Update Time: ${this.maskUpdateTime.toFixed(2)}ms\n` +
-                         `Light Render Time: ${this.lightRenderTime.toFixed(2)}ms`;
     }
 
     /**

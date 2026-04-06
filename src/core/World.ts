@@ -57,20 +57,23 @@ export class World {
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
     
-    // Player view mode masking
+    // Player view mode masking containers (owned here; passed to MaskingSystem/LightRenderPipeline)
     private entityContainerGroup!: PIXI.Container;
     private playerViewMask!: PIXI.Graphics;
     private playerLightPolygonMask!: PIXI.Graphics;
-    private maskingSystem!: MaskingSystem;
+
+    // Subsystems
+    private collisionDispatcher!: CollisionDispatcher;
     private cameraManager!: CameraManager;
+    private maskingSystem!: MaskingSystem;
     private lightRenderPipeline!: LightRenderPipeline;
+    private debugOverlay!: DebugOverlay;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
 
     // Debug text
     private debugText!: PIXI.Text;
-    private debugOverlay!: DebugOverlay;
 
     // Need for viewport calculations
     private viewportWidth: number;
@@ -78,15 +81,10 @@ export class World {
 
     // Interesting stats to keep track of
     private numLevelsCompleted: number = 0;
-    
-    // Performance metrics for debugging
-    private maskUpdateTime: number = 0;
-    private lightRenderTime: number = 0;
 
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
 
-    private collisionDispatcher!: CollisionDispatcher;
     // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
     private readonly onBeginContactBound = (contact: planck.Contact) =>
         this.collisionDispatcher.handleContact(contact);
@@ -153,8 +151,8 @@ export class World {
             () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
             () => ({
                 numLevelsCompleted: this.numLevelsCompleted,
-                maskUpdateTime: this.maskUpdateTime,
-                lightRenderTime: this.lightRenderTime,
+                maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
+                lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
             }),
             (enabled: boolean) => { if (!enabled) this.maskingSystem.clearAllMasks(); },
             () => this.level?.getEdgesList() ?? []
@@ -458,11 +456,9 @@ export class World {
             this.viewportWidth,
             this.viewportHeight
         );
-        this.lightRenderTime = this.lightRenderPipeline.getLightRenderTime();
 
         // Apply/clear the player-view mask on entity containers (must run after lights update the polygon)
         this.maskingSystem.updatePlayerViewMask();
-        this.maskUpdateTime = this.maskingSystem.getMaskUpdateTime();
 
         // Render LIDAR (uses camera offset, same as lights)
         this.renderLidar();

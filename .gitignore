@@ -29,3 +29,6 @@ dist-ssr
 
 # Windsurf
 .windsurf/
+
+# Claude
+.claude

@@ -1,11 +1,8 @@
-import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
@@ -21,28 +18,10 @@ export interface SentryOptions {
 
 export class Sentry extends BaseEntity {
     constructor(options: SentryOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Sentry.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Sentry.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Sentry.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Sentry.sprite.color
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Sentry.radius,
-            y: options.spawnPoint.y + Config.Sentry.radius
-        };
-
-        // Create dynamic body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Sentry.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Sentry;
+        const center = Sentry.centerOf(options.spawnPoint, preset);
+        const sprite = Sentry.buildSprite(preset, options.spawnPoint);
+        const body = Sentry.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         // Create the light
         const light = EntitiesConfig.Sentry.light ? new DynamicLight(
@@ -81,8 +60,7 @@ export class Sentry extends BaseEntity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    // @ts-ignore
-    update(deltaTime: number) {
+    override update(_deltaTime: number) {
         // Check to see if the sentry is locked to a certain axis and if so, nudge it away
         const epsilon = 0.01;
         const kick = 1;

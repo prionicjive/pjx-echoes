@@ -6,7 +6,6 @@
  * @module Player
  */
 
-import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { PointerState, TouchState } from '../input/InputManager';
@@ -14,7 +13,6 @@ import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntityType } from './types';
@@ -29,28 +27,10 @@ export interface PlayerOptions {
 
 export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Player.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Player.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Player.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Player.sprite.color
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Player.radius,
-            y: options.spawnPoint.y + Config.Player.radius
-        };
-
-        // Create dynamic body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Player.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Player;
+        const center = Player.centerOf(options.spawnPoint, preset);
+        const sprite = Player.buildSprite(preset, options.spawnPoint);
+        const body = Player.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         // Create the light
         const light = new DynamicLight(
@@ -301,8 +281,7 @@ export class Player extends BaseEntity {
      * Updates the player's sprite position to match the physics body.
      * Should be called every frame.
      */
-    // @ts-ignore
-    update(deltaTime: number) {
+    override update(_deltaTime: number) {
         // Keep the sprite visually synced with the physics body
         this.sprite.x = (this.body!.getPosition().x - Config.Player.radius) * Config.PixelsPerMeter;
         this.sprite.y = (this.body!.getPosition().y - Config.Player.radius) * Config.PixelsPerMeter;

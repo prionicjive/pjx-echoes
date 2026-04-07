@@ -1,15 +1,12 @@
 import * as PIXI from 'pixi.js';
-import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
+import { ParticleEffect } from '../particles/ParticleEffect';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityType } from './types';
-import { ParticleEffect } from '../particles/ParticleEffect';
 import { EntityUtils } from '../utils/EntityUtils';
 import { ColorUtils } from '../utils/ColorUtils';
 
@@ -24,32 +21,12 @@ export interface SwitchOptions {
 export class Switch extends BaseEntity {
     constructor(options: SwitchOptions) {
         const baseColor = options.color;
-        //const complementaryColor = ColorUtils.getComplementary(baseColor);
         const darkenedColor = ColorUtils.darken(baseColor, 0.2);
         const lightenedColor = ColorUtils.lighten(baseColor, 0.2);
-
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Switch.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Switch.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Switch.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: baseColor
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Switch.width / 2,
-            y: options.spawnPoint.y + Config.Switch.height / 2
-        };
-
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Switch.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Switch;
+        const center = Switch.centerOf(options.spawnPoint, preset);
+        const sprite = Switch.buildSprite(preset, options.spawnPoint, baseColor);
+        const body = Switch.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         // Construct a static light
         const light = new StaticLight(
@@ -94,8 +71,4 @@ export class Switch extends BaseEntity {
         this.particleEffect!.play();
     }
 
-    // @ts-ignore
-    update(deltaTime: number) {
-        // No special update logic... for now
-    }
 }

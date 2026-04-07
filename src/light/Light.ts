@@ -9,7 +9,7 @@ import { Point, Segment } from '../utils/types';
 import { EntityUtils } from '../utils/EntityUtils';
 
 export interface LightOptions {
-    baseRadius: number; // TODO BAD PRACTICE - We are setting and using this directly, SHOULD be a radius property on the Light object
+    baseRadius: number;
     startColor: number;
     endColor: number;
     radiusVariance: number;
@@ -55,7 +55,10 @@ export class Light {
     protected colorTween?: gsap.core.Tween;
     protected radiusTween?: gsap.core.Tween;
     protected alphaTween?: gsap.core.Tween;
-    protected tweenables: { radius: number, tint: number, alpha: number };
+    protected tweenables: { radius: number; tint: number; alpha: number };
+
+    // Set to true whenever lightPoints changes; render() skips the polygon redraw when false
+    protected isDirty: boolean = true;
 
     constructor(pos: Point, collisionData: Segment[], options: LightOptions) {
         if (new.target === Light) {
@@ -112,12 +115,8 @@ export class Light {
         this.mask = new PIXI.Graphics();
         this.sprite.mask = this.mask;
     
-        // Set up tweenable properties
-        this.tweenables = {
-            radius: this.radius,
-            alpha: this.alpha,
-            tint: this.tint
-        };
+        // Plain object used as tween target — avoids GSAP PixiPlugin detecting Light as a DisplayObject
+        this.tweenables = { radius: this.radius, alpha: this.alpha, tint: this.tint };
         this.setupTweens();
 
         // Generated unique Id
@@ -128,13 +127,13 @@ export class Light {
 
    public setupTweens(): void { };
 
-    // @ts-ignore
-    public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
+    // duration is accepted here for API compatibility with DynamicLight's override, but is not used
+    // by the base class (StaticLight doesn't animate radius changes)
+    public increaseBaseRadius(newRadius: number, maxRadius?: number, _duration?: number) {
         this.options.baseRadius = maxRadius !== undefined ? Math.min(newRadius, maxRadius) : newRadius;
     }
 
-    // @ts-ignore
-    public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
+    public decreaseBaseRadius(newRadius: number, minRadius?: number, _duration?: number) {
         this.options.baseRadius = minRadius !== undefined ? Math.max(newRadius, minRadius) : newRadius;
     }
     
@@ -144,7 +143,7 @@ export class Light {
             this.pos = {...pos};
         }
 
-        // Update with tweenable values
+        // Copy tweened values back to properties (tweenables is a plain object — avoids PixiPlugin interference)
         this.radius = this.tweenables.radius;
         this.alpha = this.tweenables.alpha;
         this.tint = this.tweenables.tint;
@@ -159,6 +158,9 @@ export class Light {
     }
 
     public render() {
+        if (!this.isDirty) return;
+        this.isDirty = false;
+
         // Assume this.pos is the light's world position in meters
         const centerX = this.pos.x * Config.PixelsPerMeter;
         const centerY = this.pos.y * Config.PixelsPerMeter;
@@ -179,6 +181,34 @@ export class Light {
         );
         this.mask.fill();
     };
+
+    protected flickerAlpha(): void {
+        if (this.alphaTween) {
+            this.alphaTween.kill();
+        }
+        this.alphaTween = gsap.to(this.tweenables, {
+            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
+            duration: this.options.flickerAlphaDuration + Math.random() * this.options.flickerAlphaDurationVariance,
+            ease: 'power1.inOut',
+            onComplete: () => this.flickerAlpha()
+        });
+    }
+
+    protected oscillateColor(startColor: number, endColor: number): void {
+        if (this.colorTween) {
+            this.colorTween.kill();
+        }
+        this.colorTween = gsap.fromTo(this.tweenables, {
+            tint: startColor,
+        }, {
+            duration: this.options.oscillateColorDuration + (Math.random() * this.options.oscillateColorDurationVariance),
+            pixi: { tint: endColor },
+            yoyo: true,
+            delay: this.options.oscillateColorDelay + (Math.random() * this.options.oscillateColorDelayVariance),
+            repeat: -1
+        });
+        this.colorTween.progress(Math.random());
+    }
 
     public setCollisionData(edges: Segment[]) {
         this.collisionData = edges;
@@ -238,6 +268,7 @@ export class DynamicLight extends Light {
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
+        this.isDirty = true;
     }
 
     public increaseBaseRadius(newRadius: number, maxRadius?: number, duration: number = 0.5) {
@@ -256,7 +287,7 @@ export class DynamicLight extends Light {
 
     public decreaseBaseRadius(newRadius: number, minRadius?: number, duration: number = 0.5) {
         super.decreaseBaseRadius(newRadius, minRadius, duration);
-        
+
         // Kill any previous change tweens
         if (this.changeRadiusTween) this.changeRadiusTween.kill();
 
@@ -273,20 +304,6 @@ export class DynamicLight extends Light {
         super.destroy();
     }
 
-    private flickerAlpha() {
-        // Kill any previous tweens
-        if (this.alphaTween) {
-            this.alphaTween.kill();
-        }
-
-        this.alphaTween = gsap.to(this.tweenables, {
-            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: this.options.flickerAlphaDuration + Math.random() * this.options.flickerAlphaDurationVariance,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerAlpha()
-        });
-    }
-
     // TODO Put in some other Light-related file / class
     private flickerRadius() {
         // Kill any previous tweens
@@ -295,33 +312,13 @@ export class DynamicLight extends Light {
         }
 
         this.radiusTween = gsap.to(this.tweenables, {
-            radius: this.options.baseRadius + Math.random() * this.options.radiusVariance, 
+            radius: this.options.baseRadius + Math.random() * this.options.radiusVariance,
             duration: 1.5 + Math.random() * 0.5,
             ease: 'power1.inOut',
             onComplete: () => this.flickerRadius()
         });
     }
 
-    // TODO Put in some other light-related file / class
-    private oscillateColor(startColor: number, endColor: number) {
-        // Kill any previous tweens
-        if (this.colorTween) {
-            this.colorTween.kill();
-        }
-
-        this.colorTween = gsap.fromTo(this.tweenables, {
-            tint: startColor,
-        }, {
-            duration: this.options.oscillateColorDuration + (Math.random() * this.options.oscillateColorDurationVariance),
-            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
-            yoyo: true,
-            delay: this.options.oscillateColorDelay + (Math.random() * this.options.oscillateColorDelayVariance),
-            repeat: -1
-        });
-
-        // Randomize the starting point
-        this.colorTween.progress(Math.random());
-    }
 }
 
 export class StaticLight extends Light {
@@ -356,6 +353,7 @@ export class StaticLight extends Light {
         if (this.lightPoints.length === 0) {
             this.lightPoints = this.generateFallbackLightPoints(pos);
         }
+        this.isDirty = true;
     }
 
     // Generate fallback light points as a circle when no intersections are found
@@ -412,38 +410,4 @@ export class StaticLight extends Light {
         this.oscillateColor(this.options.startColor, this.options.endColor);      
     }
 
-    private flickerAlpha() {
-        // Kill any previous tweens
-        if (this.alphaTween) {
-            this.alphaTween.kill();
-        }
-
-        this.alphaTween = gsap.to(this.tweenables, {
-            alpha: this.options.baseAlpha + Math.random() * this.options.alphaVariance,
-            duration: this.options.flickerAlphaDuration + Math.random() * this.options.flickerAlphaDurationVariance,
-            ease: 'power1.inOut',
-            onComplete: () => this.flickerAlpha()
-        });
-    }
-
-    // TODO Put in some other light-related file / class
-    private oscillateColor(startColor: number, endColor: number) {
-        // Kill any previous tweens
-        if (this.colorTween) {
-            this.colorTween.kill();
-        }
-
-        this.colorTween = gsap.fromTo(this.tweenables, {
-            tint: startColor,
-        }, {
-            duration: this.options.oscillateColorDuration + (Math.random() * this.options.oscillateColorDurationVariance),
-            pixi: { tint: endColor }, // Use PIXI plugin for smoother color change
-            yoyo: true,
-            delay: this.options.oscillateColorDelay + (Math.random() * this.options.oscillateColorDelayVariance),
-            repeat: -1
-        });
-
-        // Randomize the starting point
-        this.colorTween.progress(Math.random());
-    }
 }

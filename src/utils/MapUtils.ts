@@ -440,16 +440,6 @@ export class MapUtils {
         }
     }
 
-    /**
-     * Renders a map to the console using ASCII art.
-     * Walls are shown as blocks, open spaces as spaces.
-     * @param {number[][]} map - The map to render.
-     */
-    static renderMap(map: number[][]): void {
-        console.clear();
-        console.log(map.map(row => row.map(cell => cell ? "█" : " ").join("")).join("\n"));
-    }    
-
     static createMergedHorizontalEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
         const edgeSegments: Segment[] = [];
 

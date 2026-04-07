@@ -104,7 +104,6 @@ export class Player extends BaseEntity {
                 x: touchState.lastSwipeDirection.x * touchState.lastSwipeSpeedPixelsPerSecond,
                 y: touchState.lastSwipeDirection.y * touchState.lastSwipeSpeedPixelsPerSecond
             }
-            console.log(`Handling swipe!    \nVelocity (px/s): x:${velocityInPixelsPerSecond.x} y:${velocityInPixelsPerSecond.y}\nSpeed (px/s): ${touchState.lastSwipeSpeedPixelsPerSecond}`);
             this.handleSwipe(velocityInPixelsPerSecond);
             return;
         }

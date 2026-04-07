@@ -25,7 +25,14 @@ No test runner is configured.
 src/
 ├── main.ts                         # Entry point → Game.init()
 ├── config/
-│   ├── Config.ts                   # Master config (physics, collision masks, movement, debug flags)
+│   ├── Config.ts                   # Barrel re-export: assembles domain configs + entity type constants
+│   ├── CameraConfig.ts             # Camera lerp and dead-zone settings
+│   ├── DebugConfig.ts              # Debug flags (mutated at runtime by DebugOverlay)
+│   ├── FiltersConfig.ts            # Bloom and CRT post-processing filter params
+│   ├── MaskConfig.ts               # Player-view mask fill settings
+│   ├── MovementConfig.ts           # Movement forces, impulse, gesture/swipe params
+│   ├── PhysicsConfig.ts            # Planck.js collision bitmasks, body damping/restitution
+│   ├── SpritesheetConfig.ts        # Asset paths and texture name constants
 │   ├── EntitiesConfig.ts           # Per-entity presets (sprite, body, light, particle)
 │   ├── LightsConfig.ts             # Per-light-type config (radius, alpha, colors, flicker)
 │   ├── LidarConfig.ts              # LIDAR pulse config (expansion, rays, glow, cooldown)
@@ -33,14 +40,19 @@ src/
 │   └── ProcGenLevelsConfig.ts      # Level gen presets ("Standard", "Simple")
 ├── core/
 │   ├── Game.ts                     # PIXI app init, asset loading, resize, ticker
-│   └── World.ts                    # Physics, level lifecycle, camera, lighting, LIDAR, masking
+│   ├── World.ts                    # Orchestrator: physics step, level lifecycle, game loop
+│   ├── CameraManager.ts            # Dead-zone + lerp camera tracking
+│   ├── CollisionDispatcher.ts      # Contact callback routing across all entity pair types
+│   ├── DebugOverlay.ts             # Debug key bindings and on-screen text
+│   ├── LightRenderPipeline.ts      # Two-pass offscreen light rendering with additive blending
+│   └── MaskingSystem.ts            # Player-view polygon mask application
 ├── entities/                       # BaseEntity + Player, Sentry, Exit, Gate, Switch, Torch, Anti
 ├── level/                          # Level, LevelSkeleton, LevelContext, ExitGroup
 ├── lidar/                          # LidarManager, LidarPulse, EdgeGlowSegment
 ├── light/                          # Light (Dynamic/Static), LightManager
 ├── particles/                      # ParticleEffect (pool-based), ParticleEffectManager
 ├── physics/                        # PhysicsManager (deferred body destruction)
-├── input/                          # InputManager (mouse, touch, keyboard, swipe gestures)
+├── input/                          # InputManager (mouse, touch, keyboard), GestureRecognizer (swipe)
 ├── utils/                          # MapUtils, LevelUtils, LightUtils, CollisionUtils,
 │                                   #   PhysicsUtils, SpriteUtils, EntityUtils, GraphicsUtils,
 │                                   #   ColorUtils, MathUtils, RandomGenerator
@@ -53,20 +65,23 @@ vite.config.ts                      # Multi-entry: index.html + particles.html
 
 ## Architecture
 
-**Game loop** (`World.update`): debug input → player input → deferred physics cleanup → `world.step()` → entity updates → particles → camera → light rendering → player view mask → LIDAR render → post-processing → debug text.
+**Game loop** (`World.update`): debug input (`DebugOverlay`) → player input → deferred physics cleanup → `world.step()` → entity updates → particles → LIDAR → camera (`CameraManager`) → light rendering (`LightRenderPipeline`) → player view mask (`MaskingSystem`) → LIDAR render → post-processing → debug text.
 
 **Level lifecycle:** `ProcGenLevelsConfig` preset → `RandomGenerator` (seeded) → map gen (Drunkard's Walk or Cellular Automata) → edge merging → `LevelSkeleton` (blueprint) → `Level` (creates all entities). On exit contact, `pendingReset` flag defers full teardown + rebuild to after `world.step()`.
 
-**Lighting:** Each light raycasts against merged edge segments to build a visibility polygon. `DynamicLight` (player/sentry) rebuilds every frame; `StaticLight` computes once. All lights render to an offscreen `RenderTexture` with additive blending. GSAP tweens drive flicker/color oscillation.
+**Lighting:** Each light raycasts against merged edge segments to build a visibility polygon. `DynamicLight` (player/sentry) rebuilds every frame; `StaticLight` computes once and uses a dirty flag to skip redundant redraws. All lights render via `LightRenderPipeline` to an offscreen `RenderTexture` with additive blending. GSAP tweens drive flicker/color oscillation — tweened directly on the `Light` instance properties (`radius`, `alpha`, `tint`) via a `tweenables` proxy object (see GSAP note below).
 
 **LIDAR:** Spacebar fires a pulse from the player. Rays are cast once at construction; an expanding arc activates `EdgeGlowSegments` as the wavefront reaches them. Glows persist independently of the pulse.
 
 ## Non-obvious Patterns
 
-- **Config-driven entity creation:** `EntitiesConfig.ts` maps each `EntityType` to a full preset (sprite, body shape/fixture/collision mask, light type, particle effect). Adding a new entity type means adding a config entry and a class extending `BaseEntity`.
+- **Config barrel pattern:** `Config.ts` is a re-export barrel that assembles domain-specific configs (`CameraConfig`, `PhysicsConfig`, etc.) into the familiar `Config.X` shape. All existing code imports `{ Config }` unchanged. Individual domain files (`MovementConfig`, `DebugConfig`, etc.) can be imported directly by subsystems that only need one domain.
+- **Config-driven entity creation:** `EntitiesConfig.ts` maps each `EntityType` to a full preset (sprite, body shape/fixture/collision mask, light type, particle effect). `BaseEntity` exposes `buildSprite()`, `centerOf()`, and `buildBody()` static helpers that consume these presets. Adding a new entity type means adding a config entry and a class extending `BaseEntity`.
 - **Deferred physics destruction:** Planck.js forbids destroying bodies during `step()` or contact callbacks. `PhysicsManager` queues bodies and destroys them at the start of the next frame. Level reset is also deferred via `pendingReset`.
-- **Coordinate system:** Physics in meters (1 unit = 1m). Rendering multiplies by `Config.PixelsPerMeter` (16). All entity sizes/positions are in meters; only sprite placement uses pixels.
+- **Coordinate system:** Physics in meters (1 unit = 1m). Rendering multiplies by `Config.PixelsPerMeter` (16). All entity sizes/positions are in meters; only sprite placement uses pixels. Planck bodies are centered at their midpoint; PIXI sprites origin at top-left. Entity position sync subtracts the entity's radius/half-width before converting to pixels (e.g., `(body.x - radius) * PPM`).
 - **Singleton managers:** `LightManager.instance` and `ParticleEffectManager.instance` are global registries. Entities register/unregister in their constructor/destroy methods.
+- **Particle pool cap:** `ParticleEffectManager.playEffect()` returns `ParticleEffect | null`. It returns `null` (with a console warning) when the pool for a given effect type is at `MAX_POOL_SIZE`. Callers must handle the null case.
 - **Container hierarchy matters:** `World.setUpContainersInOrder()` defines render order. `lightsContainer` position is offset to counteract camera movement (viewport-aligned). `entityContainerGroup` wraps pre/main/post entity layers for unified player-view masking.
 - **Seeded RNG:** `RandomGenerator` wraps `seedrandom`. All procedural generation (map, entity placement, exits, gates, switches) flows through it for reproducibility.
 - **Gentle vs instant destroy:** `gentlyDestroy()` fades lights/particles before cleanup; `destroy()` is immediate. Both defer physics body removal.
+- **GSAP + PixiPlugin conflict:** Never tween a `Light` instance directly with GSAP. PixiPlugin intercepts `alpha` and `tint` on PIXI display objects. All light tweens must target the `tweenables` proxy object on the `Light` instance (`light.tweenables.alpha`, `light.tweenables.tint`, `light.tweenables.radius`), which `Light.update()` copies back each frame.

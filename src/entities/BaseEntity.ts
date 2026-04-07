@@ -6,7 +6,7 @@ import { ParticleEffect } from '../particles/ParticleEffect';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { PhysicsManager } from '../physics/PhysicManager';
+import { PhysicsManager } from '../physics/PhysicsManager';
 import { EntityPreset } from '../config/EntitiesConfig';
 import { Config } from '../config/Config';
 import { SpriteUtils } from '../utils/SpriteUtils';

@@ -24,7 +24,7 @@ import { SpriteUtils } from '../utils/SpriteUtils';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { Gate } from '../entities/Gate';
 import { Switch } from '../entities/Switch';
-import { PhysicsManager } from '../physics/PhysicManager';
+import { PhysicsManager } from '../physics/PhysicsManager';
 import { ExitGroup } from './ExitGroup';
 
 export interface LevelOptions {

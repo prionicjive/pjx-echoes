@@ -2,7 +2,7 @@ import * as planck from 'planck';
 import { ProcGenLevelType } from "../level/types";
 import { Level, LevelContainers } from "../level/Level";
 import { LevelSkeleton } from "../level/LevelSkeleton";
-import { PhysicsManager } from "../physics/PhysicManager";
+import { PhysicsManager } from "../physics/PhysicsManager";
 import { Point } from "../utils/types";
 import { MapUtils } from "./MapUtils";
 import * as PIXI from 'pixi.js';

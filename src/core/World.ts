@@ -1,4 +1,5 @@
 import { BloomFilter, CRTFilter } from 'pixi-filters';
+import { FiltersConfig } from '../config/FiltersConfig';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
@@ -8,7 +9,7 @@ import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
-import { PhysicsManager } from '../physics/PhysicManager.ts';
+import { PhysicsManager } from '../physics/PhysicsManager';
 import { LidarManager } from '../lidar/LidarManager.ts';
 import { DebugOverlay } from './DebugOverlay.ts';
 import { MaskingSystem } from './MaskingSystem.ts';
@@ -52,8 +53,6 @@ export class World {
     private lightmapSprite!: PIXI.Sprite;
     private transparentBgRect!: PIXI.Graphics;
 
-    // Filters
-    // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
     
@@ -205,23 +204,8 @@ export class World {
             return;
         }
 
-        // Instantiate filters
-        // TODO Make some of this configurable!
-        this.crtFilter = new CRTFilter({
-            curvature: 0,
-            lineWidth: 0.1,
-            lineContrast: 0.1,
-            vignetting: 0,
-            noise: 0.2,
-            noiseSize: 1
-        });
-
-        this.bloomFilter = new BloomFilter({
-            kernelSize: 5,
-            quality: 4,
-            resolution: 1,
-            strength: 8
-        });
+        this.crtFilter = new CRTFilter({ ...FiltersConfig.crt });
+        this.bloomFilter = new BloomFilter({ ...FiltersConfig.bloom });
 
         // Apply bloom and CRT to the world (We might not want any of this on UI layer)
         this.worldContainer.filters = [this.bloomFilter, this.crtFilter];
@@ -502,10 +486,7 @@ export class World {
     // @ts-ignore
     private updatePostProcessing(deltaTime: number) 
     {
-        // Update CRT filter
-        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
-    
-        // TODO Update any other filters
+        this.crtFilter.seed = Math.random();
     }
 
     /**

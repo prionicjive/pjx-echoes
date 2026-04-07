@@ -201,12 +201,12 @@ export class LevelUtils {
                 const candidate = LevelUtils.getRandomValidPointWithMinDistance(
                     openSpaces,
                     playerSpawnPoint,
-                    levelOptions.minDistanceBetweenPlayerSpawnAndExit || levelOptions.radiusAroundExitForGates + 1,
+                    levelOptions.minDistanceBetweenPlayerSpawnAndExit,
                     rng
                 );
                 if (!candidate) break;
 
-                if (!isTooClose(candidate, exitPositions, levelOptions.minDistanceBetweenExits || 10)) {
+                if (!isTooClose(candidate, exitPositions, levelOptions.minDistanceBetweenExits)) {
                     exitPos = candidate;
                     break;
                 }
@@ -219,7 +219,7 @@ export class LevelUtils {
 
             if (!exitPos) break;
 
-            const gatePositions = setupGatedAreaAroundExit(exitPos, levelOptions.radiusAroundExitForGates || 3);
+            const gatePositions = setupGatedAreaAroundExit(exitPos, levelOptions.radiusAroundExitForGates);
             exitData.push({ exitPos, gatePositions });
             allGatedAreas.push(...gatePositions);
             exitPositions.push(exitPos);
@@ -236,7 +236,7 @@ export class LevelUtils {
                 const candidate = LevelUtils.getRandomValidPointWithMinDistance(
                     openSpaces,
                     exitPos,
-                    levelOptions.minDistanceBetweenSwitchAndExit || 5,
+                    levelOptions.minDistanceBetweenSwitchAndExit,
                     rng
                 );
                 if (!candidate) break;

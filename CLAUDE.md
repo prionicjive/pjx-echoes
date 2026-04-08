@@ -85,3 +85,72 @@ vite.config.ts                      # Multi-entry: index.html + particles.html
 - **Seeded RNG:** `RandomGenerator` wraps `seedrandom`. All procedural generation (map, entity placement, exits, gates, switches) flows through it for reproducibility.
 - **Gentle vs instant destroy:** `gentlyDestroy()` fades lights/particles before cleanup; `destroy()` is immediate. Both defer physics body removal.
 - **GSAP + PixiPlugin conflict:** Never tween a `Light` instance directly with GSAP. PixiPlugin intercepts `alpha` and `tint` on PIXI display objects. All light tweens must target the `tweenables` proxy object on the `Light` instance (`light.tweenables.alpha`, `light.tweenables.tint`, `light.tweenables.radius`), which `Light.update()` copies back each frame.
+
+## Refactoring Decisions
+
+### World.ts Decomposition
+
+`World.ts` was reduced from ~900 to ~230 lines by extracting 5 focused subsystems:
+
+- **Why decompose?** World had too many concerns: camera tracking, collision dispatch, debug UI, light rendering, and masking. Each had distinct state and update logic. Testing, understanding, and modifying any one concern required reading through unrelated code.
+- **Why these 5?** Each subsystem has a single responsibility and clear interface. `CameraManager` owns camera state; `LightRenderPipeline` owns rendering to texture; `DebugOverlay` owns debug input and display. World orchestrates them in the game loop.
+- **Trade-off:** Slightly more verbose at the call site (instead of `this.updateCamera()`, now `this.cameraManager.updateCamera()`), but clarity wins. Each subsystem can be tested, understood, and reused independently.
+
+### Config Barrel Pattern
+
+Rather than splitting `Config` into per-subsystem imports (requiring 12+ call sites to update), we use a barrel that assembles domain configs into one object:
+
+- **Why a barrel?** `Config.Camera`, `Config.Physics`, `Config.Movement` reads naturally. No import breakage — all existing code unchanged.
+- **Why not full domain split?** Entity type constants (Player, Sentry, Wall, etc.) and `PixelsPerMeter` are used by 12+ files each. Splitting them gains no SRP benefit and adds coupling surface. Keeping them in the barrel respects the "minimal coupling" principle.
+- **DebugConfig has no `as const`:** Intentional. `DebugOverlay` mutates debug flags at runtime (e.g., `Config.Debug.showDebugText = !Config.Debug.showDebugText`). The barrel pattern ensures both the imported and the exported reference are the same object.
+
+### Entity Construction Helpers
+
+`BaseEntity.buildSprite()`, `centerOf()`, and `buildBody()` static methods eliminate ~25 lines of boilerplate per entity class:
+
+- **Before:** Each entity constructor manually created sprite, calculated center, built physics body — same code repeated 7 times.
+- **After:** One line per step: `const sprite = Player.buildSprite(preset, spawnPoint)`.
+- **Trade-off:** Introduces an extra layer, but boilerplate elimination is worth it. The helpers are domain-specific and unlikely to be reused elsewhere.
+
+### Lighting Optimizations
+
+Profiling-driven work, not speculative. Measured impact:
+
+- **Raycasting: 0.1–0.2ms per frame** (< 1.2% of 60fps budget)
+  - Removed O(N log N) sort (rays already in angular order)
+  - Removed redundant `Math.sqrt(r_dx² + r_dy²)` (ray magnitude is always 1 from cos/sin)
+  - Reuse single ray object instead of 360 per-frame allocations
+- **Spatial indexing deferred.** Adding a grid or quadtree would add ~500 lines of code and test burden for < 1% frame savings. If raycasting grows above ~2ms on larger levels, revisit. Current profiling doesn't justify the complexity.
+
+### Bundle Size Optimization
+
+Split single 846 KB shared chunk into separate vendor bundles:
+
+- **Why?** Vite auto-shares code between two entry points (index.html and particles.html). Both import PIXI, Planck, and GSAP, so they landed in one "ParticleEffectManager" chunk that bundled the whole vendor stack.
+- **Result:** Game code changes no longer invalidate the entire vendor bundle in cache. Vendors (PIXI, Planck, GSAP) are now 763 KB, 214 KB, 70 KB respectively — one-time downloads. Game code chunk shrank from 305 KB to 79 KB.
+- **Trade-off:** Slightly more HTTP requests (4 instead of 2), but each is cached independently. For Netlify or any modern CDN, this is a net win on repeat visits.
+
+### Code Quality: Conservative Fixes
+
+Removed only verified dead code and fixed clear bugs:
+
+- `shootRaysFromPoint()` — zero callers (LidarPulse rolls its own ray loop)
+- `MapUtils.renderMap()` — zero callers (grep-verified)
+- `PhysicsManager.ts` naming — obvious typo fix
+- `CameraManager` level guards — missing null-check added
+
+Did not refactor working code or add speculative features.
+
+### Deferred Work
+
+**Spatial indexing for raycasting:** Profiling shows it's not needed at current scale. Profile again if:
+- Levels grow significantly (> 100 wall segments)
+- Dynamic light count increases (> 2 per level)
+- Raycast time approaches 2ms
+
+**CI/CD pipeline:** Not set up. Would add safety (prevents regressions) and enforce code quality gates. Worth adding after the project stabilizes.
+
+**Test suite:** No tests configured. Worth reconsidering if:
+- More developers contribute
+- Refactoring becomes frequent
+- Bugs from regressions increase

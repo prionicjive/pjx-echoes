@@ -37,11 +37,11 @@ export class CameraManager {
      * Handles camera movement each frame, using soft-follow logic and dead zone.
      */
     updateCamera(deltaTime: number): void {
-        if (!this.player || !this.player.sprite) return;
+        if (!this.player || !this.player.sprite || !this.level) return;
 
         const { width: screenWidth, height: screenHeight } = this.getViewport();
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level.getHeight() * Config.PixelsPerMeter;
 
         // Center on x-axis if level is narrower than screen
         if (levelWidthInPixels <= screenWidth) {
@@ -86,11 +86,11 @@ export class CameraManager {
     }
 
     instantlyCenterCamera(): void {
-        if (!this.player || !this.player.sprite) return;
+        if (!this.player || !this.player.sprite || !this.level) return;
 
         const { width: screenWidth, height: screenHeight } = this.getViewport();
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
+        const levelWidthInPixels = this.level.getWidth() * Config.PixelsPerMeter;
+        const levelHeightInPixels = this.level.getHeight() * Config.PixelsPerMeter;
 
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;

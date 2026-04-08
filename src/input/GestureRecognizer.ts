@@ -22,7 +22,7 @@ export class GestureRecognizer {
         const dx = last.x - first.x;
         const dy = last.y - first.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const speed = distance / (dt || 0.001);
+        const speed = distance / Math.max(dt, 0.001);
 
         if (distance > minDistance && speed > speedThreshold) {
             return {

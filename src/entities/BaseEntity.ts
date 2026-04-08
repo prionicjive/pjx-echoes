@@ -97,7 +97,11 @@ export abstract class BaseEntity {
         });
     }
 
-    /** Returns the center of the entity tile in world-space meters. */
+    /**
+     * Returns the center of the entity tile in world-space meters.
+     * For circular entities (Player, Sentry), widthInMeters === heightInMeters === radius * 2,
+     * so widthInMeters / 2 is equivalent to radius.
+     */
     protected static centerOf(spawnPoint: Point, preset: EntityPreset): Point {
         return {
             x: spawnPoint.x + preset.sprite.widthInMeters / 2,

@@ -239,6 +239,9 @@ export class DynamicLight extends Light {
     // Tween for changing to a new base radius
     private changeRadiusTween?: gsap.core.Tween;
 
+    /** Segment count after AABB filter on the most recent update — used for profiling. */
+    public lastNearbySegmentCount: number = 0;
+
     constructor(
         pos: Point,
         collisionData: Segment[],
@@ -267,6 +270,7 @@ export class DynamicLight extends Light {
         // Build out the light points in world space (Meters)
         // TODO For a static light (Radius doesn't change), figure out where best to one time precompute this and make update a no-opt for a "static" light
         const nearbyEdges = this.collisionData.filter(seg => CollisionUtils.isSegmentInBounds(seg, lightBounds));
+        this.lastNearbySegmentCount = nearbyEdges.length;
         this.lightPoints = LightUtils.buildLightPolygon(this.pos, nearbyEdges, this.options.numRays, this.radius);
         this.isDirty = true;
     }

@@ -143,10 +143,7 @@ Did not refactor working code or add speculative features.
 
 ### Deferred Work
 
-**Spatial indexing for raycasting:** Profiling shows it's not needed at current scale. Profile again if:
-- Levels grow significantly (> 100 wall segments)
-- Dynamic light count increases (> 2 per level)
-- Raycast time approaches 2ms
+**Spatial indexing for raycasting:** Profiled at scale (47 lights, 100+ wall segments) and ruled out. The AABB pre-filter in `DynamicLight.update()` already culls ~90% of segments — avg 10 segments/light survive (max 29), yielding ~117k ray×segment tests/frame at ~1.10ms. A spatial grid would halve tests to ~58k for ~0.5ms savings, which does not justify the complexity. The bottleneck is **light count**, not segment density. Revisit only if dynamic light count grows significantly above ~50 or raycast time exceeds 3ms. If optimization is needed, reducing `numRays` for small-radius lights (e.g., sentries at radius 4 don't need 360 rays) is the higher-value lever. The debug overlay (`` ` `` key) reports `Lights`, `Avg segs/light`, `Max segs/light`, and `Ray×Seg tests/frame` for ongoing monitoring.
 
 **CI/CD pipeline:** Not set up. Would add safety (prevents regressions) and enforce code quality gates. Worth adding after the project stabilizes.
 

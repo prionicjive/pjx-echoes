@@ -148,12 +148,19 @@ export class World {
             this.levelGeometryContainer,
             this.lidarManager,
             () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
-            () => ({
-                numLevelsCompleted: this.numLevelsCompleted,
-                raycastTime: this.lightRenderPipeline.getRaycastTime(),
-                maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
-                lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
-            }),
+            () => {
+                const ls = this.lightRenderPipeline.getLightUpdateStats();
+                return {
+                    numLevelsCompleted: this.numLevelsCompleted,
+                    raycastTime: this.lightRenderPipeline.getRaycastTime(),
+                    maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
+                    lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
+                    activeLightCount: ls.activeLightCount,
+                    avgSegmentsPerLight: ls.avgSegmentsPerLight,
+                    maxSegmentsPerLight: ls.maxSegmentsPerLight,
+                    totalRaySegmentTests: ls.totalRaySegmentTests,
+                };
+            },
             (enabled: boolean) => { if (!enabled) this.maskingSystem.clearAllMasks(); },
             () => this.level?.getEdgesList() ?? []
         );

@@ -10,23 +10,6 @@ export class CollisionUtils {
      * @returns {Array<{ start: Point, direction: Point }>} 
      *   An array of rays, each with a start position and normalized direction vector.
      */
-    static shootRaysFromPoint(point: Point, numRays: number = 360) {
-        const rays = [];
-    
-        for (let i = 0; i < numRays; i++) {
-            const angle = (i / numRays) * Math.PI * 2;
-            const dx = Math.cos(angle);
-            const dy = Math.sin(angle);
-    
-            rays.push({
-                start: { x: point.x, y: point.y },
-                direction: { x: dx, y: dy }
-            });
-        }
-    
-        return rays;
-    }
-
     /**
      * Calculates the intersection point (if any) between a ray and a line segment.
      * Useful for 2D raycasting, e.g., for lighting, visibility, or collision checks.

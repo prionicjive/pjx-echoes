@@ -95,16 +95,14 @@ export class CameraManager {
         if (levelWidthInPixels <= screenWidth) {
             this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
         } else {
-            const targetX = -this.player.sprite.x + screenWidth / 2;
-            this.worldContainer.x += (targetX - this.worldContainer.x);
+            this.worldContainer.x = -this.player.sprite.x + screenWidth / 2;
             this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, screenWidth - levelWidthInPixels));
         }
 
         if (levelHeightInPixels <= screenHeight) {
             this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
         } else {
-            const targetY = -this.player.sprite.y + screenHeight / 2;
-            this.worldContainer.y += (targetY - this.worldContainer.y);
+            this.worldContainer.y = -this.player.sprite.y + screenHeight / 2;
             this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, screenHeight - levelHeightInPixels));
         }
     }

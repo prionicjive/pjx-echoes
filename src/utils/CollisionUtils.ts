@@ -61,20 +61,17 @@ export class CollisionUtils {
         const s_dx = seg.b.x - seg.a.x;
         const s_dy = seg.b.y - seg.a.y;
 
-        // Calculate magnitudes for normalization
-        const r_mag = Math.sqrt(r_dx * r_dx + r_dy * r_dy);
-        const s_mag = Math.sqrt(s_dx * s_dx + s_dy * s_dy);
+        // Ray direction is always a unit vector (generated via Math.cos/Math.sin) — skip sqrt.
+        // Guard against a degenerate zero-direction ray just in case.
+        if (r_dx === 0 && r_dy === 0) return null;
 
-        // Check for invalid ray or segment (zero length)
-        if (r_mag === 0 || s_mag === 0) {
-            return null;
-        }
+        const s_mag = Math.sqrt(s_dx * s_dx + s_dy * s_dy);
+        if (s_mag === 0) return null;
 
         // Check if the ray and segment are parallel via cross product (no intersection)
+        // r_mag = 1 (unit vector), so threshold simplifies to 1e-10 * s_mag
         const cross = r_dx * s_dy - r_dy * s_dx;
-        if (Math.abs(cross) < 1e-10 * r_mag * s_mag) {
-            return null;
-        }
+        if (Math.abs(cross) < 1e-10 * s_mag) return null;
 
         // Solve for intersection using parametric equations
         // t = distance along the ray, u = position along the segment (0 to 1)
@@ -82,20 +79,14 @@ export class CollisionUtils {
         const u = ((s_px - r_px) * r_dy - (s_py - r_py) * r_dx) / (r_dx * s_dy - r_dy * s_dx);
 
         // Intersection occurs if t > 0 (in front of the ray) and 0 <= u <= 1 (on the segment)
-        if (t > 0 && u >= 0 && u <= 1) {
-            const actualDistance = t * r_mag;
-            if (actualDistance <= maxDistance) {
+        // r_mag = 1, so actualDistance = t * 1 = t
+        if (t > 0 && u >= 0 && u <= 1 && t <= maxDistance) {
             return {
-                point: { 
-                    x: r_px + r_dx * t, 
-                    y: r_py + r_dy * t 
-                },
-                distance: actualDistance
+                point: { x: r_px + r_dx * t, y: r_py + r_dy * t },
+                distance: t
             };
-            }
         }
 
-        // No intersection found
         return null;
     }
 

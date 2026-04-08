@@ -150,6 +150,7 @@ export class World {
             () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
             () => ({
                 numLevelsCompleted: this.numLevelsCompleted,
+                raycastTime: this.lightRenderPipeline.getRaycastTime(),
                 maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
                 lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
             }),

@@ -8,6 +8,7 @@ import { Segment } from '../utils/types.ts';
 
 interface DebugStats {
     numLevelsCompleted: number;
+    raycastTime: number;
     maskUpdateTime: number;
     lightRenderTime: number;
 }
@@ -113,6 +114,7 @@ export class DebugOverlay {
             `Camera Offset: [${Math.floor(offset.x)}, ${Math.floor(offset.y)}]\n` +
             `Levels Completed: ${stats.numLevelsCompleted}\n` +
             `Seed: ${this.level.getSeed()}\n` +
+            `Raycast Time: ${stats.raycastTime.toFixed(2)}ms\n` +
             `Mask Update Time: ${stats.maskUpdateTime.toFixed(2)}ms\n` +
             `Light Render Time: ${stats.lightRenderTime.toFixed(2)}ms`;
     }

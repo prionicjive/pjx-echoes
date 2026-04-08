@@ -8,6 +8,7 @@ import { LightUtils } from '../utils/LightUtils.ts';
 export class LightRenderPipeline {
     private player: Player | null = null;
     private lightRenderTime: number = 0;
+    private raycastTime: number = 0;
 
     private readonly renderer: PIXI.Renderer;
     private readonly tempLightmapContainer: PIXI.Container;
@@ -44,14 +45,20 @@ export class LightRenderPipeline {
         return this.lightRenderTime;
     }
 
+    getRaycastTime(): number {
+        return this.raycastTime;
+    }
+
     updateAndRenderLights(
         cameraOffset: { x: number; y: number },
         viewportWidth: number,
         viewportHeight: number
     ): void {
-        const start = performance.now();
-
+        const raycastStart = performance.now();
         LightManager.instance.update();
+        this.raycastTime = performance.now() - raycastStart;
+
+        const start = performance.now();
 
         const screenBounds = {
             left: cameraOffset.x,

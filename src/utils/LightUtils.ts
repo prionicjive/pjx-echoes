@@ -22,29 +22,25 @@ export class LightUtils {
      *   An array of intersection points (with angle), sorted to form a continuous polygon.
      */
     static buildLightPolygon(
-        point: Point, 
+        point: Point,
         segments: Segment[],
         numRays: number = 360,
         lightRadius: number
-    ): { point: Point, angle: number }[] {
-        // Shoot rays outward from the point in all directions
-        const rays = CollisionUtils.shootRaysFromPoint(point, numRays);
-        const points: { point: Point, angle: number }[] = [];
-    
-        // For each ray, find the closest intersection with any segment
-        for (let i = 0; i < rays.length; i++) {
-            const ray = rays[i];
+    ): { point: Point; angle: number }[] {
+        const points: { point: Point; angle: number }[] = [];
+
+        // Reuse a single ray object each iteration — avoids numRays heap allocations per call
+        const ray = { start: point, direction: { x: 0, y: 0 } };
+
+        for (let i = 0; i < numRays; i++) {
             const angle = (i / numRays) * Math.PI * 2;
+            ray.direction.x = Math.cos(angle);
+            ray.direction.y = Math.sin(angle);
             const hit = CollisionUtils.findClosestIntersection(ray, segments, lightRadius);
-            if (hit) {
-                // Store the intersection point along with its angle from the origin
-                points.push({ point: hit.point, angle: angle });
-            }
+            points.push({ point: hit.point, angle });
         }
 
-        // Sort the points by angle so the polygon is continuous and smooth
-        points.sort((a, b) => a.angle - b.angle);
-
+        // No sort needed — rays are generated in ascending angular order
         return points;
     }
 

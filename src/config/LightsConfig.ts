@@ -20,7 +20,7 @@ export const LightsConfig: Record<LightType, LightOptions> = {
         oscillateColorDelayVariance: 2,
     },
     SentryLight: {
-        numRays: 360,
+        numRays: 180,
         baseRadius: 4,
         radiusVariance: 2,
         baseAlpha: 0.5,

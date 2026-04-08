@@ -11,6 +11,10 @@ interface DebugStats {
     raycastTime: number;
     maskUpdateTime: number;
     lightRenderTime: number;
+    activeLightCount: number;
+    avgSegmentsPerLight: number;
+    maxSegmentsPerLight: number;
+    totalRaySegmentTests: number;
 }
 
 export class DebugOverlay {
@@ -116,6 +120,8 @@ export class DebugOverlay {
             `Seed: ${this.level.getSeed()}\n` +
             `Raycast Time: ${stats.raycastTime.toFixed(2)}ms\n` +
             `Mask Update Time: ${stats.maskUpdateTime.toFixed(2)}ms\n` +
-            `Light Render Time: ${stats.lightRenderTime.toFixed(2)}ms`;
+            `Light Render Time: ${stats.lightRenderTime.toFixed(2)}ms\n` +
+            `Lights: ${stats.activeLightCount} | Avg segs/light: ${stats.avgSegmentsPerLight.toFixed(1)} | Max: ${stats.maxSegmentsPerLight}\n` +
+            `Ray×Seg tests/frame: ${stats.totalRaySegmentTests.toLocaleString()}`;
     }
 }

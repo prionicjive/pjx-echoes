@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { Player } from '../entities/Player.ts';
-import { LightManager } from '../light/LightManager.ts';
+import { LightManager, LightUpdateStats } from '../light/LightManager.ts';
 import { Light } from '../light/Light.ts';
 import { LightUtils } from '../utils/LightUtils.ts';
 
@@ -9,6 +9,12 @@ export class LightRenderPipeline {
     private player: Player | null = null;
     private lightRenderTime: number = 0;
     private raycastTime: number = 0;
+    private lightUpdateStats: LightUpdateStats = {
+        activeLightCount: 0,
+        avgSegmentsPerLight: 0,
+        maxSegmentsPerLight: 0,
+        totalRaySegmentTests: 0,
+    };
 
     private readonly renderer: PIXI.Renderer;
     private readonly tempLightmapContainer: PIXI.Container;
@@ -49,6 +55,10 @@ export class LightRenderPipeline {
         return this.raycastTime;
     }
 
+    getLightUpdateStats(): LightUpdateStats {
+        return this.lightUpdateStats;
+    }
+
     updateAndRenderLights(
         cameraOffset: { x: number; y: number },
         viewportWidth: number,
@@ -57,6 +67,7 @@ export class LightRenderPipeline {
         const raycastStart = performance.now();
         LightManager.instance.update();
         this.raycastTime = performance.now() - raycastStart;
+        this.lightUpdateStats = LightManager.instance.getUpdateStats();
 
         const start = performance.now();
 

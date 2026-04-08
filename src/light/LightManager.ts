@@ -1,5 +1,15 @@
 import gsap from 'gsap';
-import { Light } from './Light';
+import { Light, DynamicLight } from './Light';
+
+export interface LightUpdateStats {
+    activeLightCount: number;
+    /** Mean segments seen per DynamicLight after AABB filter. */
+    avgSegmentsPerLight: number;
+    /** Max segments seen by any single DynamicLight after AABB filter. */
+    maxSegmentsPerLight: number;
+    /** Sum of (numRays × nearbySegments) across all DynamicLights — actual intersection test count. */
+    totalRaySegmentTests: number;
+}
 
 export type LightId = string;
 
@@ -10,6 +20,12 @@ export class LightManager {
     private pendingRemove: Set<LightId> = new Set();
     private static _instance: LightManager | null = null;
     private lights: Map<LightId, Light> = new Map();
+    private lastUpdateStats: LightUpdateStats = {
+        activeLightCount: 0,
+        avgSegmentsPerLight: 0,
+        maxSegmentsPerLight: 0,
+        totalRaySegmentTests: 0,
+    };
 
     private constructor() {}
 
@@ -102,12 +118,34 @@ export class LightManager {
     }
 
     update() {
-        // Update all lights
+        let dynamicCount = 0;
+        let totalSegments = 0;
+        let maxSegments = 0;
+        let totalTests = 0;
+
         for (const light of this.lights.values()) {
             if (!light.isFadingOut) {
                 light.update(null);
+                if (light instanceof DynamicLight) {
+                    dynamicCount++;
+                    const segs = light.lastNearbySegmentCount;
+                    totalSegments += segs;
+                    if (segs > maxSegments) maxSegments = segs;
+                    totalTests += light.options.numRays * segs;
+                }
             }
         }
+
+        this.lastUpdateStats = {
+            activeLightCount: this.lights.size,
+            avgSegmentsPerLight: dynamicCount > 0 ? totalSegments / dynamicCount : 0,
+            maxSegmentsPerLight: maxSegments,
+            totalRaySegmentTests: totalTests,
+        };
+    }
+
+    getUpdateStats(): LightUpdateStats {
+        return this.lastUpdateStats;
     }
 
     getAllLights(): Light[] {

@@ -6,7 +6,12 @@ import { ParticleEffect } from '../particles/ParticleEffect';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
 import { EntityType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
-import { PhysicsManager } from '../physics/PhysicManager';
+import { PhysicsManager } from '../physics/PhysicsManager';
+import { EntityPreset } from '../config/EntitiesConfig';
+import { Config } from '../config/Config';
+import { SpriteUtils } from '../utils/SpriteUtils';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
+import { Point } from '../utils/types';
 
 export interface EntityContainers {
     containerForEntity: PIXI.Container;
@@ -73,35 +78,56 @@ export abstract class BaseEntity {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(_deltaTime: number): void {}
+
+    // ---------------------------------------------------------------------------
+    // Construction helpers — call these from subclass constructors
+    // ---------------------------------------------------------------------------
+
+    /** Builds a sprite from the preset dimensions/texture, with an optional color override. */
+    protected static buildSprite(preset: EntityPreset, spawnPoint: Point, colorOverride?: number): PIXI.Sprite {
+        return SpriteUtils.createSprite({
+            texture: PIXI.Texture.from(preset.sprite.texture),
+            x: spawnPoint.x * Config.PixelsPerMeter,
+            y: spawnPoint.y * Config.PixelsPerMeter,
+            width: preset.sprite.widthInMeters * Config.PixelsPerMeter,
+            height: preset.sprite.heightInMeters * Config.PixelsPerMeter,
+            color: colorOverride ?? preset.sprite.color
+        });
+    }
+
+    /**
+     * Returns the center of the entity tile in world-space meters.
+     * For circular entities (Player, Sentry), widthInMeters === heightInMeters === radius * 2,
+     * so widthInMeters / 2 is equivalent to radius.
+     */
+    protected static centerOf(spawnPoint: Point, preset: EntityPreset): Point {
+        return {
+            x: spawnPoint.x + preset.sprite.widthInMeters / 2,
+            y: spawnPoint.y + preset.sprite.heightInMeters / 2
+        };
+    }
+
+    /** Creates a physics body from the preset, placed at the given center position. */
+    protected static buildBody(preset: EntityPreset, center: Point, physicsWorld: planck.World): planck.Body {
+        return PhysicsUtils.createBody(physicsWorld, {
+            ...preset.body!,
+            position: new planck.Vec2(center.x, center.y)
+        });
+    }
+
     destroy(physicsManager: PhysicsManager) {
-        // Instantly remove the sprite from the container
-        this.containers.containerForEntity.removeChild(this.sprite);
-
-        // Gently destroy the body
-        if (this.body && this.body.getWorld()) {
-            if (physicsManager) {
-                physicsManager.destroyBody(this.body);
-            } else {
-                this.body.getWorld().destroyBody(this.body);
-            }
-        }
-
-        // Immediately remove light from LightManager
-        if (this.light) {
-            LightManager.instance.removeLight(this.light);
-        }
-
-        // Immediately remove particle by having it stop emitting before destroying
-        if (this.particleEffect) {
-            ParticleEffectManager.instance.removeEffect(this.particleEffect);
-        }
+        this.destroyInternal(physicsManager, false);
     }
 
     gentlyDestroy(physicsManager: PhysicsManager) {
-        // Instantly remove the sprite from the container
+        this.destroyInternal(physicsManager, true);
+    }
+
+    private destroyInternal(physicsManager: PhysicsManager, gentle: boolean) {
         this.containers.containerForEntity.removeChild(this.sprite);
 
-        // Gently destroy the body
         if (this.body && this.body.getWorld()) {
             if (physicsManager) {
                 physicsManager.destroyBody(this.body);
@@ -110,14 +136,16 @@ export abstract class BaseEntity {
             }
         }
 
-        // Gently remove light from LightManager
         if (this.light) {
-            LightManager.instance.gentlyRemoveLight(this.light);
+            gentle
+                ? LightManager.instance.gentlyRemoveLight(this.light)
+                : LightManager.instance.removeLight(this.light);
         }
 
-        // Gently remove particle by having it stop emitting before destroying
         if (this.particleEffect) {
-            ParticleEffectManager.instance.gentlyRemoveEffect(this.particleEffect);
+            gentle
+                ? ParticleEffectManager.instance.gentlyRemoveEffect(this.particleEffect)
+                : ParticleEffectManager.instance.removeEffect(this.particleEffect);
         }
     }
 }

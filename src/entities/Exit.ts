@@ -1,10 +1,6 @@
-import * as PIXI from 'pixi.js';
-import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
@@ -19,28 +15,10 @@ export interface ExitOptions {
 
 export class Exit extends BaseEntity {
     constructor(options: ExitOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Exit.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Exit.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Exit.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Exit.sprite.color
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Exit.width / 2,
-            y: options.spawnPoint.y + Config.Exit.height / 2
-        };
-
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Exit.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Exit;
+        const center = Exit.centerOf(options.spawnPoint, preset);
+        const sprite = Exit.buildSprite(preset, options.spawnPoint);
+        const body = Exit.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         // Construct a static light
         const light = new StaticLight(
@@ -64,8 +42,4 @@ export class Exit extends BaseEntity {
         });
     }
 
-    // @ts-ignore
-    update(deltaTime: number) {
-        // No special update logic... for now
-    }
 }

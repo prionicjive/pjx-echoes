@@ -4,12 +4,16 @@ export interface ProcGenLevelOptions {
     Dimensions: {
         width: number;
         height: number;
-    }; 
+    };
     minDistanceBetweenPlayerSpawnAndExit: number;
     minDistanceBetweenSwitchAndExit: number;
     minDistanceBetweenExits: number;
     radiusAroundExitForGates: number;
     numExits: number;
+    /** How many random candidates to try before falling back to unconstrained exit placement. */
+    exitPlacementRetries: number;
+    /** How many random candidates to try before falling back to unconstrained switch placement. */
+    switchPlacementRetries: number;
     torchChance: number;
     antiChance: number;
     sentryChance: number;
@@ -46,6 +50,8 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
         minDistanceBetweenExits: 36,
         radiusAroundExitForGates: 3,
         numExits: 3,
+        exitPlacementRetries: 10,
+        switchPlacementRetries: 20,
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0052,
@@ -70,6 +76,8 @@ export const ProcGenLevelsConfig: Record<ProcGenLevelType, ProcGenLevelOptions> 
         minDistanceBetweenExits: 10,
         radiusAroundExitForGates: 2,
         numExits: 2,
+        exitPlacementRetries: 10,
+        switchPlacementRetries: 20,
         torchChance: 0.00087,
         antiChance: 0.00065,
         sentryChance: 0.0095,

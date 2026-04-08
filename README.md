@@ -4,7 +4,7 @@ An exploration game rooted in navigating the unknown and unseen.
 
 [Playable via Netlify](https://pjx-echoes.netlify.app/)
 
-> For a full technical deep-dive, see [ARCHITECTURE.md](ARCHITECTURE.md).
+> For Claude Code seeding information, see [CLAUDE.md](CLAUDE.md).
 
 ## Features
 - Procedural cave generation via Drunkard's Walk (with Cellular Automata smoothing), fully seeded for reproducibility

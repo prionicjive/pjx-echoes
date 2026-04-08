@@ -5,6 +5,7 @@ import { ParticleEffectType } from './types';
 
 export class ParticleEffectManager {
     private static _instance: ParticleEffectManager;
+    private static readonly MAX_POOL_SIZE = 20;
     private effectPools: Map<ParticleEffectType, ParticleEffect[]> = new Map();
     private activeEffects: Set<ParticleEffect> = new Set();
 
@@ -27,13 +28,6 @@ export class ParticleEffectManager {
             effect.destroy();
             this.activeEffects.delete(effect);
         });
-    }
-
-    /** Add an array of effects to the master list */
-    addEffects(effects: ParticleEffect[]) {
-        for (const effect of effects) {
-            this.addEffect(effect);
-        }
     }
 
     /** Get all effects as an array */
@@ -67,19 +61,22 @@ export class ParticleEffectManager {
         effect.stopEmission();
     }
 
-    private getFromPool(type: ParticleEffectType): ParticleEffect {
+    private getFromPool(type: ParticleEffectType): ParticleEffect | null {
         if (!this.effectPools.has(type)) {
             this.effectPools.set(type, []);
         }
-        
+
         const pool = this.effectPools.get(type)!;
-        let effect = pool.find(e => !e.isPlaying());
-        
-        if (!effect) {
-            effect = new ParticleEffect(ParticleEffectsConfig[type]);
-            pool.push(effect);
+        const idle = pool.find(e => !e.isPlaying());
+        if (idle) return idle;
+
+        if (pool.length >= ParticleEffectManager.MAX_POOL_SIZE) {
+            console.warn(`[ParticleEffectManager] Pool for "${type}" is full (${ParticleEffectManager.MAX_POOL_SIZE}). Effect skipped.`);
+            return null;
         }
-        
+
+        const effect = new ParticleEffect(ParticleEffectsConfig[type]);
+        pool.push(effect);
         return effect;
     }
 
@@ -106,33 +103,29 @@ export class ParticleEffectManager {
         // They'll be reused when the effect is played again
     }
 
-    playEffect(container: PIXI.Container, type: ParticleEffectType, position: {x: number, y: number}, duration?: number): ParticleEffect {
+    playEffect(container: PIXI.Container, type: ParticleEffectType, position: {x: number, y: number}, duration?: number): ParticleEffect | null {
         const effect = this.getFromPool(type);
-    
-        // Reset the effect
+        if (!effect) return null;
+
         effect.container.visible = true;
         effect.setPosition(position.x, position.y);
-        
+
         if (duration !== undefined) {
             effect.duration = duration;
         }
-        
-        // Add to container if not already there
+
         if (effect.container.parent !== container) {
             container.addChild(effect.container);
         }
-        
-        // Add to active set
+
         this.activeEffects.add(effect);
-        
-        // Set up cleanup
+
         effect.onEmpty(() => {
             this.returnToPool(effect);
         });
 
-        // Start the effect
         effect.play();
-        
+
         return effect;
     }
 

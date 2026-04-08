@@ -1,5 +1,6 @@
 import { Config } from "../config/Config";
 import { Point } from "../utils/types";
+import { GestureRecognizer } from "./GestureRecognizer";
 
 export interface PointerState {
     screen: Point,
@@ -15,7 +16,7 @@ export interface TouchState {
     lastPos: { x: number, y: number },
     history: { x: number, y: number, time: number }[],
     lastSwipeTime: number,
-    lastSwipeSpeedPixelsPerSecond: number, // TODO Rename to speed possibly
+    lastSwipeSpeedPixelsPerSecond: number,
     lastSwipeDirection: { x: number, y: number },
 }
 
@@ -52,23 +53,17 @@ export class InputManager {
         keys: new Map<string, KeyState>()
     }
 
-    // TODO Add state for gamepad eventually
-
     constructor(canvas: HTMLCanvasElement) {
-        // Register mouse events
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
         canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
-    
-        // Register touch events
+
         canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
         canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
         canvas.addEventListener('touchmove', this.onTouchMove.bind(this));
-    
-        // TODO Add keyboard/gamepad events if needed
+
         window.addEventListener('keydown', this.onKeyDown.bind(this));
         window.addEventListener('keyup', this.onKeyUp.bind(this));
-
     }
 
     private onMouseDown(e: MouseEvent) {
@@ -82,17 +77,15 @@ export class InputManager {
         this.pointer.justReleased = true;
         this.updatePointerScreen(e);
     }
-    
+
     private onMouseMove(e: MouseEvent) {
         if (!this.touchState.active) {
-            // Additional logic that only happens when we aren't in touch mode
             this.updatePointerScreen(e);
         }
     }
 
     private updatePointerScreen(e: MouseEvent) {
         this.pointer.screen = { x: e.clientX, y: e.clientY };
-        // TODO Update pointer.world if you have a screen-to-world transform
     }
 
     private onTouchStart(e: TouchEvent) {
@@ -112,7 +105,7 @@ export class InputManager {
         this.touchState.lastSwipeSpeedPixelsPerSecond = 0;
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
     }
-    
+
     private onTouchEnd() {
         this.pointer.isDown = false;
         this.pointer.justReleased = true;
@@ -124,31 +117,22 @@ export class InputManager {
         const touch = e.touches[0];
         const now = performance.now();
 
-        // 1. Maintain history buffer (sliding window)
+        // Maintain sliding history window
         this.touchState.history.push({ x: touch.clientX, y: touch.clientY, time: now });
         this.touchState.history = this.touchState.history.filter(
             pt => now - pt.time <= Config.Movement.Gesture.swipeReleaseWindowInMs
         );
 
-        // 2. Calculate velocity over window
-        const first = this.touchState.history[0];
-        const last = this.touchState.history[this.touchState.history.length - 1];
-        const dt = (last.time - first.time) / 1000; // seconds
-        const dx = last.x - first.x;
-        const dy = last.y - first.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const pixelsPerSecond = distance / (dt || 0.001); // px/sec
-
-        // 3. Detect swipe
-        if (
-            distance > Config.Movement.Gesture.minSwipeDistance &&
-            pixelsPerSecond > Config.Movement.Gesture.swipeSpeedPixelsPerSecondThreshold
-        ) {
-            this.touchState.lastSwipeTime = now;
-            this.touchState.lastSwipeSpeedPixelsPerSecond = pixelsPerSecond;
-            this.touchState.lastSwipeDirection = { x: dx / distance, y: dy / distance };
-            // Optional: log for debugging
-            console.log(`Swipe candidate detected!\nDistance: ${distance}\nSpeed (px/s): ${pixelsPerSecond}`);
+        // Detect swipe
+        const swipe = GestureRecognizer.detectSwipe(
+            this.touchState.history,
+            Config.Movement.Gesture.minSwipeDistance,
+            Config.Movement.Gesture.swipeSpeedPixelsPerSecondThreshold
+        );
+        if (swipe) {
+            this.touchState.lastSwipeTime = swipe.time;
+            this.touchState.lastSwipeSpeedPixelsPerSecond = swipe.speedPixelsPerSecond;
+            this.touchState.lastSwipeDirection = swipe.direction;
         }
 
         this.touchState.lastPos = { x: touch.clientX, y: touch.clientY };
@@ -170,20 +154,17 @@ export class InputManager {
         this.keysState.keys.set(e.key, { isDown: false, justPressed: false, justReleased: true });
     }
 
-    // Call this once per frame to reset "just pressed / released" flags
+    // Call once per frame to reset "just pressed / released" flags
     public update() {
         this.pointer.justReleased = false;
-        
+
         this.keysState.keys.forEach((keyState) => {
             keyState.justPressed = false;
             keyState.justReleased = false;
         });
     }
 
-    // Public API for World/Player
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getTouchState(): TouchState { return { ...this.touchState }; }
     public getKeysState(): KeysState { return { ...this.keysState }; }
-    
-    // TODO Add more getters as needed
 }

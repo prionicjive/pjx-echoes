@@ -62,11 +62,14 @@ interface ParticleOptions {
     };
 }
 
+// Tint channels stored as pre-extracted [r, g, b] in [0, 1] range — avoids per-frame Color allocations
+type RgbTuple = [number, number, number];
+
 interface Particle {
     sprite: Sprite;
     alive: boolean;
     age: number;
-    maxAge: number; // TODO Store values within Particle that might be random per particle and can't just be referenced from ParticleOptions
+    maxAge: number;
     startDirection: { x: number, y: number };
     endDirection: { x: number, y: number };
     startSpeed: number;
@@ -77,8 +80,8 @@ interface Particle {
     endScaleY: number;
     startAlpha: number;
     endAlpha: number;
-    startTint: Color;
-    endTint: Color;
+    startTint: RgbTuple;
+    endTint: RgbTuple;
     width: number;
     height: number;
 }
@@ -93,7 +96,7 @@ export class ParticleEffect {
     private particlePool: Particle[] = [];
     private activeParticles: Set<Particle> = new Set();
     private maxParticles: number;
-    private position: Point = { x: 0, y: 0 }; // TODO Make a Point?
+    private position: Point = { x: 0, y: 0 };
     private numAliveParticles: number = 0;
     private emissionStopped: boolean = false;
     private emptyCallback?: () => void;
@@ -143,8 +146,8 @@ export class ParticleEffect {
                 endScaleY: 0,
                 startAlpha: 0,
                 endAlpha: 0,
-                startTint: new Color(),
-                endTint: new Color(),
+                startTint: [0, 0, 0],
+                endTint: [0, 0, 0],
                 width: 0,
                 height: 0,
             });
@@ -351,7 +354,7 @@ export class ParticleEffect {
         particle.startAlpha = this.applyVariance(this.template.startAlpha, this.template.startAlphaVariance);
         particle.endAlpha = this.applyVariance(this.template.endAlpha, this.template.endAlphaVariance);
 
-        // Apply variance to tint
+        // Apply variance to tint — stored as [r, g, b] in [0, 1] to avoid per-frame Color allocations
         particle.startTint = this.applyColorVariance(this.template.startTint, this.template.startTintVariance);
         particle.endTint = this.applyColorVariance(this.template.endTint, this.template.endTintVariance);
 
@@ -367,7 +370,7 @@ export class ParticleEffect {
         s.position.set(this.position.x, this.position.y);
         s.width = particle.width * particle.startScaleX;
         s.height = particle.height * particle.startScaleY;
-        s.tint = particle.startTint.toNumber();
+        s.tint = this.packRgb(particle.startTint);
     }
 
     private applyVariance(base: number, variance?: Variance): number {
@@ -384,33 +387,33 @@ export class ParticleEffect {
       }
     }
 
-    private applyColorVariance(color: Color, variance?: { r?: Variance, g?: Variance, b?: Variance }): Color {
-        if (!variance) return color;
-        
+    /** Extracts [r, g, b] in [0, 1] range, applying per-channel variance. Called once at emit time. */
+    private applyColorVariance(color: Color, variance?: { r?: Variance, g?: Variance, b?: Variance }): RgbTuple {
         const [r, g, b] = color.toRgbArray();
-        
-        return new Color([
-            this.applyVariance(r, variance.r),
-            this.applyVariance(g, variance.g),
-            this.applyVariance(b, variance.b)
-        ]);
+        return [
+            this.applyVariance(r, variance?.r),
+            this.applyVariance(g, variance?.g),
+            this.applyVariance(b, variance?.b)
+        ];
     }
 
     private lerp(a: number, b: number, t: number): number {
         return a + (b - a) * t;
     }
 
-    private lerpColor(a: Color, b: Color, t: number): Color {
-        // Get RGB values as [0, 1]
-        const [ar, ag, ab] = a.toRgbArray();
-        const [br, bg, bb] = b.toRgbArray();
+    /** Packs a [0, 1] RGB tuple into a 0xRRGGBB hex number. Clamps channels to [0, 1]. No allocation. */
+    private packRgb([r, g, b]: RgbTuple): number {
+        const ri = Math.round(Math.max(0, Math.min(1, r)) * 255);
+        const gi = Math.round(Math.max(0, Math.min(1, g)) * 255);
+        const bi = Math.round(Math.max(0, Math.min(1, b)) * 255);
+        return (ri << 16) | (gi << 8) | bi;
+    }
 
-        // Lerp each channel
-        const r = this.lerp(ar, br, t);
-        const g = this.lerp(ag, bg, t);
-        const b_ = this.lerp(ab, bb, t);
-
-        // Create new Color from lerped RGB
-        return new Color([r, g, b_]);
+    /** Lerps two pre-extracted RGB tuples and returns a hex number. No allocation. */
+    private lerpColor(a: RgbTuple, b: RgbTuple, t: number): number {
+        const ri = Math.round(Math.max(0, Math.min(1, this.lerp(a[0], b[0], t))) * 255);
+        const gi = Math.round(Math.max(0, Math.min(1, this.lerp(a[1], b[1], t))) * 255);
+        const bi = Math.round(Math.max(0, Math.min(1, this.lerp(a[2], b[2], t))) * 255);
+        return (ri << 16) | (gi << 8) | bi;
     }
 }

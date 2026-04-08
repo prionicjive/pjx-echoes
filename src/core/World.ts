@@ -1,17 +1,21 @@
 import { BloomFilter, CRTFilter } from 'pixi-filters';
+import { FiltersConfig } from '../config/FiltersConfig';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
-import { EntityUserData } from '../entities/BaseEntity.ts';
 import { Player } from '../entities/Player.ts';
 import { InputManager } from '../input/InputManager.ts';
 import { Level } from '../level/Level.ts';
 import { LightManager } from '../light/LightManager.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
 import { LevelUtils } from '../utils/LevelUtils.ts';
-import { LightUtils } from '../utils/LightUtils.ts';
-import { PhysicsManager } from '../physics/PhysicManager.ts';
+import { PhysicsManager } from '../physics/PhysicsManager';
 import { LidarManager } from '../lidar/LidarManager.ts';
+import { DebugOverlay } from './DebugOverlay.ts';
+import { MaskingSystem } from './MaskingSystem.ts';
+import { CameraManager } from './CameraManager.ts';
+import { LightRenderPipeline } from './LightRenderPipeline.ts';
+import { CollisionDispatcher } from './CollisionDispatcher.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -49,19 +53,20 @@ export class World {
     private lightmapSprite!: PIXI.Sprite;
     private transparentBgRect!: PIXI.Graphics;
 
-    // Filters
-    // TODO Do we need to have these here?
     private crtFilter!: CRTFilter;
     private bloomFilter!: BloomFilter;
     
-    // Player view mode masking
+    // Player view mode masking containers (owned here; passed to MaskingSystem/LightRenderPipeline)
     private entityContainerGroup!: PIXI.Container;
     private playerViewMask!: PIXI.Graphics;
     private playerLightPolygonMask!: PIXI.Graphics;
-    
-    // Polygon caching for performance
-    private cachedPlayerPolygon: { point: { x: number, y: number }, angle: number }[] | null = null;
-    private lastPlayerLightUpdate: number = 0;
+
+    // Subsystems
+    private collisionDispatcher!: CollisionDispatcher;
+    private cameraManager!: CameraManager;
+    private maskingSystem!: MaskingSystem;
+    private lightRenderPipeline!: LightRenderPipeline;
+    private debugOverlay!: DebugOverlay;
 
     // LIDAR
     private lidarManager: LidarManager = new LidarManager();
@@ -75,16 +80,13 @@ export class World {
 
     // Interesting stats to keep track of
     private numLevelsCompleted: number = 0;
-    
-    // Performance metrics for debugging
-    private maskUpdateTime: number = 0;
-    private lightRenderTime: number = 0;
 
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
 
-    // Stored bound handler so the same reference is used for both on() and off()
-    private readonly onBeginContactBound = this.onBeginContact.bind(this);
+    // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
+    private readonly onBeginContactBound = (contact: planck.Contact) =>
+        this.collisionDispatcher.handleContact(contact);
 
     constructor(app: PIXI.Application) {
         this.app = app;
@@ -94,12 +96,42 @@ export class World {
 
         // Instantiate the various PIXI containers
         this.initializeContainers();
-        
+
+        // Initialize collision dispatcher (depends on preEntitiesContainer from initializeContainers)
+        this.collisionDispatcher = new CollisionDispatcher(
+            this.preEntitiesContainer,
+            () => { this.pendingReset = true; },
+            () => { this.numLevelsCompleted++; }
+        );
+
+        // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
+        this.maskingSystem = new MaskingSystem(
+            this.playerViewMask,
+            this.playerLightPolygonMask,
+            this.entityContainerGroup
+        );
+
+        // Initialize camera manager (depends on containers from initializeContainers)
+        this.cameraManager = new CameraManager(
+            this.worldContainer,
+            this.lightsContainer,
+            () => ({ width: this.viewportWidth, height: this.viewportHeight })
+        );
+
         // Set up viewport dimensions (Will change on resize)
         this.viewportWidth = window.innerWidth;
         this.viewportHeight = window.innerHeight;
 
         this.initializeTexturesAndGraphicalElements(this.viewportWidth, this.viewportHeight);
+
+        // Initialize light render pipeline (depends on textures from initializeTexturesAndGraphicalElements)
+        this.lightRenderPipeline = new LightRenderPipeline(
+            this.app.renderer as PIXI.Renderer,
+            this.tempLightmapContainer,
+            this.lightmapTexture,
+            this.transparentBgRect,
+            this.playerLightPolygonMask
+        );
 
         // Create post-processing
         // TODO Find out how to dynamically alter these
@@ -107,6 +139,24 @@ export class World {
 
         // Initialize debug text
         this.initializeDebugText();
+
+        // Initialize debug overlay (depends on debugText, inputManager, lidarManager)
+        this.debugOverlay = new DebugOverlay(
+            this.debugText,
+            this.inputManager,
+            this.lightsContainer,
+            this.levelGeometryContainer,
+            this.lidarManager,
+            () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
+            () => ({
+                numLevelsCompleted: this.numLevelsCompleted,
+                raycastTime: this.lightRenderPipeline.getRaycastTime(),
+                maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
+                lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
+            }),
+            (enabled: boolean) => { if (!enabled) this.maskingSystem.clearAllMasks(); },
+            () => this.level?.getEdgesList() ?? []
+        );
 
         // TODO Handle additional setup if needed
 
@@ -155,23 +205,8 @@ export class World {
             return;
         }
 
-        // Instantiate filters
-        // TODO Make some of this configurable!
-        this.crtFilter = new CRTFilter({
-            curvature: 0,
-            lineWidth: 0.1,
-            lineContrast: 0.1,
-            vignetting: 0,
-            noise: 0.2,
-            noiseSize: 1
-        });
-
-        this.bloomFilter = new BloomFilter({
-            kernelSize: 5,
-            quality: 4,
-            resolution: 1,
-            strength: 8
-        });
+        this.crtFilter = new CRTFilter({ ...FiltersConfig.crt });
+        this.bloomFilter = new BloomFilter({ ...FiltersConfig.bloom });
 
         // Apply bloom and CRT to the world (We might not want any of this on UI layer)
         this.worldContainer.filters = [this.bloomFilter, this.crtFilter];
@@ -223,6 +258,16 @@ export class World {
     }
 
     private tearDownWorld() {
+        // Null out mutable references in subsystems before any destruction
+        this.collisionDispatcher.setPlayer(null);
+        this.collisionDispatcher.setLevel(null);
+        this.cameraManager.setPlayer(null);
+        this.cameraManager.setLevel(null);
+        this.maskingSystem.setPlayer(null);
+        this.lightRenderPipeline.setPlayer(null);
+        this.debugOverlay.setPlayer(null);
+        this.debugOverlay.setLevel(null);
+
         // Tear down dynamic entities
         this.tearDownEntities();
         
@@ -232,8 +277,8 @@ export class World {
         // Remove all lights
         LightManager.instance.removeAllLights();
 
-        // Remove LIDAR state
-        this.lidarManager.destroy();
+        // Reset LIDAR state (clears active pulses/glows without destroying the Graphics object)
+        this.lidarManager.reset();
 
         // Remove all effects
         ParticleEffectManager.instance.removeAllEffects();
@@ -283,8 +328,18 @@ export class World {
         // Get the player - our "first class" entity
         this.player = this.level.getPlayer();
 
+        // Propagate mutable references to subsystems
+        this.collisionDispatcher.setPlayer(this.player);
+        this.collisionDispatcher.setLevel(this.level);
+        this.cameraManager.setPlayer(this.player);
+        this.cameraManager.setLevel(this.level);
+        this.maskingSystem.setPlayer(this.player);
+        this.lightRenderPipeline.setPlayer(this.player);
+        this.debugOverlay.setPlayer(this.player);
+        this.debugOverlay.setLevel(this.level);
+
         // Instantly center camera on player to avoid an initial soft follow
-        this.instantlyCenterCamera();      
+        this.cameraManager.instantlyCenterCamera();
     }
 
     private tearDownEntities() {
@@ -346,191 +401,12 @@ export class World {
     }
     
     /**
-     * Handles collision events from Planck.js, such as the player reaching a exit tile
-     * or interacting with walls.
-     * @param {planck.Contact} contact - The collision contact event from Planck.js.
-     */
-    private onBeginContact(contact: planck.Contact) {
-        const aData: EntityUserData = contact.getFixtureA().getBody().getUserData() as EntityUserData;
-        const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
-
-        if (
-            (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
-            (aData.type === Config.Exit.type && bData.type === Config.Player.type)
-        ) {
-            //console.log("Player reached exit tile!");
-            
-            // TODO Show a "Level Complete" screen
-            this.numLevelsCompleted++;
-            this.pendingReset = true;
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Player.type)
-        ) {
-            // TODO Handle player hitting an edge
-            //console.log("Player hit an edge!");
-            if (Config.Debug.showCollisionMarkers) {
-                // Access the manifold to get the contact points
-                const manifold = contact.getManifold();
-                if (manifold.pointCount > 0) {
-                    const worldManifold = contact.getWorldManifold(null);
-
-                    if (!worldManifold) {
-                        return;
-                    }
-
-                    for (let i = 0; i < manifold.pointCount; i++) {
-                        const point = worldManifold.points[i]; // { x, y }
-
-                        //console.log("Sentry/Edge Collision point: ", point);
-                        ParticleEffectManager.instance.playEffect(
-                            this.preEntitiesContainer, 
-                            "EdgeImpact", { 
-                                x: point.x * Config.PixelsPerMeter,
-                                y: point.y * Config.PixelsPerMeter 
-                            },
-                            5
-                        );
-                    }
-                }
-            }
-        } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
-        ) {
-            // TODO Handle sentry hitting an edge
-            //console.log("Sentry hit an edge!");
-
-            if (Config.Debug.showCollisionMarkers) {
-                // Access the manifold to get the contact points
-                const manifold = contact.getManifold();
-                if (manifold.pointCount > 0) {
-                    const worldManifold = contact.getWorldManifold(null);
-
-                    if (!worldManifold) {
-                        return;
-                    }
-
-                    for (let i = 0; i < manifold.pointCount; i++) {
-                        const point = worldManifold.points[i]; // { x, y }
-
-                        //console.log("Sentry/Edge Collision point: ", point);
-                        ParticleEffectManager.instance.playEffect(
-                            this.preEntitiesContainer, 
-                            "EdgeImpact", { 
-                                x: point.x * Config.PixelsPerMeter,
-                                y: point.y * Config.PixelsPerMeter 
-                            },
-                            5
-                        );
-                    }
-                }
-            }
-
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
-            (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
-        ) {
-            // Handle player hitting a sentry
-            //console.log("Player hit a sentry!");
-
-            const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData; // TODO Make this a little more foolproof
-            if (sentryData.entity) {
-                this.player!.onPickup(sentryData.type);
-                this.level!.gentlyDestroyEntity(sentryData.entity);
-            }
-
-            // Disable the contact to prevent the sentry from physically reacting with the player
-            contact.setEnabled(false);
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
-            (aData.type === Config.Torch.type && bData.type === Config.Player.type)
-        ) {
-            // Handle player hitting a torch
-            //console.log("Player hit a torch!");
-
-            const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData; // TODO Make this a little more foolproof
-            if (torchEntity.entity) {
-                this.player!.onPickup(torchEntity.type);
-                this.level!.gentlyDestroyEntity(torchEntity.entity);
-            }
-        } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
-        ) {
-            // TODO Handle a sentry hitting another sentry
-            //console.log("Sentry hit another sentry!");
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
-            (aData.type === Config.Anti.type && bData.type === Config.Player.type)
-        ) {
-            // Pick up and remove anti
-            //console.log("Player picked up an anti!");
-
-            const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData; // TODO Make this a little more foolproof
-            if (antiEntity.entity) {
-                this.player!.onPickup(antiEntity.type);
-                this.level!.gentlyDestroyEntity(antiEntity.entity);
-            }
-        } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Switch.type) ||
-            (aData.type === Config.Switch.type && bData.type === Config.Player.type)
-        ) {
-            // Press and remove swtich
-            //console.log("Player pressed a switch!");
-
-            const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData; // TODO Make this a little more foolproof
-            if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
-                this.level!.onSwitchPressed(switchEntity.groupId);
-            }
-        }
-    }
-
-    /**
-     * Instantly centers the camera on the player or the level, depending on which is smaller.
-     * Used at game start to avoid jarring camera jumps.
-     */
-    private instantlyCenterCamera() {
-        // If the level is smaller than the screen, center it. Otherwise, center on the player.
-        if (!this.player || !this.worldContainer) return;
-
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
-
-        // Center if level is smaller than screen
-        if (levelWidthInPixels <= screenWidth) {
-            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterX = this.viewportWidth / 2;
-            const targetX = -this.player.sprite.x + screenCenterX;
-            this.worldContainer.x += (targetX - this.worldContainer.x);
-
-            // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
-         }
-
-        if (levelHeightInPixels <= screenHeight) {
-            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterY = this.viewportHeight / 2;
-            const targetY = -this.player.sprite.y + screenCenterY;
-            this.worldContainer.y += (targetY - this.worldContainer.y);
-
-            // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
-        }
-    }
-
-    /**
      * Called every frame. Steps physics, updates entities, and handles camera movement.
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) { 
         // Handle debugging input
-        this.handleDebugInput();
+        this.debugOverlay.handleDebugInput();
 
         // Handle input, as this might affect the physics
         this.updateFromInput(deltaTime);
@@ -557,13 +433,17 @@ export class World {
         this.lidarManager.update(deltaTime);
 
         // Update camera
-        this.updateCamera(deltaTime);
+        this.cameraManager.updateCamera(deltaTime);
 
         // Update and render the lights
-        this.updateAndRenderLights();
+        this.lightRenderPipeline.updateAndRenderLights(
+            this.cameraManager.getCameraOffset(),
+            this.viewportWidth,
+            this.viewportHeight
+        );
 
         // Apply/clear the player-view mask on entity containers (must run after lights update the polygon)
-        this.updatePlayerViewMask();
+        this.maskingSystem.updatePlayerViewMask();
 
         // Render LIDAR (uses camera offset, same as lights)
         this.renderLidar();
@@ -573,55 +453,10 @@ export class World {
 
         // Update debug text
         if (Config.Debug.showDebugText) {
-            this.updateDebugText();
+            this.debugOverlay.updateDebugText();
         }
     }
 
-    private handleDebugInput() {
-        // Process any debugging input
-
-        // Toggle debug text
-        if (this.inputManager.getKeysState().keys.get("`")?.justPressed) {
-            Config.Debug.showDebugText = !Config.Debug.showDebugText;
-            this.debugText.visible = Config.Debug.showDebugText;
-        }
-
-        // Toggle lights
-        if (this.inputManager.getKeysState().keys.get("1")?.justPressed) {
-            Config.Debug.showLights = !Config.Debug.showLights;
-            this.lightsContainer.visible = Config.Debug.showLights;
-        }
-        // Toggle level geometry
-        if (this.inputManager.getKeysState().keys.get("2")?.justPressed) {
-            Config.Debug.showLevelGeometry = !Config.Debug.showLevelGeometry;
-            this.levelGeometryContainer.visible = Config.Debug.showLevelGeometry;
-        }
-
-        // Toggle new collision "markers"
-        if (this.inputManager.getKeysState().keys.get("3")?.justPressed) {
-            Config.Debug.showCollisionMarkers = !Config.Debug.showCollisionMarkers;
-        }
-
-        // Toggle player view mode (entities only visible inside the player's light polygon)
-        if (this.inputManager.getKeysState().keys.get("4")?.justPressed) {
-            Config.Debug.onlyDisplayInPlayerView = !Config.Debug.onlyDisplayInPlayerView;
-            if (!Config.Debug.onlyDisplayInPlayerView) {
-                this.clearAllMasks();
-            }
-        }
-
-        // Fire LIDAR pulse
-        if (this.inputManager.getKeysState().keys.get(" ")?.justPressed) {
-            if (this.player && this.level) {
-                const playerPos = this.player.body!.getPosition();
-                this.lidarManager.fire(
-                    { x: playerPos.x, y: playerPos.y },
-                    this.level.getEdgesList()
-                );
-            }
-        }
-    }
-    
     private updateFromInput(deltaTime: number) {
         if (!this.player || !this.player.sprite) return;
 
@@ -645,331 +480,14 @@ export class World {
         this.inputManager.update();
     }
 
-     /**
-     * Handles camera movement each frame, using soft-follow logic and dead zone.
-     */
-     private updateCamera(deltaTime: number) {
-        // If the level is smaller than the screen, keep it centered.
-        // Otherwise, use soft-follow logic with a dead zone to track the player.
-
-        // Smooth camera follow
-        if (!this.player || !this.player.sprite || !this.worldContainer) return;
-
-        const levelWidthInPixels = this.level!.getWidth() * Config.PixelsPerMeter;
-        const levelHeightInPixels = this.level!.getHeight() * Config.PixelsPerMeter;
-        const screenWidth = this.viewportWidth;
-        const screenHeight = this.viewportHeight;
-
-        // Center on x-axis if level is narrower than screen
-        if (levelWidthInPixels <= screenWidth) {
-            this.worldContainer.x = (screenWidth - levelWidthInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterX = this.viewportWidth / 2;
-
-            // World coordinates of screen center
-            const cameraX = -this.worldContainer.x;
-
-            // Get ball position relative to camera center
-            const offsetX = this.player.sprite.x - cameraX;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveX = 0;
-
-            if (offsetX < screenCenterX - Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX - Config.Camera.DeadZone.width / 2);
-            } else if (offsetX > screenCenterX + Config.Camera.DeadZone.width / 2) {
-                moveX = offsetX - (screenCenterX + Config.Camera.DeadZone.width / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
-            this.worldContainer.x -= moveX * Config.Camera.lerpFactor * deltaTime;
-
-            // Keep camera inside the world edges
-            this.worldContainer.x = Math.min(0, Math.max(this.worldContainer.x, this.viewportWidth - this.level!.getWidth() * Config.PixelsPerMeter));
-        }
-
-        // Center on y-axis if level is shorter than screen
-        if (levelHeightInPixels <= screenHeight) {
-            this.worldContainer.y = (screenHeight - levelHeightInPixels) / 2;
-        } else {
-            // Camera target position: center the ball on the screen
-            const screenCenterY = this.viewportHeight / 2;
-            
-            // World coordinates of screen center
-            const cameraY = -this.worldContainer.y;
-
-            // Get ball position relative to camera center
-            const offsetY = this.player.sprite.y - cameraY;
-
-            // Only move camera if the ball is outside the dead zone
-            let moveY = 0;
-
-            if (offsetY < screenCenterY - Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY - Config.Camera.DeadZone.height / 2);
-            } else if (offsetY > screenCenterY + Config.Camera.DeadZone.height / 2) {
-                moveY = offsetY - (screenCenterY + Config.Camera.DeadZone.height / 2);
-            }
-
-            // Move the camera a little bit toward the target each frame
-            this.worldContainer.y -= moveY * Config.Camera.lerpFactor * deltaTime;
-            
-            // Keep camera inside the world edges
-            this.worldContainer.y = Math.min(0, Math.max(this.worldContainer.y, this.viewportHeight - this.level!.getHeight() * Config.PixelsPerMeter));
-        }
-
-        // Lastly, reposition any container that needs to "stick" to the viewport (Lightmaps, etc)
-        this.counteractWorldTransform();
-    }
-
-    private counteractWorldTransform() {
-        this.lightsContainer.position.set(-this.worldContainer.x, -this.worldContainer.y);
-    }
-
-    private updatePlayerViewMask(): void {
-        const start = performance.now();
-        
-        if (!this.validatePlayerViewMode()) {
-            this.clearEntityMask();
-            this.maskUpdateTime = performance.now() - start;
-            return;
-        }
-
-        const lightPoints = this.getCachedPlayerPolygon();
-        if (lightPoints.length < 3) {
-            this.clearEntityMask();
-            this.maskUpdateTime = performance.now() - start;
-            return;
-        }
-
-        this.drawWorldSpaceMask(lightPoints);
-        this.entityContainerGroup.mask = this.playerViewMask;
-        
-        this.maskUpdateTime = performance.now() - start;
-    }
-
-    private validatePlayerViewMode(): boolean {
-        return Config.Debug?.onlyDisplayInPlayerView === true && 
-               this.player?.light !== null;
-    }
-
-    private clearEntityMask(): void {
-        this.entityContainerGroup.mask = null;
-    }
-
-    private clearAllMasks(): void {
-        this.entityContainerGroup.mask = null;
-        this.playerViewMask.clear();
-        this.playerLightPolygonMask.clear();
-        this.cachedPlayerPolygon = null;
-    }
-
-    private getCachedPlayerPolygon(): { point: { x: number, y: number }, angle: number }[] {
-        if (!this.player?.light) return [];
-        
-        // Use a simple timestamp-based cache invalidation
-        const currentUpdate = Date.now();
-        if (this.cachedPlayerPolygon && this.lastPlayerLightUpdate === currentUpdate) {
-            return this.cachedPlayerPolygon;
-        }
-        
-        this.cachedPlayerPolygon = this.player.light.getLightPoints();
-        this.lastPlayerLightUpdate = currentUpdate;
-        return this.cachedPlayerPolygon;
-    }
-
-    private drawWorldSpaceMask(lightPoints: { point: { x: number, y: number }, angle: number }[]): void {
-        const ppm = Config.PixelsPerMeter;
-
-        this.playerViewMask.clear();
-        this.playerViewMask.moveTo(
-            lightPoints[0].point.x * ppm,
-            lightPoints[0].point.y * ppm
-        );
-        for (let i = 1; i < lightPoints.length; i++) {
-            this.playerViewMask.lineTo(
-                lightPoints[i].point.x * ppm,
-                lightPoints[i].point.y * ppm
-            );
-        }
-        this.playerViewMask.closePath();
-        this.playerViewMask.fill({ color: 0xffffff, alpha: 1 });
-    }
-
     private renderLidar() {
         this.lidarManager.render(this.lidarContainer);
     }
 
-    private updateAndRenderLights() {
-        const start = performance.now();
-        
-        // Update all lights
-        LightManager.instance.update();
-
-        const cameraOffset = {
-            x: -this.worldContainer.x,
-            y: -this.worldContainer.y
-        };
-
-        const screenBounds = {
-            left: -this.worldContainer.x,
-            top: -this.worldContainer.y,
-            right: -this.worldContainer.x + this.viewportWidth,
-            bottom: -this.worldContainer.y + this.viewportHeight
-        };
-
-        // Clear the lightmap container once
-        this.tempLightmapContainer.removeChildren();
-
-        // Split rendering into two passes when player view mode is active
-        if (Config.Debug.onlyDisplayInPlayerView && this.player?.light) {
-            this.renderPlayerViewModeLights(cameraOffset, screenBounds);
-        } else {
-            this.renderNormalLights(cameraOffset, screenBounds);
-        }
-        
-        this.lightRenderTime = performance.now() - start;
-        
-        // Process any lights that exited fading out after all updates/renders
-        this.processPendingLightRemovals();
-    }
-
-    private renderPlayerViewModeLights(
-        cameraOffset: { x: number; y: number },
-        screenBounds: { left: number; top: number; right: number; bottom: number }
-    ): void {
-        if (!this.player?.light) return;
-        
-        // === PASS 1: Render player light (unmasked) ===
-        const playerLight = this.player.light;
-        LightUtils.renderLightsBatch(
-            [playerLight],
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
-
-        this.app.renderer.render({
-            container: this.transparentBgRect,
-            target: this.lightmapTexture,
-            clear: true
-        });
-        this.app.renderer.render({
-            container: this.tempLightmapContainer,
-            target: this.lightmapTexture,
-            clear: false
-        });
-
-        // === PASS 2: Render overlapping non-player lights, masked to player's visible polygon ===
-        const playerPos = playerLight.getPosition();
-        const playerRadius = playerLight.radius;
-        const polygon = this.getCachedPlayerPolygon().map(p => p.point);
-        const overlappingLights = LightManager.instance.getAllLights().filter(light => {
-            if (light.id === playerLight.id) return false; // already rendered
-            const lp = light.getPosition();
-            const dx = lp.x - playerPos.x;
-            const dy = lp.y - playerPos.y;
-            return (dx * dx + dy * dy) < (playerRadius + light.radius) * (playerRadius + light.radius);
-        });
-
-        if (overlappingLights.length > 0 && polygon.length >= 3) {
-            this.drawScreenSpaceMask(polygon, cameraOffset);
-            this.renderMaskedLights(overlappingLights, cameraOffset, screenBounds);
-        }
-    }
-
-    private renderNormalLights(
-        cameraOffset: { x: number; y: number },
-        screenBounds: { left: number; top: number; right: number; bottom: number }
-    ): void {
-        // Normal mode: render all lights unmasked
-        LightUtils.renderLightsBatch(
-            LightManager.instance.getAllLights(),
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
-
-        this.app.renderer.render({
-            container: this.transparentBgRect,
-            target: this.lightmapTexture,
-            clear: true
-        });
-        this.app.renderer.render({
-            container: this.tempLightmapContainer,
-            target: this.lightmapTexture,
-            clear: false
-        });
-    }
-
-    private drawScreenSpaceMask(
-        polygon: { x: number, y: number }[],
-        cameraOffset: { x: number; y: number }
-    ): void {
-        const ppm = Config.PixelsPerMeter;
-
-        // Build mask polygon in screen space (same space as tempLightmapContainer)
-        this.playerLightPolygonMask.clear();
-        this.playerLightPolygonMask.moveTo(
-            polygon[0].x * ppm - cameraOffset.x,
-            polygon[0].y * ppm - cameraOffset.y
-        );
-        for (let i = 1; i < polygon.length; i++) {
-            this.playerLightPolygonMask.lineTo(
-                polygon[i].x * ppm - cameraOffset.x,
-                polygon[i].y * ppm - cameraOffset.y
-            );
-        }
-        this.playerLightPolygonMask.closePath();
-        this.playerLightPolygonMask.fill({ color: 0xffffff, alpha: 1 });
-
-        // Apply mask to tempLightmapContainer for this pass
-        this.tempLightmapContainer.removeChildren();
-        this.tempLightmapContainer.addChild(this.playerLightPolygonMask);
-        this.tempLightmapContainer.mask = this.playerLightPolygonMask;
-    }
-
-    private renderMaskedLights(
-        overlappingLights: any[],
-        cameraOffset: { x: number; y: number },
-        screenBounds: { left: number; top: number; right: number; bottom: number }
-    ): void {
-        LightUtils.renderLightsBatch(
-            overlappingLights,
-            cameraOffset, screenBounds, this.tempLightmapContainer
-        );
-        this.app.renderer.render({
-            container: this.tempLightmapContainer,
-            target: this.lightmapTexture,
-            clear: false
-        });
-
-        // Restore mask
-        this.tempLightmapContainer.mask = null;
-    }
-
-    // Process any lights that exited fading out after all updates/renders
-    private processPendingLightRemovals(): void {
-        LightManager.instance.processPendingRemovals();
-    }
-    
-
     // @ts-ignore
     private updatePostProcessing(deltaTime: number) 
     {
-        // Update CRT filter
-        this.crtFilter.seed = Math.random(); // For regenerating noise for animation purposes
-    
-        // TODO Update any other filters
-    }
-
-    private updateDebugText() {
-        if (!this.debugText) return;
-        
-        this.debugText.text = `FPS: ${Math.round(PIXI.Ticker.shared.FPS)}\n` +
-                         `Player (World): [${Math.floor(this.player!.sprite.x)}, ${Math.floor(this.player!.sprite.y)}]\n` +
-                         `Player (Current Tile): [${Math.floor(this.player!.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player!.sprite.y / Config.PixelsPerMeter)}]\n` +
-                         `Camera Offset: [${Math.floor(this.worldContainer.x)}, ${Math.floor(this.worldContainer.y)}]\n` +
-                         `Levels Completed: ${this.numLevelsCompleted}\n` +
-                         `Seed: ${this.level!.getSeed()}\n` +
-                         `Mask Update Time: ${this.maskUpdateTime.toFixed(2)}ms\n` +
-                         `Light Render Time: ${this.lightRenderTime.toFixed(2)}ms`;
+        this.crtFilter.seed = Math.random();
     }
 
     /**
@@ -988,7 +506,7 @@ export class World {
         this.resizeTexturesAndGraphicalElements(width, height);
     
         // Optionally, recenter camera or update camera logic
-        this.instantlyCenterCamera();
+        this.cameraManager.instantlyCenterCamera();
     }
 
     private resizeTexturesAndGraphicalElements(width: number, height: number) {
@@ -997,6 +515,7 @@ export class World {
             this.lightmapTexture.destroy(true);
         }
         this.lightmapTexture = PIXI.RenderTexture.create({ width, height });
+        this.lightRenderPipeline.setLightmapTexture(this.lightmapTexture);
         this.lightmapSprite.texture = this.lightmapTexture;
         this.lightmapSprite.width = width;
         this.lightmapSprite.height = height;

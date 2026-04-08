@@ -1,9 +1,5 @@
-import * as PIXI from 'pixi.js';
-import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
@@ -19,28 +15,10 @@ export interface GateOptions {
 
 export class Gate extends BaseEntity {
     constructor(options: GateOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Gate.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Gate.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Gate.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: options.color
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Gate.width / 2,
-            y: options.spawnPoint.y + Config.Gate.height / 2
-        };
-
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Gate.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Gate;
+        const center = Gate.centerOf(options.spawnPoint, preset);
+        const sprite = Gate.buildSprite(preset, options.spawnPoint, options.color);
+        const body = Gate.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         super({
             type: Config.Gate.type as EntityType,
@@ -57,8 +35,4 @@ export class Gate extends BaseEntity {
         });
     }
 
-    // @ts-ignore
-    update(deltaTime: number) {
-        // No special update logic... for now
-    }
 }

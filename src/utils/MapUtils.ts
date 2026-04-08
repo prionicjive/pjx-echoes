@@ -440,97 +440,81 @@ export class MapUtils {
         }
     }
 
-    /**
-     * Renders a map to the console using ASCII art.
-     * Walls are shown as blocks, open spaces as spaces.
-     * @param {number[][]} map - The map to render.
-     */
-    static renderMap(map: number[][]): void {
-        console.clear();
-        console.log(map.map(row => row.map(cell => cell ? "█" : " ").join("")).join("\n"));
-    }    
-
     static createMergedHorizontalEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
         const edgeSegments: Segment[] = [];
-      
+
         const height = tileMap.length;
         const width = tileMap[0].length;
-      
+
         for (let y = 0; y < height; y++) {
-          let startX = null; // Tracks where an edge should begin
-      
-          for (let x = 0; x <= width; x++) {
-            const wall = x < width && tileMap[y][x]; // Is the current tile a wall?
-            const isAboveOpen = y > 0 ? !tileMap[y - 1][x] : false; // Is the tile above open?
-      
-            // Only start if we are (on a wall AND the above is open OR we are not on a wall and the above is not open) AND we haven't already started an edge
-            const shouldStart = (wall == isAboveOpen) && startX === null; 
-            // End only if we have already started an edge and (we're wall and it's not open above OR we're not wall and it is open above) or we are at the end of the row
-            const shouldEnd = (startX !== null && (wall != isAboveOpen)) || x === width; 
-      
-            // Mark where the edge starts
-            if (shouldStart) {
-              startX = x;
+            let startX = null; // Tracks where a horizontal edge run begins
+
+            for (let x = 0; x <= width; x++) {
+                const wall = x < width && tileMap[y][x];          // current tile is a wall
+                const isAboveOpen = y > 0 ? !tileMap[y - 1][x] : false; // tile above is open space
+
+                // A horizontal edge exists between rows when one side is wall and the other is open.
+                // We start a run when both are the same (wall==wall or open==open) meaning we just
+                // crossed into an edge-boundary condition. We end when they differ again.
+                //
+                // Truth table for `wall == isAboveOpen` (start condition):
+                //   wall=1, above=1 → both wall  → start (top face of a wall with wall above — interior edge)
+                //   wall=0, above=0 → both open  → start (open tile with open above — no edge needed, but resets run)
+                //   wall=1, above=0 → edge face   → end/emit
+                //   wall=0, above=1 → edge face   → end/emit
+                const shouldStart = (wall == isAboveOpen) && startX === null;
+                const shouldEnd = (startX !== null && (wall != isAboveOpen)) || x === width;
+
+                if (shouldStart) {
+                    startX = x;
+                }
+
+                if (shouldEnd && startX !== null) {
+                    edgeSegments.push({
+                        a: new planck.Vec2(startX * tileSize, y * tileSize),
+                        b: new planck.Vec2(x * tileSize, y * tileSize)
+                    });
+                    startX = null;
+                }
             }
-      
-            if (shouldEnd && startX !== null) {
-              // Construct the full edge
-              const ax = startX * tileSize;
-              const ay = y * tileSize;
-              const bx = x * tileSize;
-              const by = y * tileSize;
-      
-              // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: new planck.Vec2(ax, ay), b: new planck.Vec2(bx, by) });
-      
-              // Reset the start position
-              startX = null;
-            }
-          }
         }
-      
+
         return edgeSegments;
-    }    
+    }
 
     static createMergedVerticalEdgesFromTilemap(tileMap: number[][], tileSize = 1) {
         const edgeSegments: Segment[] = [];
-      
+
         const height = tileMap.length;
         const width = tileMap[0].length;
-      
+
         for (let x = 0; x < width; x++) {
-          let startY = null; // Tracks where an edge should begin
-      
-          for (let y = 0; y <= height; y++) {
-            const wall = y < height && tileMap[y][x]; // Is the current tile a wall?
-            const isLeftOpen = x > 0 ? !tileMap[y]?.[x - 1] : false; // Is the tile to the left open? (We say it's open to the left of the very first column)
-      
-            // Only start if we are on a wall, the left is open AND we haven't already started an edge
-            const shouldStart = (wall == isLeftOpen) && startY === null; 
-            // End only if we have already started an edge and (we're a wall and it's not open to the left OR we're not a wall and it's open to the left) or we are at the end of the column
-            const shouldEnd = (startY !== null && (wall != isLeftOpen)) || y === height;
-      
-            // Mark where the edge starts
-            if (shouldStart) {
-              startY = y;
+            let startY = null; // Tracks where a vertical edge run begins
+
+            for (let y = 0; y <= height; y++) {
+                const wall = y < height && tileMap[y][x];                   // current tile is a wall
+                const isLeftOpen = x > 0 ? !tileMap[y]?.[x - 1] : false;  // tile to the left is open space
+
+                // Same state-machine logic as horizontal, rotated 90°.
+                // A vertical edge exists on the left face of a wall tile when the tile to its left is open.
+                // `wall == isLeftOpen` means both sides match → boundary of a run; `wall != isLeftOpen` → emit.
+                const shouldStart = (wall == isLeftOpen) && startY === null;
+                const shouldEnd = (startY !== null && (wall != isLeftOpen)) || y === height;
+
+                if (shouldStart) {
+                    startY = y;
+                }
+
+                if (shouldEnd && startY !== null) {
+                    edgeSegments.push({
+                        a: new planck.Vec2(x * tileSize, startY * tileSize),
+                        b: new planck.Vec2(x * tileSize, y * tileSize)
+                    });
+                    startY = null;
+                }
             }
-      
-            if (shouldEnd && startY !== null) {
-              // Construct the full edge
-              const ax = x * tileSize;
-              const ay = startY * tileSize;
-              const bx = x * tileSize;
-              const by = y * tileSize;
-      
-              // ✨ Save the edge for later (Ex. raycasting)
-              edgeSegments.push({ a: new planck.Vec2(ax, ay), b: new planck.Vec2(bx, by) });
-      
-              // Reset the start position
-              startY = null;
-            }
-          }
         }
-      
+
         return edgeSegments;
     }
 

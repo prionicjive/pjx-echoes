@@ -1,11 +1,7 @@
-import * as PIXI from 'pixi.js';
-import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
-import { PhysicsUtils } from '../utils/PhysicsUtils';
-import { SpriteUtils } from '../utils/SpriteUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
 import { EntitiesConfig } from '../config/EntitiesConfig';
@@ -20,28 +16,10 @@ export interface TorchOptions {
 
 export class Torch extends BaseEntity {
     constructor(options: TorchOptions) {
-        // Create the sprite
-        const sprite = SpriteUtils.createSprite({
-            texture: PIXI.Texture.from(EntitiesConfig.Torch.sprite.texture),
-            x: options.spawnPoint.x * Config.PixelsPerMeter,
-            y: options.spawnPoint.y * Config.PixelsPerMeter,
-            width: EntitiesConfig.Torch.sprite.widthInMeters * Config.PixelsPerMeter,
-            height: EntitiesConfig.Torch.sprite.heightInMeters * Config.PixelsPerMeter,
-            color: EntitiesConfig.Torch.sprite.color
-        });
-
-        const center = {
-            x: options.spawnPoint.x + Config.Torch.width / 2,
-            y: options.spawnPoint.y + Config.Torch.height / 2
-        };
-
-        // Create static body
-        const body = PhysicsUtils.createBody(
-            options.levelContext.getPhysicsWorld(), {
-                ...EntitiesConfig.Torch.body!,
-                position: new planck.Vec2(center.x, center.y)
-            }
-        );
+        const preset = EntitiesConfig.Torch;
+        const center = Torch.centerOf(options.spawnPoint, preset);
+        const sprite = Torch.buildSprite(preset, options.spawnPoint);
+        const body = Torch.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         // Construct a static light
         const light = new StaticLight(
@@ -69,11 +47,6 @@ export class Torch extends BaseEntity {
 
         // Play the effect
         this.particleEffect!.play();
-    }
-
-    // @ts-ignore
-    update(deltaTime: number) {
-        // No special update logic... for now
     }
 
     // Optionally, add any unique logic on pickup

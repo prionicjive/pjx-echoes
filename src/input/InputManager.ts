@@ -53,6 +53,9 @@ export class InputManager {
         keys: new Map<string, KeyState>()
     }
 
+    private lastTapTime = 0;
+    private doubleTapped = false;
+
     constructor(canvas: HTMLCanvasElement) {
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
@@ -110,6 +113,12 @@ export class InputManager {
         this.pointer.isDown = false;
         this.pointer.justReleased = true;
         this.touchState.active = false;
+
+        const now = performance.now();
+        if (now - this.lastTapTime <= Config.Movement.Gesture.doubleTapMaxIntervalMs) {
+            this.doubleTapped = true;
+        }
+        this.lastTapTime = now;
     }
 
     private onTouchMove(e: TouchEvent) {
@@ -157,6 +166,7 @@ export class InputManager {
     // Call once per frame to reset "just pressed / released" flags
     public update() {
         this.pointer.justReleased = false;
+        this.doubleTapped = false;
 
         this.keysState.keys.forEach((keyState) => {
             keyState.justPressed = false;
@@ -167,4 +177,5 @@ export class InputManager {
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getTouchState(): TouchState { return { ...this.touchState }; }
     public getKeysState(): KeysState { return { ...this.keysState }; }
+    public isDoubleTapped(): boolean { return this.doubleTapped; }
 }

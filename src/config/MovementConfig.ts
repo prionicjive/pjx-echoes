@@ -6,6 +6,7 @@ export const MovementConfig = {
         swipeSpeedScaleExponent: 0.95,
         maxSpeedScaleExponent: 1.1,
         maxSpeedMetersPerSecond: 10.00,
+        doubleTapMaxIntervalMs: 300,
     },
     towardsPoint: true,
     towardsPointMode: "FORCE" as const, // "IMPULSE" or "FORCE"

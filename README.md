@@ -2,7 +2,7 @@
 
 An exploration game rooted in navigating the unknown and unseen.
 
-[Playable via Netlify](https://pjx-echoes.netlify.app/)
+[Playable via Vercel](https://pjx-echoes.vercel.app/)
 
 > For Claude Code seeding information, see [CLAUDE.md](CLAUDE.md).
 

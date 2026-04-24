@@ -1,6 +1,13 @@
 import { Config } from "../config/Config";
 import { Point } from "../utils/types";
 import { GestureRecognizer } from "./GestureRecognizer";
+import { InputDevice, GamepadDevice } from "pixijs-input-devices";
+
+declare module "pixijs-input-devices" {
+    interface BindValues {
+        Echoes: "aButton" | "yButton";
+    }
+}
 
 export interface PointerState {
     screen: Point,
@@ -30,6 +37,13 @@ export interface KeysState {
     keys: Map<string, KeyState>
 }
 
+export interface GamepadState {
+    connected: boolean;
+    aButton: { isDown: boolean };
+    yButton: { justPressed: boolean };
+    leftStick: { x: number; y: number };
+}
+
 export class InputManager {
     private pointer: PointerState = {
         screen: { x: 0, y: 0 },
@@ -56,7 +70,15 @@ export class InputManager {
     private lastTapTime = 0;
     private doubleTapped = false;
 
+    private gamepadState: GamepadState = {
+        connected: false,
+        aButton: { isDown: false },
+        yButton: { justPressed: false },
+        leftStick: { x: 0, y: 0 },
+    };
+
     constructor(canvas: HTMLCanvasElement) {
+        GamepadDevice.configureDefaultBinds({ aButton: ["Face1"], yButton: ["Face4"] });
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
         canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
@@ -165,6 +187,21 @@ export class InputManager {
 
     // Call once per frame to reset "just pressed / released" flags
     public update() {
+        InputDevice.update();
+
+        const pad = InputDevice.gamepads[0];
+        if (pad) {
+            this.gamepadState = {
+                connected: true,
+                aButton: { isDown: pad.bindDown("aButton") },
+                yButton: { justPressed: pad.bindPressed("yButton") },
+                leftStick: { x: pad.leftJoystick.x, y: pad.leftJoystick.y },
+            };
+        } else {
+            this.gamepadState.connected = false;
+            this.gamepadState.yButton.justPressed = false;
+        }
+
         this.pointer.justReleased = false;
         this.doubleTapped = false;
 
@@ -177,5 +214,6 @@ export class InputManager {
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getTouchState(): TouchState { return { ...this.touchState }; }
     public getKeysState(): KeysState { return { ...this.keysState }; }
+    public getGamepadState(): GamepadState { return { ...this.gamepadState, aButton: { ...this.gamepadState.aButton }, yButton: { ...this.gamepadState.yButton }, leftStick: { ...this.gamepadState.leftStick } }; }
     public isDoubleTapped(): boolean { return this.doubleTapped; }
 }

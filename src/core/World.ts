@@ -476,9 +476,10 @@ export class World {
     
         const pointer = this.inputManager.getPointerState();
         const touchState = this.inputManager.getTouchState();
-    
+        const gamepad = this.inputManager.getGamepadState();
+
         this.player.handleInput(
-            { pointer, touchState },
+            { pointer, touchState, gamepad },
             { levelPosition, playerScreenPos },
             deltaTime
         );

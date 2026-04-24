@@ -8,7 +8,7 @@
 
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { PointerState, TouchState } from '../input/InputManager';
+import { GamepadState, PointerState, TouchState } from '../input/InputManager';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -61,7 +61,7 @@ export class Player extends BaseEntity {
     }
 
     handleInput(
-        input: { pointer: PointerState, touchState: TouchState },
+        input: { pointer: PointerState, touchState: TouchState, gamepad: GamepadState },
         context: {
             levelPosition: { x: number, y: number },
             playerScreenPos: { x: number, y: number }
@@ -143,6 +143,15 @@ export class Player extends BaseEntity {
                 this.body!.setLinearVelocity(new planck.Vec2(0, 0));
             }
         }
+
+        // Gamepad: A held + left stick direction applies continuous force
+        if (input.gamepad.connected && input.gamepad.aButton.isDown) {
+            const { x, y } = input.gamepad.leftStick;
+            const magnitude = Math.sqrt(x * x + y * y);
+            if (magnitude > 0.01) {
+                this.applyForceInDirection(x / magnitude, y / magnitude, deltaTime);
+            }
+        }
     }
 
     private handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }) {
@@ -207,6 +216,25 @@ export class Player extends BaseEntity {
         }
 
         // Apply force at the center of mass
+        this.body!.applyForceToCenter(force);
+    }
+
+    private applyForceInDirection(dx: number, dy: number, deltaTime: number) {
+        const magnitude = Config.Movement.forceFactorPerSecond * deltaTime;
+        const force = new planck.Vec2(dx * magnitude, dy * magnitude);
+
+        const currLinearVelocity = this.body!.getLinearVelocity();
+        const speed: number = Math.min(currLinearVelocity.length(), Config.Movement.maxSpeed);
+        const direction: planck.Vec2 = PhysicsUtils.normalizeVector(currLinearVelocity);
+
+        if (Config.Movement.instantlyChangeDirection) {
+            this.body!.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
+        } else {
+            if (speed !== 0 && !isNaN(speed)) {
+                this.body!.setLinearVelocity(direction.mul(speed));
+            }
+        }
+
         this.body!.applyForceToCenter(force);
     }
 

@@ -93,8 +93,8 @@ export class DebugOverlay {
             this.onPlayerViewToggled(Config.Debug.onlyDisplayInPlayerView);
         }
 
-        // Fire LIDAR pulse (spacebar on desktop, double-tap on touch)
-        const fireLidar = keys.get(" ")?.justPressed || this.inputManager.isDoubleTapped();
+        // Fire LIDAR pulse (spacebar on desktop, double-tap on touch, Y button on gamepad)
+        const fireLidar = keys.get(" ")?.justPressed || this.inputManager.isDoubleTapped() || this.inputManager.getGamepadState().yButton.justPressed;
         if (fireLidar) {
             if (this.player && this.level) {
                 const playerPos = this.player.body!.getPosition();

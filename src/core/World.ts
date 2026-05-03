@@ -146,7 +146,6 @@ export class World {
             this.inputManager,
             this.lightsContainer,
             this.levelGeometryContainer,
-            this.lidarManager,
             () => ({ x: this.worldContainer.x, y: this.worldContainer.y }),
             () => {
                 const ls = this.lightRenderPipeline.getLightUpdateStats();
@@ -162,7 +161,6 @@ export class World {
                 };
             },
             (enabled: boolean) => { if (!enabled) this.maskingSystem.clearAllMasks(); },
-            () => this.level?.getEdgesList() ?? []
         );
 
         // TODO Handle additional setup if needed
@@ -329,7 +327,8 @@ export class World {
                 entitiesContainer: this.entitiesContainer,
                 postEntitiesContainer: this.postEntitiesContainer
             },
-            "Standard"
+            "Standard",
+            this.lidarManager
         );
         
         // Get the player - our "first class" entity
@@ -477,9 +476,11 @@ export class World {
         const pointer = this.inputManager.getPointerState();
         const touchState = this.inputManager.getTouchState();
         const gamepad = this.inputManager.getGamepadState();
+        const keys = this.inputManager.getKeysState().keys;
+        const doubleTapped = this.inputManager.isDoubleTapped();
 
         this.player.handleInput(
-            { pointer, touchState, gamepad },
+            { pointer, touchState, gamepad, keys, doubleTapped },
             { levelPosition, playerScreenPos },
             deltaTime
         );

@@ -26,6 +26,7 @@ import { Gate } from '../entities/Gate';
 import { Switch } from '../entities/Switch';
 import { PhysicsManager } from '../physics/PhysicsManager';
 import { ExitGroup } from './ExitGroup';
+import { LidarManager } from '../lidar/LidarManager';
 
 export interface LevelOptions {
     renderer: PIXI.Renderer;
@@ -35,6 +36,7 @@ export interface LevelOptions {
     edgesList: Segment[];
     entitiesOptions: LevelSkeleton;
     seed: string;
+    lidarManager: LidarManager;
 }
 
 export interface LevelContainers {
@@ -52,6 +54,7 @@ export interface LevelContainers {
  */
 export class Level implements LevelContext {
     private renderer: PIXI.Renderer;
+    private lidarManager: LidarManager;
     private player: Player | null;
     private exits: Exit[];
     private exitGroups: Map<number, { exit: Exit; gates: Gate[]; switchEntity: Switch }> = new Map();
@@ -75,6 +78,7 @@ export class Level implements LevelContext {
         this.edgesList = options.edgesList;
         this.physicsWorld = options.physicsWorld;
         this.physicsManager = options.physicsManager;
+        this.lidarManager = options.lidarManager;
 
         // Store the seed
         this.seed = options.seed;
@@ -245,12 +249,13 @@ export class Level implements LevelContext {
         containers: LevelContainers
     ): Player {
         const entity = new Player({
-            spawnPoint: {...spawnPoint}, 
+            spawnPoint: {...spawnPoint},
             containers: {
                 containerForEntity: containers.entitiesContainer,
-                containerForParticleEffects: containers.preEntitiesContainer 
+                containerForParticleEffects: containers.preEntitiesContainer
             },
-            levelContext: this
+            levelContext: this,
+            lidarManager: this.lidarManager,
         });
 
         return entity;

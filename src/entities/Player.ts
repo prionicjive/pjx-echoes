@@ -8,7 +8,8 @@
 
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { GamepadState, PointerState, TouchState } from '../input/InputManager';
+import { GamepadState, KeyState, PointerState, TouchState } from '../input/InputManager';
+import { LidarManager } from '../lidar/LidarManager.ts';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -19,13 +20,17 @@ import { EntityType } from './types';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityUtils } from '../utils/EntityUtils';
 
-export interface PlayerOptions { 
+export interface PlayerOptions {
     spawnPoint: Point,
     containers: EntityContainers,
-    levelContext: LevelContext
+    levelContext: LevelContext,
+    lidarManager: LidarManager,
 }
 
 export class Player extends BaseEntity {
+    private readonly levelContext: LevelContext;
+    private readonly lidarManager: LidarManager;
+
     constructor(options: PlayerOptions) {
         const preset = EntitiesConfig.Player;
         const center = Player.centerOf(options.spawnPoint, preset);
@@ -53,6 +58,9 @@ export class Player extends BaseEntity {
             containers: options.containers
         });
 
+        this.levelContext = options.levelContext;
+        this.lidarManager = options.lidarManager;
+
         // Set initial position
         EntityUtils.syncEffectToSprite(this);
 
@@ -61,13 +69,20 @@ export class Player extends BaseEntity {
     }
 
     handleInput(
-        input: { pointer: PointerState, touchState: TouchState, gamepad: GamepadState },
+        input: { pointer: PointerState, touchState: TouchState, gamepad: GamepadState, keys: Map<string, KeyState>, doubleTapped: boolean },
         context: {
             levelPosition: { x: number, y: number },
             playerScreenPos: { x: number, y: number }
         },
         deltaTime: number
     ) {
+        // Fire LIDAR pulse (spacebar on desktop, double-tap on touch, Y button on gamepad)
+        const fireLidar = input.keys.get(' ')?.justPressed || input.doubleTapped || input.gamepad.yButton.justPressed;
+        if (fireLidar) {
+            const pos = this.body!.getPosition();
+            this.lidarManager.fire({ x: pos.x, y: pos.y }, this.levelContext.getEdgesList());
+        }
+
         const touchState = input.touchState;
 
         // 1. Attractor logic while touch is held

@@ -3,8 +3,6 @@ import { Config } from '../config/Config.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../level/Level.ts';
 import { InputManager } from '../input/InputManager.ts';
-import { LidarManager } from '../lidar/LidarManager.ts';
-import { Segment } from '../utils/types.ts';
 
 interface DebugStats {
     numLevelsCompleted: number;
@@ -25,32 +23,26 @@ export class DebugOverlay {
     private readonly inputManager: InputManager;
     private readonly lightsContainer: PIXI.Container;
     private readonly levelGeometryContainer: PIXI.Container;
-    private readonly lidarManager: LidarManager;
     private readonly getWorldOffset: () => { x: number; y: number };
     private readonly getStats: () => DebugStats;
     private readonly onPlayerViewToggled: (enabled: boolean) => void;
-    private readonly getEdges: () => Segment[];
 
     constructor(
         debugText: PIXI.Text,
         inputManager: InputManager,
         lightsContainer: PIXI.Container,
         levelGeometryContainer: PIXI.Container,
-        lidarManager: LidarManager,
         getWorldOffset: () => { x: number; y: number },
         getStats: () => DebugStats,
         onPlayerViewToggled: (enabled: boolean) => void,
-        getEdges: () => Segment[]
     ) {
         this.debugText = debugText;
         this.inputManager = inputManager;
         this.lightsContainer = lightsContainer;
         this.levelGeometryContainer = levelGeometryContainer;
-        this.lidarManager = lidarManager;
         this.getWorldOffset = getWorldOffset;
         this.getStats = getStats;
         this.onPlayerViewToggled = onPlayerViewToggled;
-        this.getEdges = getEdges;
     }
 
     setPlayer(player: Player | null): void {
@@ -93,17 +85,6 @@ export class DebugOverlay {
             this.onPlayerViewToggled(Config.Debug.onlyDisplayInPlayerView);
         }
 
-        // Fire LIDAR pulse (spacebar on desktop, double-tap on touch, Y button on gamepad)
-        const fireLidar = keys.get(" ")?.justPressed || this.inputManager.isDoubleTapped() || this.inputManager.getGamepadState().yButton.justPressed;
-        if (fireLidar) {
-            if (this.player && this.level) {
-                const playerPos = this.player.body!.getPosition();
-                this.lidarManager.fire(
-                    { x: playerPos.x, y: playerPos.y },
-                    this.getEdges()
-                );
-            }
-        }
     }
 
     updateDebugText(): void {

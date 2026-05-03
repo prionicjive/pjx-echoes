@@ -8,6 +8,7 @@ import { MapUtils } from "./MapUtils";
 import * as PIXI from 'pixi.js';
 import { ExitGroup } from '../level/ExitGroup';
 import { ColorUtils } from './ColorUtils';
+import { LidarManager } from '../lidar/LidarManager';
 import { CellularAutomataOptions, DrunkardsWalkWithSmoothingOptions, ProcGenLevelOptions, ProcGenLevelsConfig } from '../config/ProcGenLevelsConfig';
 import { RandomGenerator } from './RandomGenerator';
 
@@ -17,7 +18,8 @@ export class LevelUtils {
         world: planck.World,
         physicsManager: PhysicsManager,
         containers: LevelContainers,
-        procGenLevelType: ProcGenLevelType
+        procGenLevelType: ProcGenLevelType,
+        lidarManager: LidarManager
     ) {
         let map: number[][] = [];
         let openSpaces: string[] = [];
@@ -67,7 +69,8 @@ export class LevelUtils {
             },
             edgesList,
             entitiesOptions,
-            seed: rng.seed
+            seed: rng.seed,
+            lidarManager,
         });
     }
 

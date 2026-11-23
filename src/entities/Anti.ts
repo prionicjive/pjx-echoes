@@ -1,4 +1,3 @@
-import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { Point } from '../utils/types';
@@ -27,7 +26,7 @@ export class Anti extends BaseEntity {
         );
 
         super({
-            type: Config.Anti.type as EntityType,
+            type: EntityType.Anti,
             sprite,
             body,
             light,

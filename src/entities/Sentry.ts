@@ -36,7 +36,7 @@ export class Sentry extends BaseEntity {
         });
 
         super({
-            type: Config.Sentry.type as EntityType,
+            type: EntityType.Sentry,
             sprite,
             body,
             light,

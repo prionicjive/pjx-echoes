@@ -1,4 +1,3 @@
-import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { Point } from '../utils/types';
@@ -28,7 +27,7 @@ export class Exit extends BaseEntity {
         );
 
         super({
-            type: Config.Exit.type as EntityType,
+            type: EntityType.Exit,
             sprite,
             body,
             light,
@@ -36,7 +35,7 @@ export class Exit extends BaseEntity {
         });
 
         body.setUserData({ 
-            type: Config.Exit.type, 
+            type: EntityType.Exit, 
             entity: this,
             groupId: options.groupId
         });

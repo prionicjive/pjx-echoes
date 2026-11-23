@@ -9,6 +9,7 @@
 import * as PIXI from 'pixi.js';
 import * as planck from 'planck';
 import { Config } from '../config/Config';
+import { EntityType, BodyType } from '../entities/types';
 import { Anti } from '../entities/Anti';
 import { BaseEntity, EntityUserData } from '../entities/BaseEntity';
 import { Exit } from '../entities/Exit';
@@ -160,7 +161,7 @@ export class Level implements LevelContext {
         }
 
         // Create single body and multiple fixtures for all the edges of the level
-        const id = EntityUtils.generateRandomId(Config.Edges.type);
+        const id = EntityUtils.generateRandomId(BodyType.Edges);
 
         const body = PhysicsUtils.createChainsBodyFromEdges(world, { 
             edges: this.edgesList, 
@@ -174,7 +175,7 @@ export class Level implements LevelContext {
 
         // Set user data for the body in a self-referential way
         body.setUserData({ 
-            type: Config.Edges.type,
+            type: BodyType.Edges,
         } as EntityUserData);
 
         return { id, body, graphics: edgeGraphics }
@@ -429,22 +430,22 @@ export class Level implements LevelContext {
     private removeEntity(entity: BaseEntity) {
         // Now, remove the entity from the correct array
         switch (entity.type) {
-            case Config.Torch.type:
+            case EntityType.Torch:
                 this.torches = this.torches.filter((torch) => torch !== entity as Torch);
                 break;
-            case Config.Anti.type:
+            case EntityType.Anti:
                 this.antiEntities = this.antiEntities.filter((anti) => anti !== entity as Anti);
                 break;
-            case Config.Exit.type:
+            case EntityType.Exit:
                 this.exits = this.exits.filter((exit) => exit !== entity as Exit);
                 break;
-            case Config.Gate.type:
+            case EntityType.Gate:
                 this.gates = this.gates.filter((gate) => gate !== entity as Gate);
                 break;
-            case Config.Switch.type:
+            case EntityType.Switch:
                 this.switches = this.switches.filter((switchEntity) => switchEntity !== entity as Switch);
                 break;    
-            case Config.Sentry.type:
+            case EntityType.Sentry:
                 this.sentries = this.sentries.filter((sentry) => sentry !== entity as Sentry);
                 break;
         }

@@ -1,4 +1,3 @@
-import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
@@ -21,7 +20,7 @@ export class Gate extends BaseEntity {
         const body = Gate.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
         super({
-            type: Config.Gate.type as EntityType,
+            type: EntityType.Gate,
             sprite,
             body,
             containers: options.containers
@@ -29,7 +28,7 @@ export class Gate extends BaseEntity {
 
         // Set user data for the body in a self-referential way
         body.setUserData({ 
-            type: Config.Gate.type,
+            type: EntityType.Gate,
             entity: this,
             groupId: options.groupId
         });

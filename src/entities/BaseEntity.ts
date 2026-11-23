@@ -4,7 +4,7 @@ import { Light } from '../light/Light';
 import { LightManager } from '../light/LightManager';
 import { ParticleEffect } from '../particles/ParticleEffect';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager';
-import { EntityType } from './types';
+import { EntityType, BodyType } from './types';
 import { EntityUtils } from '../utils/EntityUtils';
 import { PhysicsManager } from '../physics/PhysicsManager';
 import { EntityPreset } from '../config/EntitiesConfig';
@@ -28,7 +28,7 @@ export interface BaseEntityOptions {
 }
 
 export interface EntityUserData {
-    type: EntityType;
+    type: BodyType;
     entity?: BaseEntity;
     body?: planck.Body;
     groupId?: number;

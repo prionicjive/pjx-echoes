@@ -16,7 +16,7 @@ import { ParticleEffect } from '../particles/ParticleEffect';
 import { PhysicsUtils } from '../utils/PhysicsUtils';
 import { Point } from '../utils/types';
 import { BaseEntity, EntityContainers } from './BaseEntity';
-import { EntityType } from './types';
+import { EntityType, BodyType } from './types';
 import { EntitiesConfig } from '../config/EntitiesConfig';
 import { EntityUtils } from '../utils/EntityUtils';
 
@@ -50,7 +50,7 @@ export class Player extends BaseEntity {
         });
 
         super({
-            type: Config.Player.type as EntityType,
+            type: EntityType.Player,
             sprite,
             body,
             light,
@@ -333,9 +333,9 @@ export class Player extends BaseEntity {
         EntityUtils.syncEffectToSprite(this);
     }
 
-    onPickup(type: EntityType) {
+    onPickup(type: BodyType) {
         switch (type) {
-            case Config.Torch.type:
+            case EntityType.Torch:
                 // Grow the light
                 this.light?.increaseBaseRadius(
                     this.light.options.baseRadius + Config.Player.lightRadiusIncrement,
@@ -343,7 +343,7 @@ export class Player extends BaseEntity {
                     Config.Player.lightChangeDuration
                 );
                 break;
-            case Config.Anti.type:
+            case EntityType.Anti:
                 // Shrink the light
                 this.light?.decreaseBaseRadius(
                     this.light.options.baseRadius - Config.Player.lightRadiusDecrement,
@@ -351,7 +351,7 @@ export class Player extends BaseEntity {
                     Config.Player.lightChangeDuration
                 );
                 break;
-            case Config.Sentry.type:
+            case EntityType.Sentry:
                 // Increase the age of the particle trail
                 if(this.particleEffect) {
                     this.particleEffect.template.maxAge += Config.Player.particleTrailMaxAgeIncrement;

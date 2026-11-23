@@ -1,4 +1,3 @@
-import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -34,7 +33,7 @@ export class Torch extends BaseEntity {
         });
 
         super({
-            type: Config.Torch.type as EntityType,
+            type: EntityType.Torch,
             sprite,
             body,
             light,

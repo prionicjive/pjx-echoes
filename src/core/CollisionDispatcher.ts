@@ -2,6 +2,7 @@ import planck from 'planck';
 import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { EntityUserData } from '../entities/BaseEntity.ts';
+import { EntityType, BodyType } from '../entities/types.ts';
 import { Player } from '../entities/Player.ts';
 import { Level } from '../level/Level.ts';
 import { ParticleEffectManager } from '../particles/ParticleEffectManager.ts';
@@ -41,30 +42,30 @@ export class CollisionDispatcher {
         const bData: EntityUserData = contact.getFixtureB().getBody().getUserData() as EntityUserData;
 
         if (
-            (aData.type === Config.Player.type && bData.type === Config.Exit.type) ||
-            (aData.type === Config.Exit.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === EntityType.Exit) ||
+            (aData.type === EntityType.Exit && bData.type === EntityType.Player)
         ) {
             this.onLevelCompleted();
             this.onResetRequested();
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === BodyType.Edges) ||
+            (aData.type === BodyType.Edges && bData.type === EntityType.Player)
         ) {
             if (Config.Debug.showCollisionMarkers) {
                 this.spawnEdgeImpactParticles(contact);
             }
         } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Edges.type) ||
-            (aData.type === Config.Edges.type && bData.type === Config.Sentry.type)
+            (aData.type === EntityType.Sentry && bData.type === BodyType.Edges) ||
+            (aData.type === BodyType.Edges && bData.type === EntityType.Sentry)
         ) {
             if (Config.Debug.showCollisionMarkers) {
                 this.spawnEdgeImpactParticles(contact);
             }
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Sentry.type) ||
-            (aData.type === Config.Sentry.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === EntityType.Sentry) ||
+            (aData.type === EntityType.Sentry && bData.type === EntityType.Player)
         ) {
-            const sentryData: EntityUserData = aData?.type === Config.Sentry.type ? aData : bData;
+            const sentryData: EntityUserData = aData?.type === EntityType.Sentry ? aData : bData;
             if (sentryData.entity) {
                 this.player!.onPickup(sentryData.type);
                 this.level!.gentlyDestroyEntity(sentryData.entity);
@@ -72,32 +73,32 @@ export class CollisionDispatcher {
             // Disable contact to prevent sentry from physically reacting with the player
             contact.setEnabled(false);
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Torch.type) ||
-            (aData.type === Config.Torch.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === EntityType.Torch) ||
+            (aData.type === EntityType.Torch && bData.type === EntityType.Player)
         ) {
-            const torchEntity: EntityUserData = aData?.type === Config.Torch.type ? aData : bData;
+            const torchEntity: EntityUserData = aData?.type === EntityType.Torch ? aData : bData;
             if (torchEntity.entity) {
                 this.player!.onPickup(torchEntity.type);
                 this.level!.gentlyDestroyEntity(torchEntity.entity);
             }
         } else if (
-            (aData.type === Config.Sentry.type && bData.type === Config.Sentry.type)
+            (aData.type === EntityType.Sentry && bData.type === EntityType.Sentry)
         ) {
             // TODO Handle a sentry hitting another sentry
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Anti.type) ||
-            (aData.type === Config.Anti.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === EntityType.Anti) ||
+            (aData.type === EntityType.Anti && bData.type === EntityType.Player)
         ) {
-            const antiEntity: EntityUserData = aData?.type === Config.Anti.type ? aData : bData;
+            const antiEntity: EntityUserData = aData?.type === EntityType.Anti ? aData : bData;
             if (antiEntity.entity) {
                 this.player!.onPickup(antiEntity.type);
                 this.level!.gentlyDestroyEntity(antiEntity.entity);
             }
         } else if (
-            (aData.type === Config.Player.type && bData.type === Config.Switch.type) ||
-            (aData.type === Config.Switch.type && bData.type === Config.Player.type)
+            (aData.type === EntityType.Player && bData.type === EntityType.Switch) ||
+            (aData.type === EntityType.Switch && bData.type === EntityType.Player)
         ) {
-            const switchEntity: EntityUserData = aData?.type === Config.Switch.type ? aData : bData;
+            const switchEntity: EntityUserData = aData?.type === EntityType.Switch ? aData : bData;
             if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
                 this.level!.onSwitchPressed(switchEntity.groupId);
             }

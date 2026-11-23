@@ -1,5 +1,4 @@
 import * as PIXI from 'pixi.js';
-import { Config } from '../config/Config';
 import { LevelContext } from '../level/LevelContext';
 import { StaticLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -50,7 +49,7 @@ export class Switch extends BaseEntity {
         });
 
         super({
-            type: Config.Switch.type as EntityType,
+            type: EntityType.Switch,
             sprite,
             body,
             light,
@@ -60,7 +59,7 @@ export class Switch extends BaseEntity {
 
         // Set user data for the body in a self-referential way
         body.setUserData({ 
-            type: Config.Switch.type,
+            type: EntityType.Switch,
             entity: this,
             groupId: options.groupId
         });

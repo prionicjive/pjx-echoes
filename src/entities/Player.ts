@@ -8,7 +8,7 @@
 
 import * as planck from 'planck';
 import { Config } from '../config/Config';
-import { GamepadState, KeyState, PointerState, TouchState } from '../input/InputManager';
+import { PlayerActions } from '../input/ActionMapping';
 import { LidarManager } from '../lidar/LidarManager.ts';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
@@ -69,30 +69,27 @@ export class Player extends BaseEntity {
     }
 
     handleInput(
-        input: { pointer: PointerState, touchState: TouchState, gamepad: GamepadState, keys: Map<string, KeyState>, doubleTapped: boolean },
+        actions: PlayerActions,
         context: {
             levelPosition: { x: number, y: number },
             playerScreenPos: { x: number, y: number }
         },
         deltaTime: number
     ) {
-        // Fire LIDAR pulse (spacebar on desktop, double-tap on touch, Y button on gamepad)
-        const fireLidar = input.keys.get(' ')?.justPressed || input.doubleTapped || input.gamepad.yButton.justPressed;
-        if (fireLidar) {
+        if (actions.fireLidar) {
             const pos = this.body!.getPosition();
             this.lidarManager.fire({ x: pos.x, y: pos.y }, this.levelContext.getEdgesList());
         }
 
-        const touchState = input.touchState;
-
-        // 1. Attractor logic while touch is held
-        if (touchState?.active) {
+        // 1. Attractor logic while touch / mouse is held
+        if (actions.attractorScreenPos) {
+            const target = actions.attractorScreenPos;
             const levelRelative = {
-                x: touchState.lastPos.x - context.levelPosition.x,
-                y: touchState.lastPos.y - context.levelPosition.y
+                x: target.x - context.levelPosition.x,
+                y: target.y - context.levelPosition.y
             };
-            const dx = context.playerScreenPos.x - touchState.lastPos.x;
-            const dy = context.playerScreenPos.y - touchState.lastPos.y;
+            const dx = context.playerScreenPos.x - target.x;
+            const dy = context.playerScreenPos.y - target.y;
             const screenDistance = Math.sqrt(dx * dx + dy * dy);
             const screenThreshold = Config.PixelsPerMeter / 2;
 
@@ -108,63 +105,31 @@ export class Player extends BaseEntity {
             return;
         }
 
-        // 2. On touch end, check for recent swipe
-        if (
-            !touchState.active &&
-            input.pointer.justReleased &&
-            touchState.lastSwipeTime > 0 &&
-            (performance.now() - touchState.lastSwipeTime) < Config.Movement.Gesture.swipeReleaseWindowInMs
-        ) {
-            const velocityInPixelsPerSecond = {
-                x: touchState.lastSwipeDirection.x * touchState.lastSwipeSpeedPixelsPerSecond,
-                y: touchState.lastSwipeDirection.y * touchState.lastSwipeSpeedPixelsPerSecond
-            }
-            this.handleSwipe(velocityInPixelsPerSecond);
+        // 2. Flick on touch release
+        if (actions.swipeVelocityPx) {
+            this.handleSwipe(actions.swipeVelocityPx);
             return;
         }
 
-        // 3. Fallback to pointer logic (Converting pointer to level-relative position)
-        const pointerLevelRelativePositionInPixels = {
-            x: input.pointer.screen.x - context.levelPosition.x,
-            y: input.pointer.screen.y - context.levelPosition.y
-        };
-    
-        const dx = context.playerScreenPos.x - input.pointer.screen.x;
-        const dy = context.playerScreenPos.y - input.pointer.screen.y;
-        const screenDistance = Math.sqrt(dx * dx + dy * dy);
-    
-        const screenThreshold = Config.PixelsPerMeter / 2; // pixels, tweak as needed
-    
-        if (input.pointer.isDown) {
-            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
-                if (Config.Movement.towardsPoint) {
-                    this.applyForceTowards(pointerLevelRelativePositionInPixels, deltaTime);
-                } else {
-                    this.applyForceAwayFrom(pointerLevelRelativePositionInPixels, deltaTime);
-                }
-            } else {
-                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-        } else if (input.pointer.justReleased) {
-            // On mouse up, stop player if close enough
+        // 3. Non-swipe release: stop the player if the release point is close enough
+        if (actions.pointerReleasedScreenPos) {
+            const released = actions.pointerReleasedScreenPos;
             const playerPos = this.body!.getPosition();
             const targetPos = new planck.Vec2(
-                pointerLevelRelativePositionInPixels.x / Config.PixelsPerMeter,
-                pointerLevelRelativePositionInPixels.y / Config.PixelsPerMeter
+                (released.x - context.levelPosition.x) / Config.PixelsPerMeter,
+                (released.y - context.levelPosition.y) / Config.PixelsPerMeter
             );
-            const delta = targetPos.clone().sub(playerPos);
-            const distance = delta.length();
-            if (distance <= 0.15) { // TODO Make this configurable as dead zone
+            if (targetPos.sub(playerPos).length() <= 0.15) { // TODO Make this configurable as dead zone
                 this.body!.setLinearVelocity(new planck.Vec2(0, 0));
             }
         }
 
-        // Gamepad: A held + left stick direction applies continuous force
-        if (input.gamepad.connected && input.gamepad.aButton.isDown) {
-            const { x, y } = input.gamepad.leftStick;
-            const magnitude = Math.sqrt(x * x + y * y);
-            if (magnitude > 0.01) {
-                this.applyForceInDirection(x / magnitude, y / magnitude, deltaTime);
+        // 4. Analog stick / WASD: continuous force in the given direction, scaled by magnitude
+        if (actions.moveVector) {
+            const { x, y } = actions.moveVector;
+            const magnitude = Math.hypot(x, y);
+            if (magnitude > 0) {
+                this.applyForceInDirection(x / magnitude, y / magnitude, deltaTime * Math.min(1, magnitude));
             }
         }
     }

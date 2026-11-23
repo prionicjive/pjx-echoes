@@ -411,6 +411,9 @@ export class World {
      * @param {number} deltaTime - Time since the last frame, in seconds.
      */
     update(deltaTime: number) { 
+        // Poll gamepad first so edge-triggered button state is fresh for this frame
+        this.inputManager.pollGamepad();
+
         // Handle debugging input
         this.debugOverlay.handleDebugInput();
 
@@ -473,14 +476,10 @@ export class World {
             y: playerWorldPos.y + levelPosition.y
         };
     
-        const pointer = this.inputManager.getPointerState();
-        const touchState = this.inputManager.getTouchState();
-        const gamepad = this.inputManager.getGamepadState();
-        const keys = this.inputManager.getKeysState().keys;
-        const doubleTapped = this.inputManager.isDoubleTapped();
+        const actions = this.inputManager.getActions();
 
         this.player.handleInput(
-            { pointer, touchState, gamepad, keys, doubleTapped },
+            actions,
             { levelPosition, playerScreenPos },
             deltaTime
         );

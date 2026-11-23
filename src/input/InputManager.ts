@@ -1,13 +1,7 @@
 import { Config } from "../config/Config";
 import { Point } from "../utils/types";
 import { GestureRecognizer } from "./GestureRecognizer";
-import { InputDevice, GamepadDevice } from "pixijs-input-devices";
-
-declare module "pixijs-input-devices" {
-    interface BindValues {
-        Echoes: "aButton" | "yButton";
-    }
-}
+import { PlayerActions, resolvePlayerActions } from "./ActionMapping";
 
 export interface PointerState {
     screen: Point,
@@ -39,9 +33,11 @@ export interface KeysState {
 
 export interface GamepadState {
     connected: boolean;
-    aButton: { isDown: boolean };
-    yButton: { justPressed: boolean };
+    /** Left stick after radial deadzone, rescaled so magnitude spans 0..1 */
     leftStick: { x: number; y: number };
+    /** Indexed by standard-mapping button index */
+    isDown: boolean[];
+    justPressed: boolean[];
 }
 
 export class InputManager {
@@ -72,13 +68,13 @@ export class InputManager {
 
     private gamepadState: GamepadState = {
         connected: false,
-        aButton: { isDown: false },
-        yButton: { justPressed: false },
         leftStick: { x: 0, y: 0 },
+        isDown: [],
+        justPressed: [],
     };
+    private prevPadButtons: boolean[] = [];
 
     constructor(canvas: HTMLCanvasElement) {
-        GamepadDevice.configureDefaultBinds({ aButton: ["Face1"], yButton: ["Face4"] });
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
         canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
@@ -136,6 +132,16 @@ export class InputManager {
         this.pointer.justReleased = true;
         this.touchState.active = false;
 
+        // Only a short, non-swipe touch counts as a tap
+        const dx = this.touchState.lastPos.x - this.touchState.startPos.x;
+        const dy = this.touchState.lastPos.y - this.touchState.startPos.y;
+        const isTap = Math.hypot(dx, dy) < Config.Movement.Gesture.tapMaxDistancePx
+            && this.touchState.lastSwipeTime === 0;
+        if (!isTap) {
+            this.lastTapTime = 0;
+            return;
+        }
+
         const now = performance.now();
         if (now - this.lastTapTime <= Config.Movement.Gesture.doubleTapMaxIntervalMs) {
             this.doubleTapped = true;
@@ -185,23 +191,36 @@ export class InputManager {
         this.keysState.keys.set(e.key, { isDown: false, justPressed: false, justReleased: true });
     }
 
-    // Call once per frame to reset "just pressed / released" flags
-    public update() {
-        InputDevice.update();
-
-        const pad = InputDevice.gamepads[0];
-        if (pad) {
-            this.gamepadState = {
-                connected: true,
-                aButton: { isDown: pad.bindDown("aButton") },
-                yButton: { justPressed: pad.bindPressed("yButton") },
-                leftStick: { x: pad.leftJoystick.x, y: pad.leftJoystick.y },
-            };
-        } else {
-            this.gamepadState.connected = false;
-            this.gamepadState.yButton.justPressed = false;
+    /** Call at the start of each frame (before reading input). Diffs button state against the previous poll. */
+    public pollGamepad() {
+        const pads = navigator.getGamepads?.() ?? [];
+        const pad = Array.from(pads).find(p => p && p.connected) ?? null;
+        if (!pad) {
+            this.gamepadState = { connected: false, leftStick: { x: 0, y: 0 }, isDown: [], justPressed: [] };
+            this.prevPadButtons = [];
+            return;
         }
 
+        const isDown = pad.buttons.map(b => b.pressed);
+        const justPressed = isDown.map((down, i) => down && !this.prevPadButtons[i]);
+        this.prevPadButtons = isDown;
+
+        // Radial deadzone, rescaled so output is smooth from 0 at the edge of the deadzone
+        const rx = pad.axes[0] ?? 0;
+        const ry = pad.axes[1] ?? 0;
+        const mag = Math.hypot(rx, ry);
+        const dz = Config.Movement.Gamepad.stickDeadzone;
+        let leftStick = { x: 0, y: 0 };
+        if (mag > dz) {
+            const scaled = Math.min(1, (mag - dz) / (1 - dz));
+            leftStick = { x: (rx / mag) * scaled, y: (ry / mag) * scaled };
+        }
+
+        this.gamepadState = { connected: true, leftStick, isDown, justPressed };
+    }
+
+    // Call once per frame to reset "just pressed / released" flags
+    public update() {
         this.pointer.justReleased = false;
         this.doubleTapped = false;
 
@@ -214,6 +233,15 @@ export class InputManager {
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getTouchState(): TouchState { return { ...this.touchState }; }
     public getKeysState(): KeysState { return { ...this.keysState }; }
-    public getGamepadState(): GamepadState { return { ...this.gamepadState, aButton: { ...this.gamepadState.aButton }, yButton: { ...this.gamepadState.yButton }, leftStick: { ...this.gamepadState.leftStick } }; }
+    public getGamepadState(): GamepadState { return { ...this.gamepadState, leftStick: { ...this.gamepadState.leftStick } }; }
+    public getActions(): PlayerActions {
+        return resolvePlayerActions({
+            pointer: this.getPointerState(),
+            touchState: this.getTouchState(),
+            gamepad: this.getGamepadState(),
+            keys: this.keysState.keys,
+            doubleTapped: this.doubleTapped,
+        });
+    }
     public isDoubleTapped(): boolean { return this.doubleTapped; }
 }

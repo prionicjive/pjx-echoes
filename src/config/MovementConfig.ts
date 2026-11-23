@@ -7,6 +7,10 @@ export const MovementConfig = {
         maxSpeedScaleExponent: 1.1,
         maxSpeedMetersPerSecond: 10.00,
         doubleTapMaxIntervalMs: 300,
+        tapMaxDistancePx: 15, // Max start→end travel for a touch to count as a tap
+    },
+    Gamepad: {
+        stickDeadzone: 0.15,
     },
     towardsPoint: true,
     towardsPointMode: "FORCE" as const, // "IMPULSE" or "FORCE"

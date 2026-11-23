@@ -256,7 +256,7 @@ export class Level implements LevelContext {
                 containerForParticleEffects: containers.preEntitiesContainer
             },
             levelContext: this,
-            lidarManager: this.lidarManager,
+            onFireLidar: (origin) => this.lidarManager.fire(origin, this.getEdgesList()),
         });
 
         return entity;

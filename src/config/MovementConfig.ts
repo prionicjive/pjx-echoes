@@ -16,6 +16,7 @@ export const MovementConfig = {
     towardsPointMode: "FORCE" as const, // "IMPULSE" or "FORCE"
     maxSpeed: 7.00,
     impulseFactor: 1.00,  // Only used when in impulse mode
+    pointerReleaseStopDistance: 0.15, // Meters: releasing the pointer this close to the player stops them
     forceFactorPerSecond: 300.00, // Default as factor of constant force over time
     instantlyChangeDirection: true // Change the linear velocity to whatever the pointer direction is
 };

@@ -9,7 +9,6 @@
 import * as planck from 'planck';
 import { Config } from '../config/Config';
 import { PlayerActions } from '../input/ActionMapping';
-import { LidarManager } from '../lidar/LidarManager.ts';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
 import { ParticleEffect } from '../particles/ParticleEffect';
@@ -24,12 +23,12 @@ export interface PlayerOptions {
     spawnPoint: Point,
     containers: EntityContainers,
     levelContext: LevelContext,
-    lidarManager: LidarManager,
+    /** Called with the player's body position (meters) when LIDAR should fire. */
+    onFireLidar: (origin: Point) => void,
 }
 
 export class Player extends BaseEntity {
-    private readonly levelContext: LevelContext;
-    private readonly lidarManager: LidarManager;
+    private readonly onFireLidar: (origin: Point) => void;
 
     constructor(options: PlayerOptions) {
         const preset = EntitiesConfig.Player;
@@ -58,8 +57,7 @@ export class Player extends BaseEntity {
             containers: options.containers
         });
 
-        this.levelContext = options.levelContext;
-        this.lidarManager = options.lidarManager;
+        this.onFireLidar = options.onFireLidar;
 
         // Set initial position
         EntityUtils.syncEffectToSprite(this);
@@ -71,66 +69,76 @@ export class Player extends BaseEntity {
     handleInput(
         actions: PlayerActions,
         context: {
-            levelPosition: { x: number, y: number },
-            playerScreenPos: { x: number, y: number }
+            levelPosition: Point,
+            playerScreenPos: Point
         },
         deltaTime: number
     ) {
-        if (actions.fireLidar) {
-            const pos = this.body!.getPosition();
-            this.lidarManager.fire({ x: pos.x, y: pos.y }, this.levelContext.getEdgesList());
-        }
-
-        // 1. Attractor logic while touch / mouse is held
+        this.handleLidar(actions);
         if (actions.attractorScreenPos) {
-            const target = actions.attractorScreenPos;
-            const levelRelative = {
-                x: target.x - context.levelPosition.x,
-                y: target.y - context.levelPosition.y
-            };
-            const dx = context.playerScreenPos.x - target.x;
-            const dy = context.playerScreenPos.y - target.y;
-            const screenDistance = Math.sqrt(dx * dx + dy * dy);
-            const screenThreshold = Config.PixelsPerMeter / 2;
-
-            if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
-                if (Config.Movement.towardsPoint) {
-                    this.applyForceTowards(levelRelative, deltaTime);
-                } else {
-                    this.applyForceAwayFrom(levelRelative, deltaTime);
-                }
-            } else {
-                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
-            }
-            return;
-        }
-
-        // 2. Flick on touch release
-        if (actions.swipeVelocityPx) {
+            this.handleAttractorMove(actions.attractorScreenPos, context, deltaTime);
+        } else if (actions.swipeVelocityPx) {
             this.handleSwipe(actions.swipeVelocityPx);
-            return;
+        } else if (actions.pointerReleasedScreenPos) {
+            this.handlePointerRelease(actions.pointerReleasedScreenPos, context.levelPosition);
         }
-
-        // 3. Non-swipe release: stop the player if the release point is close enough
-        if (actions.pointerReleasedScreenPos) {
-            const released = actions.pointerReleasedScreenPos;
-            const playerPos = this.body!.getPosition();
-            const targetPos = new planck.Vec2(
-                (released.x - context.levelPosition.x) / Config.PixelsPerMeter,
-                (released.y - context.levelPosition.y) / Config.PixelsPerMeter
-            );
-            if (targetPos.sub(playerPos).length() <= 0.15) { // TODO Make this configurable as dead zone
-                this.body!.setLinearVelocity(new planck.Vec2(0, 0));
-            }
+        if (actions.moveVector && !actions.attractorScreenPos) {
+            this.handleDirectionalMove(actions.moveVector, deltaTime);
         }
+    }
 
-        // 4. Analog stick / WASD: continuous force in the given direction, scaled by magnitude
-        if (actions.moveVector) {
-            const { x, y } = actions.moveVector;
-            const magnitude = Math.hypot(x, y);
-            if (magnitude > 0) {
-                this.applyForceInDirection(x / magnitude, y / magnitude, deltaTime * Math.min(1, magnitude));
+    private handleLidar(actions: PlayerActions) {
+        if (!actions.fireLidar) return;
+        const pos = this.body!.getPosition();
+        this.onFireLidar({ x: pos.x, y: pos.y });
+    }
+
+    /** Analog stick / WASD: force in the given direction, scaled by stick magnitude. */
+    private handleDirectionalMove(moveVector: Point, deltaTime: number) {
+        const magnitude = Math.hypot(moveVector.x, moveVector.y);
+        if (magnitude === 0) return;
+        this.applyDirectionalForce(
+            new planck.Vec2(moveVector.x / magnitude, moveVector.y / magnitude),
+            Math.min(1, magnitude),
+            deltaTime
+        );
+    }
+
+    /** Touch / mouse held: pull toward (or push away from) the pointer. */
+    private handleAttractorMove(
+        target: Point,
+        context: { levelPosition: Point, playerScreenPos: Point },
+        deltaTime: number
+    ) {
+        const levelRelative = {
+            x: target.x - context.levelPosition.x,
+            y: target.y - context.levelPosition.y
+        };
+        const screenDistance = Math.hypot(
+            context.playerScreenPos.x - target.x,
+            context.playerScreenPos.y - target.y
+        );
+        const screenThreshold = Config.PixelsPerMeter / 2;
+
+        if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
+            if (Config.Movement.towardsPoint) {
+                this.applyForceTowards(levelRelative, deltaTime);
+            } else {
+                this.applyForceAwayFrom(levelRelative, deltaTime);
             }
+        } else {
+            this.body!.setLinearVelocity(new planck.Vec2(0, 0));
+        }
+    }
+
+    /** Non-swipe release: stop the player if released close enough to them. */
+    private handlePointerRelease(releasedScreenPos: Point, levelPosition: Point) {
+        const targetPos = new planck.Vec2(
+            (releasedScreenPos.x - levelPosition.x) / Config.PixelsPerMeter,
+            (releasedScreenPos.y - levelPosition.y) / Config.PixelsPerMeter
+        );
+        if (targetPos.sub(this.body!.getPosition()).length() <= Config.Movement.pointerReleaseStopDistance) {
+            this.body!.setLinearVelocity(new planck.Vec2(0, 0));
         }
     }
 
@@ -166,53 +174,33 @@ export class Player extends BaseEntity {
     }
 
     private applyForceTowards(levelRelativePositionInPixels: Point, deltaTime: number) {
-        // Convert pixel coordinates to world (meter) coordinates
         const playerPos = this.body!.getPosition();
-        
-        // Calculate normalized force vector
-        const force = PhysicsUtils.calculateForceVector(
-            playerPos, 
-            new planck.Vec2(
-                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                levelRelativePositionInPixels.y / Config.PixelsPerMeter
-            ), 
-            Config.Movement.forceFactorPerSecond * deltaTime
-        );
-
-        // Fetch the current linear velocity in its various components
-        const currLinearVelocity = this.body!.getLinearVelocity()
-        const speed: number = Math.min(currLinearVelocity.length(), Config.Movement.maxSpeed);
-        const direction: planck.Vec2 = PhysicsUtils.normalizeVector(currLinearVelocity);
-
-        // If we want to instantly change the direction, the capped speed needs to scale the new direction unit vector
-        if(Config.Movement.instantlyChangeDirection) {
-            this.body!.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
-        } else {
-            // Otherwise check to see we have a speed at all (Meaning we have non-zero / non-NaN linerar velocity)
-            // If we DO, then (And ONLY then) do we adjust the linear velocity
-            if(speed !== 0 && !isNaN(speed)) {
-                this.body!.setLinearVelocity(direction.mul(speed));
-            }
-        }
-
-        // Apply force at the center of mass
-        this.body!.applyForceToCenter(force);
+        const direction = PhysicsUtils.normalizeVector(new planck.Vec2(
+            levelRelativePositionInPixels.x / Config.PixelsPerMeter - playerPos.x,
+            levelRelativePositionInPixels.y / Config.PixelsPerMeter - playerPos.y
+        ));
+        this.applyDirectionalForce(direction, 1, deltaTime);
     }
 
-    private applyForceInDirection(dx: number, dy: number, deltaTime: number) {
-        const magnitude = Config.Movement.forceFactorPerSecond * deltaTime;
-        const force = new planck.Vec2(dx * magnitude, dy * magnitude);
+    /**
+     * Shared movement physics: applies force along a unit direction and
+     * (optionally) re-aims the current velocity at it, capped at max speed.
+     *
+     * @param direction - Unit vector of desired movement.
+     * @param intensity - 0..1 scale on the force (stick magnitude).
+     * @param deltaTime - Frame time in seconds.
+     */
+    private applyDirectionalForce(direction: planck.Vec2, intensity: number, deltaTime: number) {
+        const scale = Config.Movement.forceFactorPerSecond * deltaTime * intensity;
+        const force = new planck.Vec2(direction.x * scale, direction.y * scale);
 
         const currLinearVelocity = this.body!.getLinearVelocity();
         const speed: number = Math.min(currLinearVelocity.length(), Config.Movement.maxSpeed);
-        const direction: planck.Vec2 = PhysicsUtils.normalizeVector(currLinearVelocity);
 
         if (Config.Movement.instantlyChangeDirection) {
             this.body!.setLinearVelocity(PhysicsUtils.normalizeVector(force).mul(speed));
-        } else {
-            if (speed !== 0 && !isNaN(speed)) {
-                this.body!.setLinearVelocity(direction.mul(speed));
-            }
+        } else if (speed !== 0 && !isNaN(speed)) {
+            this.body!.setLinearVelocity(PhysicsUtils.normalizeVector(currLinearVelocity).mul(speed));
         }
 
         this.body!.applyForceToCenter(force);
@@ -234,54 +222,6 @@ export class Player extends BaseEntity {
 
         // Apply force at the center of mass
         this.body!.applyForceToCenter(force);
-    }
-
-    /**
-     * Applies an impulse to the player body toward the given pixel position.
-     * Used to move the player in response to input.
-     *
-     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
-     */
-    // @ts-ignore
-    private applyImpulseTowards(levelRelativePositionInPixels: Point) {
-        // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body!.getPosition();
-        
-        // Calculate normalized force vector
-        const impulse = PhysicsUtils.calculateForceVector(
-            playerPos, 
-            new planck.Vec2(
-                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                levelRelativePositionInPixels.y / Config.PixelsPerMeter
-            ), 
-            Config.Movement.impulseFactor
-        );
-        // Apply impulse at the center of mass
-        this.body!.applyLinearImpulse(impulse, this.body!.getWorldCenter(), true);
-    }
-
-    /**
-     * Applies an impulse to the player body away from the given pixel position.
-     * Used to move the player in response to input.
-     *
-     * @param {Point} levelRelativePositionInPixels - Target position in pixels, relative to the level.
-     */
-    // @ts-ignore
-    private applyImpulseAwayFrom(levelRelativePositionInPixels: Point) {
-        // Convert pixel coordinates to world (meter) coordinates
-        const playerPos = this.body!.getPosition();
-        
-        // Calculate normalized force vector
-        const impulse = PhysicsUtils.calculateForceVector(
-            new planck.Vec2(
-                levelRelativePositionInPixels.x / Config.PixelsPerMeter, 
-                levelRelativePositionInPixels.y / Config.PixelsPerMeter
-            ),
-            playerPos, 
-            Config.Movement.impulseFactor
-        );
-        // Apply impulse at the center of mass
-        this.body!.applyLinearImpulse(impulse, this.body!.getWorldCenter(), true);
     }
 
     /**

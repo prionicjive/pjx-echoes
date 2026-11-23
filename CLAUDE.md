@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-2D exploration game built with TypeScript, PIXI.js v8, and Planck.js. Player navigates procedurally generated cave mazes using dynamic raycasted lighting, physics-based movement, and collectible-driven progression. Live at https://pjx-echoes.netlify.app/
+2D exploration game built with TypeScript, PIXI.js v8, and Planck.js. Player navigates procedurally generated cave mazes using dynamic raycasted lighting, physics-based movement, and collectible-driven progression. Live at https://pjx-echoes.vercel.app/
 
 ## Tech Stack
 
@@ -52,7 +52,8 @@ src/
 ├── light/                          # Light (Dynamic/Static), LightManager
 ├── particles/                      # ParticleEffect (pool-based), ParticleEffectManager
 ├── physics/                        # PhysicsManager (deferred body destruction)
-├── input/                          # InputManager (mouse, touch, keyboard), GestureRecognizer (swipe)
+├── input/                          # InputManager (mouse, touch, keyboard, gamepad), ActionMapping (device → PlayerActions),
+│                                   #   GestureRecognizer (swipe)
 ├── utils/                          # MapUtils, LevelUtils, LightUtils, CollisionUtils,
 │                                   #   PhysicsUtils, SpriteUtils, EntityUtils, GraphicsUtils,
 │                                   #   ColorUtils, MathUtils, RandomGenerator
@@ -69,12 +70,15 @@ vite.config.ts                      # Multi-entry: index.html + particles.html
 
 **Level lifecycle:** `ProcGenLevelsConfig` preset → `RandomGenerator` (seeded) → map gen (Drunkard's Walk or Cellular Automata) → edge merging → `LevelSkeleton` (blueprint) → `Level` (creates all entities). On exit contact, `pendingReset` flag defers full teardown + rebuild to after `world.step()`.
 
+**Input → intent:** `InputManager` collects raw device state (mouse, touch, keyboard, Gamepad API). `ActionMapping.resolvePlayerActions()` turns an `InputSnapshot` into a device-independent `PlayerActions` (`moveVector`, `attractorScreenPos`, `swipeVelocityPx`, `pointerReleasedScreenPos`, `fireLidar`). Key/button bindings live in `ActionBindings` (edit there to remap). `World.updateFromInput` passes the actions to `Player.handleInput()`, a small dispatcher over `handleLidar`, `handleAttractorMove`, `handleSwipe`, `handlePointerRelease` and `handleDirectionalMove`. All movement funnels through `applyDirectionalForce(direction, intensity, deltaTime)`. Player never knows which device produced an action.
+
 **Lighting:** Each light raycasts against merged edge segments to build a visibility polygon. `DynamicLight` (player/sentry) rebuilds every frame; `StaticLight` computes once and uses a dirty flag to skip redundant redraws. All lights render via `LightRenderPipeline` to an offscreen `RenderTexture` with additive blending. GSAP tweens drive flicker/color oscillation — tweened directly on the `Light` instance properties (`radius`, `alpha`, `tint`) via a `tweenables` proxy object (see GSAP note below).
 
-**LIDAR:** Spacebar fires a pulse from the player. Rays are cast once at construction; an expanding arc activates `EdgeGlowSegments` as the wavefront reaches them. Glows persist independently of the pulse.
+**LIDAR:** The `fireLidar` action (Space, double-tap, gamepad A/RB) makes `Player` call its `onFireLidar(origin)` callback (wired in `Level.createPlayer` to `LidarManager.fire`), so Player doesn't import LidarManager. Rays are cast once at construction; an expanding arc activates `EdgeGlowSegments` as the wavefront reaches them. Glows persist independently of the pulse.
 
 ## Non-obvious Patterns
 
+- **Gamepad support:** Native Gamepad API, polled in `InputManager` (standard mapping). Left stick is deadzoned (`Config.Movement.Gamepad.stickDeadzone`) and rescaled to 0..1 magnitude, so gentle tilts move slowly. Buttons use `justPressed` edge detection. A gamepad stick takes precedence over WASD for `moveVector`.
 - **Config barrel pattern:** `Config.ts` is a re-export barrel that assembles domain-specific configs (`CameraConfig`, `PhysicsConfig`, etc.) into the familiar `Config.X` shape. All existing code imports `{ Config }` unchanged. Individual domain files (`MovementConfig`, `DebugConfig`, etc.) can be imported directly by subsystems that only need one domain.
 - **Config-driven entity creation:** `EntitiesConfig.ts` maps each `EntityType` to a full preset (sprite, body shape/fixture/collision mask, light type, particle effect). `BaseEntity` exposes `buildSprite()`, `centerOf()`, and `buildBody()` static helpers that consume these presets. Adding a new entity type means adding a config entry and a class extending `BaseEntity`.
 - **Deferred physics destruction:** Planck.js forbids destroying bodies during `step()` or contact callbacks. `PhysicsManager` queues bodies and destroys them at the start of the next frame. Level reset is also deferred via `pendingReset`.
@@ -128,7 +132,7 @@ Split single 846 KB shared chunk into separate vendor bundles:
 
 - **Why?** Vite auto-shares code between two entry points (index.html and particles.html). Both import PIXI, Planck, and GSAP, so they landed in one "ParticleEffectManager" chunk that bundled the whole vendor stack.
 - **Result:** Game code changes no longer invalidate the entire vendor bundle in cache. Vendors (PIXI, Planck, GSAP) are now 763 KB, 214 KB, 70 KB respectively — one-time downloads. Game code chunk shrank from 305 KB to 79 KB.
-- **Trade-off:** Slightly more HTTP requests (4 instead of 2), but each is cached independently. For Netlify or any modern CDN, this is a net win on repeat visits.
+- **Trade-off:** Slightly more HTTP requests (4 instead of 2), but each is cached independently. For Vercel or any modern CDN, this is a net win on repeat visits.
 
 ### Code Quality: Conservative Fixes
 

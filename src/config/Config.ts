@@ -4,6 +4,7 @@ import { SpritesheetConfig } from './SpritesheetConfig';
 import { MovementConfig } from './MovementConfig';
 import { DebugConfig } from './DebugConfig';
 import { MaskConfig } from './MaskConfig';
+import { SkinsConfig } from './SkinsConfig';
 
 export const Config = {
     PixelsPerMeter: 16, // How many pixels represent one physics meter
@@ -14,6 +15,7 @@ export const Config = {
     Movement: MovementConfig,
     Debug: DebugConfig,
     Mask: MaskConfig,
+    Skins: SkinsConfig,
 
     // Entity type identifiers and visual/physics constants
     Player: {

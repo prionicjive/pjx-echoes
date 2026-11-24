@@ -6,6 +6,7 @@ import { InputManager } from '../input/InputManager.ts';
 
 interface DebugStats {
     numLevelsCompleted: number;
+    skinName: string;
     raycastTime: number;
     maskUpdateTime: number;
     lightRenderTime: number;
@@ -99,6 +100,7 @@ export class DebugOverlay {
             `Player (Current Tile): [${Math.floor(this.player.sprite.x / Config.PixelsPerMeter)}, ${Math.floor(this.player.sprite.y / Config.PixelsPerMeter)}]\n` +
             `Camera Offset: [${Math.floor(offset.x)}, ${Math.floor(offset.y)}]\n` +
             `Levels Completed: ${stats.numLevelsCompleted}\n` +
+            `Skin: ${stats.skinName} (K to cycle)\n` +
             `Seed: ${this.level.getSeed()}\n` +
             `Raycast Time: ${stats.raycastTime.toFixed(2)}ms\n` +
             `Mask Update Time: ${stats.maskUpdateTime.toFixed(2)}ms\n` +

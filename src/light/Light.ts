@@ -210,6 +210,16 @@ export class Light {
         this.colorTween.progress(Math.random());
     }
 
+    /**
+     * Swaps the color oscillation range at runtime. Goes through the tween on `tweenables`
+     * (never tweens/mutates this Light directly) — see the GSAP + PixiPlugin note in CLAUDE.md.
+     */
+    public setColors(startColor: number, endColor: number): void {
+        this.options.startColor = startColor;
+        this.options.endColor = endColor;
+        this.oscillateColor(startColor, endColor);
+    }
+
     public setCollisionData(edges: Segment[]) {
         this.collisionData = edges;
     }

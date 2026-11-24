@@ -28,7 +28,8 @@ src/
 │   ├── Config.ts                   # Barrel re-export: assembles domain configs + entity type constants
 │   ├── CameraConfig.ts             # Camera lerp and dead-zone settings
 │   ├── DebugConfig.ts              # Debug flags (mutated at runtime by DebugOverlay)
-│   ├── FiltersConfig.ts            # Bloom and CRT post-processing filter params
+│   ├── FiltersConfig.ts            # Bloom and CRT post-processing baseline (bloom quality/resolution fixed here)
+│   ├── SkinsConfig.ts              # Cosmetic skin presets (ball/light/trail colors + bloom/CRT look)
 │   ├── MaskConfig.ts               # Player-view mask fill settings
 │   ├── MovementConfig.ts           # Movement forces, impulse, gesture/swipe params
 │   ├── PhysicsConfig.ts            # Planck.js collision bitmasks, body damping/restitution
@@ -45,7 +46,9 @@ src/
 │   ├── CollisionDispatcher.ts      # Contact callback routing across all entity pair types
 │   ├── DebugOverlay.ts             # Debug key bindings and on-screen text
 │   ├── LightRenderPipeline.ts      # Two-pass offscreen light rendering with additive blending
-│   └── MaskingSystem.ts            # Player-view polygon mask application
+│   ├── MaskingSystem.ts            # Player-view polygon mask application
+│   └── SkinManager.ts              # Singleton: active skin + persisted progress (levels, last seed)
+├── storage/                        # SafeStorage (typed, never-throwing localStorage wrapper)
 ├── entities/                       # BaseEntity + Player, Sentry, Exit, Gate, Switch, Torch, Anti
 ├── level/                          # Level, LevelSkeleton, LevelContext, ExitGroup
 ├── lidar/                          # LidarManager, LidarPulse, EdgeGlowSegment
@@ -77,6 +80,10 @@ vite.config.ts                      # Multi-entry: index.html + particles.html
 **LIDAR:** The `fireLidar` action (Space, double-tap, gamepad A/RB) makes `Player` call its `onFireLidar(origin)` callback (wired in `Level.createPlayer` to `LidarManager.fire`), so Player doesn't import LidarManager. Rays are cast once at construction; an expanding arc activates `EdgeGlowSegments` as the wavefront reaches them. Glows persist independently of the pulse.
 
 ## Non-obvious Patterns
+
+- **Skins & persistence:** `SkinsConfig` presets bundle `ballColor`, `lightStart/End`, `trailStart/End`, and `bloom`/`crt` looks. `SkinManager.instance` owns the active skin and a `SafeStorage`-backed save (`activeSkinId`, `levelsCompleted`, `lastSeed`, key `pjx-echoes:save:v1`); storage failures fall back to memory silently. `Player` reads the active skin at construction (so level resets keep the look); live changes flow `SkinManager.setSkin` → `World.applySkin` → `Player.applySkin` + `World.applyFilterPreset`. Press **K** (`ActionBindings.cycleSkin`, temporary preview control) to cycle skins. Light colors change only via `Light.setColors()` (tweenables, per the GSAP rule). Sprite textures are pure white so `sprite.tint` is the true color — keep new skinnable textures white.
+- **Bloom/CRT presets:** Bloom is `AdvancedBloomFilter` (only pixels above `threshold` bloom, so darks stay black). The blur is Kawase with fixed contiguous `kernels` (`[0,1,2,3]`, set in `FiltersConfig`) — don't use auto `blur`/`quality` kernels (gappy offsets render as blocky repeating squares around lights); skins vary bloom `threshold`/`bloomScale`/`enabled` and CRT params/`enabled`. Disabled filters are skipped by PIXI; if both are off the whole pass is skipped. PIXI already clips filter bounds to the viewport, so don't add `filterArea`.
+- **Never lower `resolution` on a world filter:** PIXI renders the whole `worldContainer.filters` chain at the *minimum* `resolution` of all its filters (even disabled ones), so a half-res bloom softens the entire world and makes it shimmer when the camera moves. Keep filter `resolution` at 1. CRT `noise` is added to every pixel including black, so keep it low (0.087) to keep darks crisp.
 
 - **Gamepad support:** Native Gamepad API, polled in `InputManager` (standard mapping). Left stick is deadzoned (`Config.Movement.Gamepad.stickDeadzone`) and rescaled to 0..1 magnitude, so gentle tilts move slowly. Buttons use `justPressed` edge detection. A gamepad stick takes precedence over WASD for `moveVector`.
 - **Config barrel pattern:** `Config.ts` is a re-export barrel that assembles domain-specific configs (`CameraConfig`, `PhysicsConfig`, etc.) into the familiar `Config.X` shape. All existing code imports `{ Config }` unchanged. Individual domain files (`MovementConfig`, `DebugConfig`, etc.) can be imported directly by subsystems that only need one domain.

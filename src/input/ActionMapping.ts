@@ -14,6 +14,8 @@ export interface PlayerActions {
     pointerReleasedScreenPos: Point | null;
     /** True on the frame LIDAR should fire (Space, double-tap, Gamepad A/RB) */
     fireLidar: boolean;
+    /** True on the frame the skin preview should advance (K) */
+    cycleSkin: boolean;
 }
 
 /** Raw device state consumed by the mapping. */
@@ -28,6 +30,7 @@ export interface InputSnapshot {
 /** Key / button bindings. Edit here to remap. Gamepad indices follow the W3C "standard" mapping. */
 export const ActionBindings = {
     fireLidar: { keys: [' '], gamepadButtons: [0, 5] }, // Space; A, RB
+    cycleSkin: { keys: ['k', 'K'] }, // Temporary live skin preview
     moveLeft: { keys: ['a', 'A', 'ArrowLeft'] },
     moveRight: { keys: ['d', 'D', 'ArrowRight'] },
     moveUp: { keys: ['w', 'W', 'ArrowUp'] },
@@ -80,11 +83,14 @@ export function resolvePlayerActions(input: InputSnapshot): PlayerActions {
         }
     }
 
+    const cycleSkin = ActionBindings.cycleSkin.keys.some(k => keys.get(k)?.justPressed);
+
     return {
         moveVector: resolveMoveVector(input),
         attractorScreenPos,
         swipeVelocityPx,
         pointerReleasedScreenPos,
         fireLidar,
+        cycleSkin,
     };
 }

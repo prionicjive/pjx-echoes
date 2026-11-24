@@ -7,7 +7,10 @@
  */
 
 import * as planck from 'planck';
+import { Color } from 'pixi.js';
 import { Config } from '../config/Config';
+import type { SkinPreset } from '../config/SkinsConfig';
+import { SkinManager } from '../core/SkinManager';
 import { PlayerActions } from '../input/ActionMapping';
 import { LevelContext } from '../level/LevelContext';
 import { DynamicLight } from '../light/Light';
@@ -33,19 +36,26 @@ export class Player extends BaseEntity {
     constructor(options: PlayerOptions) {
         const preset = EntitiesConfig.Player;
         const center = Player.centerOf(options.spawnPoint, preset);
-        const sprite = Player.buildSprite(preset, options.spawnPoint);
+        const skin = SkinManager.instance.getActiveSkin();
+        const sprite = Player.buildSprite(preset, options.spawnPoint, skin.ballColor);
         const body = Player.buildBody(preset, center, options.levelContext.getPhysicsWorld());
 
-        // Create the light
+        // Create the light (colors come from the active skin)
         const light = new DynamicLight(
             {...body.getPosition()},
             options.levelContext.getEdgesList(),
-            { ...EntitiesConfig.Player.light! }
+            { ...EntitiesConfig.Player.light!, startColor: skin.lightStart, endColor: skin.lightEnd }
         );
 
-        // Create the particle effect
+        // Create the particle effect (trail colors come from the active skin)
+        const baseEffect = EntitiesConfig.Player.particleEffect!;
         const particleEffect = new ParticleEffect({
-            ...EntitiesConfig.Player.particleEffect!,
+            ...baseEffect,
+            particleOptions: {
+                ...baseEffect.particleOptions,
+                startTint: new Color(skin.trailStart),
+                endTint: new Color(skin.trailEnd),
+            },
         });
 
         super({
@@ -64,6 +74,20 @@ export class Player extends BaseEntity {
 
         // Play the effect
         this.particleEffect!.play();
+    }
+
+    /**
+     * Applies a skin to this live player: sprite tint, light colors, and trail palette.
+     * Light colors go through Light.setColors (tweenables), never the Light directly.
+     * Trail particles already in flight finish with their old colors; new ones use the new palette.
+     */
+    applySkin(skin: SkinPreset) {
+        this.sprite.tint = skin.ballColor;
+        this.light?.setColors(skin.lightStart, skin.lightEnd);
+        if (this.particleEffect) {
+            this.particleEffect.template.startTint = new Color(skin.trailStart);
+            this.particleEffect.template.endTint = new Color(skin.trailEnd);
+        }
     }
 
     handleInput(

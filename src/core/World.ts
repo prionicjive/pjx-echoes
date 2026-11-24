@@ -1,5 +1,6 @@
-import { BloomFilter, CRTFilter } from 'pixi-filters';
+import { AdvancedBloomFilter, CRTFilter } from 'pixi-filters';
 import { FiltersConfig } from '../config/FiltersConfig';
+import type { SkinPreset } from '../config/SkinsConfig';
 import * as PIXI from 'pixi.js';
 import planck from 'planck';
 import { Config } from '../config/Config.ts';
@@ -16,6 +17,7 @@ import { MaskingSystem } from './MaskingSystem.ts';
 import { CameraManager } from './CameraManager.ts';
 import { LightRenderPipeline } from './LightRenderPipeline.ts';
 import { CollisionDispatcher } from './CollisionDispatcher.ts';
+import { SkinManager } from './SkinManager.ts';
 
 export class World {
     private app: PIXI.Application;
@@ -54,7 +56,7 @@ export class World {
     private transparentBgRect!: PIXI.Graphics;
 
     private crtFilter!: CRTFilter;
-    private bloomFilter!: BloomFilter;
+    private bloomFilter!: AdvancedBloomFilter;
     
     // Player view mode masking containers (owned here; passed to MaskingSystem/LightRenderPipeline)
     private entityContainerGroup!: PIXI.Container;
@@ -78,9 +80,6 @@ export class World {
     private viewportWidth: number;
     private viewportHeight: number;
 
-    // Interesting stats to keep track of
-    private numLevelsCompleted: number = 0;
-
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
 
@@ -101,7 +100,7 @@ export class World {
         this.collisionDispatcher = new CollisionDispatcher(
             this.preEntitiesContainer,
             () => { this.pendingReset = true; },
-            () => { this.numLevelsCompleted++; }
+            () => { SkinManager.instance.recordLevelCompleted(); }
         );
 
         // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
@@ -133,9 +132,12 @@ export class World {
             this.playerLightPolygonMask
         );
 
-        // Create post-processing
-        // TODO Find out how to dynamically alter these
+        // Create post-processing and apply the saved skin's filter look
         this.initializePostProcessingFilters();
+        this.applyFilterPreset(SkinManager.instance.getActiveSkin());
+
+        // Live skin changes (preview key, future cosmetics UI) restyle the player and filters in place
+        SkinManager.instance.onSkinChanged(skin => this.applySkin(skin));
 
         // Initialize debug text
         this.initializeDebugText();
@@ -150,7 +152,8 @@ export class World {
             () => {
                 const ls = this.lightRenderPipeline.getLightUpdateStats();
                 return {
-                    numLevelsCompleted: this.numLevelsCompleted,
+                    numLevelsCompleted: SkinManager.instance.getLevelsCompleted(),
+                    skinName: SkinManager.instance.getActiveSkin().name,
                     raycastTime: this.lightRenderPipeline.getRaycastTime(),
                     maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
                     lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
@@ -211,10 +214,35 @@ export class World {
         }
 
         this.crtFilter = new CRTFilter({ ...FiltersConfig.crt });
-        this.bloomFilter = new BloomFilter({ ...FiltersConfig.bloom });
+        const { kernels, ...bloomOptions } = FiltersConfig.bloom;
+        this.bloomFilter = new AdvancedBloomFilter(bloomOptions);
+        // Set after construction: the constructor path for custom kernels is overridden by the
+        // default blur/quality options (see FiltersConfig.bloom for why kernels must be contiguous)
+        this.bloomFilter.kernels = [...kernels];
 
         // Apply bloom and CRT to the world (We might not want any of this on UI layer)
         this.worldContainer.filters = [this.bloomFilter, this.crtFilter];
+    }
+
+    /**
+     * Applies a skin's post-processing look. Only live-mutable properties are touched:
+     * bloom kernels are fixed at construction (see FiltersConfig).
+     * Disabled filters are skipped by PIXI, and if both are disabled the whole filter pass is skipped.
+     */
+    private applyFilterPreset(skin: SkinPreset) {
+        const { bloom, crt } = skin;
+        this.bloomFilter.enabled = bloom.enabled;
+        this.bloomFilter.threshold = bloom.threshold;
+        this.bloomFilter.bloomScale = bloom.bloomScale;
+
+        const { enabled, ...crtParams } = crt;
+        this.crtFilter.enabled = enabled;
+        Object.assign(this.crtFilter, crtParams);
+    }
+
+    private applySkin(skin: SkinPreset) {
+        this.player?.applySkin(skin);
+        this.applyFilterPreset(skin);
     }
 
     private initializeDebugText() {
@@ -331,7 +359,10 @@ export class World {
             this.lidarManager
         );
         
-        // Get the player - our "first class" entity
+        // Remember the seed of the level being played
+        SkinManager.instance.setLastSeed(this.level.getSeed());
+
+        // Get the player - our "first class" entity (built with the active skin)
         this.player = this.level.getPlayer();
 
         // Propagate mutable references to subsystems
@@ -478,6 +509,10 @@ export class World {
     
         const actions = this.inputManager.getActions();
 
+        if (actions.cycleSkin) {
+            SkinManager.instance.cycleNext();
+        }
+
         this.player.handleInput(
             actions,
             { levelPosition, playerScreenPos },
@@ -495,7 +530,9 @@ export class World {
     // @ts-ignore
     private updatePostProcessing(deltaTime: number) 
     {
-        this.crtFilter.seed = Math.random();
+        if (this.crtFilter.enabled) {
+            this.crtFilter.seed = Math.random();
+        }
     }
 
     /**

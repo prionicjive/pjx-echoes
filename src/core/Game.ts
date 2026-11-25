@@ -9,12 +9,15 @@ import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
 import { TransitionOverlay } from './TransitionOverlay.ts';
+import { IntroOverlay } from './IntroOverlay.ts';
+import { SkinManager } from './SkinManager.ts';
 import { AudioManager } from '../audio/AudioManager.ts';
 
 export class Game {
     private app: PIXI.Application | null = null;
     private world: World | null = null;
     private overlay: TransitionOverlay | null = null;
+    private intro: IntroOverlay | null = null;
 
     constructor() {}
 
@@ -53,13 +56,33 @@ export class Game {
         // Set up the resize handler
         window.addEventListener('resize', () => this.handleResize());
 
-        // Create the game world
+        // Create the game world. It builds the opening cave but stays locked (input discarded,
+        // physics held) until the intro's Play button calls world.startPlay().
         this.world = new World(this.app, this.overlay);
 
-        // TODO Handle additional setup if needed
-
-        // Lastly, start the main loop
+        // Start the main loop so the cave renders behind the intro
         this.app.ticker.add((ticker) => this.update(ticker.deltaMS));
+
+        // Intro / skin picker over a dim scrim. The opaque black cover fades out beneath it.
+        this.intro = new IntroOverlay(
+            SkinManager.instance.getLevelsCompleted() + 1,
+            () => this.handlePlay()
+        );
+        void this.overlay.hide(Config.Intro.underlayFadeDuration);
+        void this.intro.reveal();
+    }
+
+    /**
+     * Play pressed. Runs synchronously inside the user gesture: audio is unlocked by the
+     * AudioManager's own gesture listener, and the music starts here (never on the intro itself).
+     * The intro then fades onto the already-built cave and gameplay input unlocks.
+     */
+    private handlePlay() {
+        AudioManager.instance.enableMusic(Config.Audio.music.introFadeInSeconds);
+        void this.intro?.dismiss().then(() => {
+            this.intro = null;
+            this.world?.startPlay();
+        });
     }
 
     handleResize() {

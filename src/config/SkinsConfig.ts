@@ -38,7 +38,15 @@ export interface SkinPreset {
     trailEnd: number;
     bloom: BloomPreset;
     crt: CrtPreset;
+    /** Short filter-style label shown on the skin picker card (e.g. "Bloom + CRT"). */
+    vibe: string;
 }
+
+// Contrast rule for skin colors: the ball, light start and trail start must stay visually
+// distinct (CIELAB ΔE ≳ 30, or a clear hue gap) from every world entity color — Torch gold,
+// Anti pink/red, Sentry purple, Switch/Gate blue, Exit green/aqua. The hue wheel is nearly full,
+// so the clear space is cool cyan, orange, and low-chroma near-whites. Skins only ever recolor the
+// player: never change entity/pickup colors to make room for a skin.
 
 const CRT_OFF: CrtPreset = { ...FiltersConfig.crt, enabled: false };
 
@@ -49,21 +57,24 @@ const CyanSkin: SkinPreset = {
     lightStart: 0x55aaff,
     lightEnd: 0x77edff,
     trailStart: 0x32ddff,
-    trailEnd: 0xff13bb,
+    trailEnd: 0x0a4a7a, // Deep ocean (was Anti-pink 0xff13bb)
     bloom: { enabled: true, threshold: FiltersConfig.bloom.threshold, bloomScale: FiltersConfig.bloom.bloomScale },
     crt: { ...FiltersConfig.crt, enabled: true }, // The original look
+    vibe: 'Bloom + CRT',
 };
 
-const AmberSkin: SkinPreset = {
-    id: 'warm-amber',
-    name: 'Warm Amber',
-    ballColor: 0xffb02e,
-    lightStart: 0xff8a1f,
-    lightEnd: 0xffd27a,
-    trailStart: 0xffb02e,
-    trailEnd: 0xc2300a,
+// Orange: the clear gap between Torch gold and Anti red.
+const EmberSkin: SkinPreset = {
+    id: 'ember',
+    name: 'Ember',
+    ballColor: 0xff7a3d,
+    lightStart: 0xff6a2b,
+    lightEnd: 0xffa066,
+    trailStart: 0xff7a3d,
+    trailEnd: 0x5a1a00,
     bloom: { enabled: true, threshold: 0.55, bloomScale: 0.8 }, // Subtle
     crt: CRT_OFF,
+    vibe: 'Soft Bloom',
 };
 
 const NeonSkin: SkinPreset = {
@@ -71,9 +82,9 @@ const NeonSkin: SkinPreset = {
     name: 'Retro Neon CRT',
     ballColor: 0xff2bd6,
     lightStart: 0xff2bd6,
-    lightEnd: 0x2bffb0,
+    lightEnd: 0xffd6f5, // Pale pink (was mint 0x2bffb0, which matched the Exit light)
     trailStart: 0xff2bd6,
-    trailEnd: 0x2bffb0,
+    trailEnd: 0xffd6f5,
     bloom: { enabled: true, threshold: 0.5, bloomScale: 0.9 },
     crt: {
         enabled: true,
@@ -86,16 +97,18 @@ const NeonSkin: SkinPreset = {
         noise: FiltersConfig.crt.noise,
         noiseSize: 1,
     },
+    vibe: 'Bloom + Scanlines',
 };
 
-const VioletSkin: SkinPreset = {
-    id: 'deep-violet',
-    name: 'Deep Violet',
-    ballColor: 0x9a4dff,
-    lightStart: 0x7a2bff,
-    lightEnd: 0xc78cff,
-    trailStart: 0x9a4dff,
-    trailEnd: 0x2a0a66,
+// Near-white ball with a cool pale-blue light: low chroma keeps it clear of Sentry purple and Switch blue.
+const GhostSkin: SkinPreset = {
+    id: 'ghost',
+    name: 'Ghost',
+    ballColor: 0xeef3ff,
+    lightStart: 0x9fb4ff,
+    lightEnd: 0xd0dcff,
+    trailStart: 0xeef3ff,
+    trailEnd: 0x3a4a80,
     bloom: { enabled: true, threshold: 0.5, bloomScale: 1 },
     crt: {
         enabled: true,
@@ -108,27 +121,30 @@ const VioletSkin: SkinPreset = {
         noise: FiltersConfig.crt.noise,
         noiseSize: 1,
     },
+    vibe: 'Bloom + Vignette',
 };
 
 const SolarSkin: SkinPreset = {
     id: 'high-bloom-solar',
     name: 'High-Bloom Solar',
-    ballColor: 0xffe680,
-    // Keep light colors saturated, never near-white: lights render additively and the bloom
-    // extract is a hard luminance cutoff, so near-white lights overlap into huge blown-out blooms.
-    lightStart: 0xffd24a,
-    lightEnd: 0xffb347,
-    trailStart: 0xffe680,
-    trailEnd: 0xff7a00,
+    // Warm-white ball (pale enough to stay clear of Torch gold). Lights stay tinted, never
+    // near-white: they render additively and the bloom extract is a hard luminance cutoff, so
+    // near-white lights overlap into huge blown-out blooms.
+    ballColor: 0xfff4dc,
+    lightStart: 0xffd9a0,
+    lightEnd: 0xffc070,
+    trailStart: 0xfff4dc,
+    trailEnd: 0xff8a3d,
     // Strongest scale of the five, but same threshold as the others. A low threshold (<0.5) or
     // scale above ~1.3 makes nearby additive lights swell and merge.
     bloom: { enabled: true, threshold: 0.5, bloomScale: 1.2 },
     crt: CRT_OFF,
+    vibe: 'High Bloom',
 };
 
 export const SkinsConfig = {
     /** Skin used when nothing valid is saved. */
     defaultSkinId: CyanSkin.id,
-    /** Cycle order for the live-preview key. */
-    presets: [CyanSkin, AmberSkin, NeonSkin, VioletSkin, SolarSkin] as readonly SkinPreset[],
+    /** Cycle order for the live-preview key, and display order on the intro skin picker. */
+    presets: [CyanSkin, EmberSkin, NeonSkin, GhostSkin, SolarSkin] as readonly SkinPreset[],
 };

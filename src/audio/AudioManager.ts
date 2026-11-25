@@ -63,6 +63,10 @@ export class AudioManager {
 
     private armed = false;
     private gestureSeen = false;
+    /** Music stays off until the game asks for it (Play on the intro screen); see enableMusic(). */
+    private musicAllowed = false;
+
+    private readonly muteListeners = new Set<(muted: boolean) => void>();
 
     private constructor() {
         Howler.mute(this.storage.get().muted);
@@ -143,9 +147,26 @@ export class AudioManager {
 
     // ---- Music ---------------------------------------------------------------------------
 
-    /** Starts (or resumes) the background music. Needs a prior user gesture; otherwise a no-op. */
+    /**
+     * Lets the background music play and starts it. Call synchronously from the user gesture that
+     * should start it (e.g. the Play button's click handler). Until this is called, gestures still
+     * unlock audio (SFX work) but music never starts, which keeps the intro screen silent.
+     * `fadeInSeconds` > 0 fades the music in from silence.
+     */
+    enableMusic(fadeInSeconds = 0): void {
+        this.musicAllowed = true;
+        if (fadeInSeconds > 0 && !this.music?.playing()) {
+            this.duckTween?.kill();
+            this.duck.level = 0;
+            this.applyMusicVolume();
+            this.tweenDuck(1, fadeInSeconds);
+        }
+        this.startMusic();
+    }
+
+    /** Starts (or resumes) the background music. Needs enableMusic() and a prior user gesture; otherwise a no-op. */
     startMusic(): void {
-        if (!this.gestureSeen || this.failed.has(MUSIC_KEY) || document.hidden) return;
+        if (!this.musicAllowed || !this.gestureSeen || this.failed.has(MUSIC_KEY) || document.hidden) return;
 
         try {
             if (!this.music) {
@@ -217,7 +238,14 @@ export class AudioManager {
     setMuted(muted: boolean): boolean {
         this.storage.update({ muted });
         Howler.mute(muted);
+        this.muteListeners.forEach(listener => listener(muted));
         return muted;
+    }
+
+    /** Subscribe to mute changes from any source (button, M key). Returns an unsubscribe function. */
+    onMuteChanged(listener: (muted: boolean) => void): () => void {
+        this.muteListeners.add(listener);
+        return () => this.muteListeners.delete(listener);
     }
 
     getMasterVolume(): number {
@@ -298,6 +326,7 @@ export class AudioManager {
     getDebugLine(): string {
         let music: string;
         if (this.failed.has(MUSIC_KEY)) music = 'missing';
+        else if (!this.musicAllowed) music = 'off (intro)';
         else if (!this.music) music = this.gestureSeen ? 'idle' : 'waiting for tap/key';
         else if (this.music.playing()) music = this.duck.level < 1 ? 'playing (ducked)' : 'playing';
         else if (this.pausedForHidden) music = 'paused';

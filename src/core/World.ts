@@ -91,6 +91,10 @@ export class World {
     private transitioning: boolean = false;
     private coverReady: boolean = false; // Overlay fully opaque: safe to swap the level
 
+    // True while the intro screen is open: the cave is rendered (lights flicker, preview skins)
+    // but physics is not stepped, so sentries can't drift into the idle player behind the menu.
+    private physicsHeld: boolean = false;
+
     // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
     private readonly onBeginContactBound = (contact: planck.Contact) =>
         this.collisionDispatcher.handleContact(contact);
@@ -291,22 +295,24 @@ export class World {
         // Basically, set up a new world!
         this.setUpWorld();
 
-        // Boot reveal: input stays locked while the opening cave eases in
+        // Input stays locked (and physics held) behind the intro screen until startPlay()
         this.transitioning = true;
-        void this.runBootReveal();
+        this.physicsHeld = true;
+    }
+
+    /**
+     * Called once the intro screen has fully faded out: releases the physics hold and unlocks
+     * input. clearState() drops any buffered pointer/tap state and edge flags (e.g. the Space
+     * keydown that pressed Play), so nothing leaks into a LIDAR fire or a movement impulse.
+     */
+    startPlay() {
+        this.physicsHeld = false;
+        this.endTransition();
     }
 
     /** Depth of the cave being entered (levels completed so far + 1). */
     private currentDepth(): number {
         return SkinManager.instance.getLevelsCompleted() + 1;
-    }
-
-    private async runBootReveal() {
-        const T = Config.Transition;
-        await this.overlay.revealText(this.currentDepth());
-        await this.wait(T.bootHoldDuration);
-        await this.overlay.hide(T.bootFadeOutDuration);
-        this.endTransition();
     }
 
     /** Level exit: lock input, fade in; the swap itself happens in update() once covered. */
@@ -516,7 +522,7 @@ export class World {
 
         // Update and step the physics
         this.physicsManager?.update();
-        this.world!.step(deltaTime);
+        if (!this.physicsHeld) this.world!.step(deltaTime);
 
         // Check for a reset requested from inside a contact callback (must happen after world.step)
         if (this.pendingReset) {

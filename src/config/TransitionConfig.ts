@@ -1,14 +1,10 @@
-// Timings (seconds) and copy for the level-transition / boot overlay.
+// Timings (seconds) and copy for the level-transition overlay.
+// (The opening reveal is handled by the intro screen: see IntroConfig.)
 export const TransitionConfig = {
     // Level exit: fade in -> (swap level while covered) -> hold -> fade out
     fadeInDuration: 0.5,
     holdDuration: 1.2,
     fadeOutDuration: 0.6,
-
-    // Initial boot: backdrop is opaque from the start, text fades in once fonts load
-    bootTextFadeInDuration: 0.5,
-    bootHoldDuration: 1.2,
-    bootFadeOutDuration: 0.8,
 
     depthLabel: 'DEPTH',
 
@@ -16,7 +12,7 @@ export const TransitionConfig = {
     flavorText: [
         'The dark remembers your footsteps.',
         'Something stirs below.',
-        'Listen for the echo.',
+        'How deep does it go? No one knows.',
         'The walls breathe in the silence.',
         'Light is a promise. Keep it.',
         'Deeper, where the sound goes to die.',

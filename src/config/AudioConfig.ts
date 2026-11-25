@@ -43,6 +43,8 @@ export const AudioConfig = {
             src: ['/audio/music/main.mp3', '/audio/music/main.ogg'] as readonly string[],
             volume: 0.5,
         },
+        /** Fade-in when Play on the intro screen first starts the music */
+        introFadeInSeconds: 1.5,
         /** Music level (as a fraction of its volume) while a level transition covers the screen */
         duckLevel: 0.25,
         duckFadeSeconds: 0.5,

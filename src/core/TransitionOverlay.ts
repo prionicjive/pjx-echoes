@@ -2,13 +2,14 @@ import gsap from 'gsap';
 import { TransitionConfig } from '../config/TransitionConfig';
 
 /**
- * Full-viewport HTML/CSS overlay used for the boot reveal and level transitions.
+ * Full-viewport HTML/CSS overlay used for level transitions (and as the opaque black cover
+ * while the game boots, until the intro screen takes over and this fades out beneath it).
  *
  * Lives in the DOM (outside the canvas) so it survives World resets, sits above the
  * bloom/CRT chain, and stays full-screen/centered on resize or rotation via CSS alone.
  * Animated with plain CSS properties through GSAP (no PixiPlugin involvement).
  *
- * It is created opaque and visible so the canvas never flashes before the first reveal.
+ * It is created opaque and visible so the canvas never flashes before the intro appears.
  */
 export class TransitionOverlay {
     private readonly root: HTMLDivElement;
@@ -86,14 +87,6 @@ export class TransitionOverlay {
     setContent(depth: number) {
         this.depthEl.textContent = `${TransitionConfig.depthLabel} ${depth}`;
         this.subtitleEl.textContent = this.nextFlavor();
-    }
-
-    /**
-     * Boot reveal, step 1: backdrop is already opaque; fade the text in (call after fonts load).
-     */
-    revealText(depth: number, duration: number = TransitionConfig.bootTextFadeInDuration): Promise<void> {
-        this.setContent(depth);
-        return this.run(tl => this.textIn(tl, 0, duration));
     }
 
     /** Fades the overlay in over the game and animates the text in. */

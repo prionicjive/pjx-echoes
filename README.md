@@ -7,66 +7,42 @@ An exploration game rooted in navigating the unknown and unseen.
 > For Claude Code seeding information, see [CLAUDE.md](CLAUDE.md).
 
 ## Features
-- Procedural cave generation via Drunkard's Walk (with Cellular Automata smoothing), fully seeded for reproducibility
-- Entities: torches (grow light), anti pickups (shrink light), sentries (bouncing enemies), gates, switches, and exits
-- Find and press a switch to unlock its paired exit — gates are removed and the path opens
-- Force/impulse-based player movement (pointer on desktop, swipe/flick on touch)
-- Dynamic lighting with raycasted occlusion, multiple simultaneous light sources, and flicker/color animation
-- Custom particle effects for trails, radiance, and impacts
-- Post-processing effects (CRT scanlines and Bloom)
-- Soft-follow camera with dead zone; dynamic viewport scaling without stretching
-- Debug mode for toggling lights, collision geometry, markers, and overlay text
-- LIDAR effect emitted from player to light up edges of tiles
+
+- **Procedural caves:** seeded maze generation (Drunkard's Walk or Cellular Automata), so any level is reproducible
+- **Dynamic lighting:** raycasted occlusion, so you only see what your light reaches
+- **LIDAR pulse:** ping from the player to reveal and glow nearby edges
+- **Physics movement:** force/impulse-based control via mouse, touch (swipe/flick), keyboard, or gamepad
+- **Progression:** find a switch to open gates and unlock the exit, then descend to the next depth
+- **Entities:** torches (grow light), anti pickups (shrink light), sentries (bouncing enemies), gates, switches, and exits
+- **Skins:** cosmetic presets, picked on the intro screen, with saved progress
+- **Audio:** sound effects and looping music, with a mute toggle (**M**)
+- **Visuals:** particle effects, bloom and CRT post-processing, soft-follow camera
+- **Debug mode:** toggle with `` ` `` to inspect lights, collision geometry, and audio state
 
 ## Getting Started
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v16 or higher recommended)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
-
-### Installation
-
-Clone the repository and install dependencies:
+**Prerequisites:** [Node.js](https://nodejs.org/) (v18 or higher recommended) and npm.
 
 ```sh
 git clone https://github.com/prionicjive/pjx-echoes.git
 cd pjx-echoes
 npm install
-```
-
-### Running the Game (Development Mode)
-
-```sh
 npm run dev
 ```
 
-Then open the URL shown in your terminal (usually http://localhost:5173) in your browser.
+Open http://localhost:5173. To play on another device on your network (e.g. a phone), use `npm run dev -- --host`.
 
-To allow access from other devices on the same network (Such as wanting to play on a phone):
-
-```sh
-npm run dev -- --host
-```
-
-### Building for Production
-
-```sh
-npm run build
-```
+To build for production: `npm run build`.
 
 ## TODOs
 
-- Toggle option so any game entity (even lights) is only visible when in non-occluded light
-- Loading maze from file (Ex. Tiled Map)
-- Minimalistic UI / HUD (number of levels cleared, current level time, level seed, number of items picked up, debug info)
-- BG Music
-- SFX when colliding or collecting pickups
-- Controller support
+- Option to show entities only when in non-occluded light
+- Load mazes from file (e.g. Tiled Map)
+- Minimal HUD (levels cleared, level time, seed, items collected)
 
 ## Contributing
 
-Pull requests, suggestions, and feedback are welcome! Feel free to open an issue or PR to help improve the game.
+Pull requests, suggestions, and feedback are welcome! Feel free to open an issue or PR.
 
 ## License
 

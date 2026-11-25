@@ -262,4 +262,6 @@ export class InputManager {
         });
     }
     public isDoubleTapped(): boolean { return this.doubleTapped; }
+    /** True if any gamepad button went down on the latest poll (allocation-free; for audio unlock nudges). */
+    public anyGamepadButtonJustPressed(): boolean { return this.gamepadState.justPressed.some(Boolean); }
 }

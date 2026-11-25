@@ -18,6 +18,7 @@ import { CameraManager } from './CameraManager.ts';
 import { LightRenderPipeline } from './LightRenderPipeline.ts';
 import { CollisionDispatcher } from './CollisionDispatcher.ts';
 import { SkinManager } from './SkinManager.ts';
+import { AudioManager } from '../audio/AudioManager.ts';
 import { TransitionOverlay } from './TransitionOverlay.ts';
 import gsap from 'gsap';
 
@@ -110,9 +111,15 @@ export class World {
             () => { if (!this.transitioning) this.pendingReset = true; },
             () => {
                 // Ignore repeat exit contacts while a transition is pending/running
-                if (!this.transitioning && !this.pendingReset) SkinManager.instance.recordLevelCompleted();
+                if (!this.transitioning && !this.pendingReset) {
+                    SkinManager.instance.recordLevelCompleted();
+                    AudioManager.instance.playSfx('exit');
+                }
             }
         );
+
+        // LIDAR SFX plays only when a pulse actually starts (not on cooldown no-ops)
+        this.lidarManager.onFired = () => AudioManager.instance.playSfx('lidar');
 
         // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
         this.maskingSystem = new MaskingSystem(
@@ -165,6 +172,7 @@ export class World {
                 return {
                     numLevelsCompleted: SkinManager.instance.getLevelsCompleted(),
                     skinName: SkinManager.instance.getActiveSkin().name,
+                    audioLine: AudioManager.instance.getDebugLine(),
                     raycastTime: this.lightRenderPipeline.getRaycastTime(),
                     maskUpdateTime: this.maskingSystem.getMaskUpdateTime(),
                     lightRenderTime: this.lightRenderPipeline.getLightRenderTime(),
@@ -304,6 +312,7 @@ export class World {
     /** Level exit: lock input, fade in; the swap itself happens in update() once covered. */
     private async beginTransition() {
         this.transitioning = true;
+        AudioManager.instance.duckMusic();
         await this.overlay.show(this.currentDepth());
         this.coverReady = true;
     }
@@ -312,6 +321,7 @@ export class World {
     private async finishTransition() {
         const T = Config.Transition;
         await this.wait(T.holdDuration);
+        AudioManager.instance.restoreMusic(); // Music swells back as the next cave fades in
         await this.overlay.hide(T.fadeOutDuration);
         this.endTransition();
     }
@@ -496,6 +506,7 @@ export class World {
     update(deltaTime: number) { 
         // Poll gamepad first so edge-triggered button state is fresh for this frame
         this.inputManager.pollGamepad();
+        if (this.inputManager.anyGamepadButtonJustPressed()) AudioManager.instance.nudge();
 
         // Handle debugging input
         this.debugOverlay.handleDebugInput();
@@ -566,13 +577,18 @@ export class World {
             y: playerWorldPos.y + levelPosition.y
         };
     
-        // Discard all input during transitions (and drain edge flags so nothing buffers)
+        const actions = this.inputManager.getActions();
+
+        // Global controls work even while a transition is running
+        if (actions.toggleMute) {
+            AudioManager.instance.toggleMute();
+        }
+
+        // Discard all other input during transitions (and drain edge flags so nothing buffers)
         if (this.transitioning) {
             this.inputManager.update();
             return;
         }
-
-        const actions = this.inputManager.getActions();
 
         if (actions.cycleSkin) {
             SkinManager.instance.cycleNext();

@@ -15,6 +15,9 @@ export class LidarManager {
     // Shared graphics object for all edge glow rendering
     private edgeGlowGraphics: PIXI.Graphics = new PIXI.Graphics();
 
+    /** Called only when a pulse actually starts (not on cooldown / active-pulse no-ops). */
+    onFired: (() => void) | null = null;
+
     constructor() {
         this.edgeGlowGraphics.blendMode = 'add';
     }
@@ -35,6 +38,7 @@ export class LidarManager {
 
         this.activePulse = new LidarPulse(origin, edges);
         this.cooldownTimer = LidarConfig.cooldown;
+        this.onFired?.();
     }
 
     update(dt: number): void {

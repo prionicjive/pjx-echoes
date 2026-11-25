@@ -6,6 +6,7 @@ import { DebugConfig } from './DebugConfig';
 import { MaskConfig } from './MaskConfig';
 import { SkinsConfig } from './SkinsConfig';
 import { TransitionConfig } from './TransitionConfig';
+import { AudioConfig } from './AudioConfig';
 
 export const Config = {
     PixelsPerMeter: 16, // How many pixels represent one physics meter
@@ -18,6 +19,7 @@ export const Config = {
     Mask: MaskConfig,
     Skins: SkinsConfig,
     Transition: TransitionConfig,
+    Audio: AudioConfig,
 
     // Entity type identifiers and visual/physics constants
     Player: {

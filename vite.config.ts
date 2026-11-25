@@ -13,6 +13,7 @@ export default defineConfig({
           'vendor-pixi': ['pixi.js', 'pixi-filters'],
           'vendor-planck': ['planck'],
           'vendor-gsap': ['gsap'],
+          'vendor-howler': ['howler'],
         }
       }
     }

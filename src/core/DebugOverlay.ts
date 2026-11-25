@@ -7,6 +7,7 @@ import { InputManager } from '../input/InputManager.ts';
 interface DebugStats {
     numLevelsCompleted: number;
     skinName: string;
+    audioLine: string;
     raycastTime: number;
     maskUpdateTime: number;
     lightRenderTime: number;
@@ -101,6 +102,7 @@ export class DebugOverlay {
             `Camera Offset: [${Math.floor(offset.x)}, ${Math.floor(offset.y)}]\n` +
             `Levels Completed: ${stats.numLevelsCompleted}\n` +
             `Skin: ${stats.skinName} (K to cycle)\n` +
+            `${stats.audioLine}\n` +
             `Seed: ${this.level.getSeed()}\n` +
             `Raycast Time: ${stats.raycastTime.toFixed(2)}ms\n` +
             `Mask Update Time: ${stats.maskUpdateTime.toFixed(2)}ms\n` +

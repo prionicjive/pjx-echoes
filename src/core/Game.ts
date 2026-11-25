@@ -9,6 +9,7 @@ import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
 import { TransitionOverlay } from './TransitionOverlay.ts';
+import { AudioManager } from '../audio/AudioManager.ts';
 
 export class Game {
     private app: PIXI.Application | null = null;
@@ -45,6 +46,9 @@ export class Game {
         // Preload textures before starting the game loop to avoid rendering glitches.
         // TODO Load any other assets possibly need by the game
         await this.loadAssets();
+
+        // Start loading SFX and arm the first-gesture audio unlock (never blocks or throws)
+        AudioManager.instance.init();
 
         // Set up the resize handler
         window.addEventListener('resize', () => this.handleResize());

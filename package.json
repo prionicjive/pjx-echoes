@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@assetpack/core": "^1.4.0",
+    "@types/howler": "^2.2.13",
     "@types/seedrandom": "^3.0.8",
     "typescript": "~5.7.2",
     "vite": "^6.3.1"
@@ -17,6 +18,7 @@
   "dependencies": {
     "@pixi/tilemap": "^5.0.1",
     "gsap": "^3.12.7",
+    "howler": "^2.2.4",
     "pixi-filters": "^6.1.2",
     "pixi.js": "^8.9.1",
     "pixijs-input-devices": "^0.9.1",

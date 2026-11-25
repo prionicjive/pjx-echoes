@@ -1,5 +1,6 @@
 import planck from 'planck';
 import * as PIXI from 'pixi.js';
+import { AudioManager } from '../audio/AudioManager.ts';
 import { Config } from '../config/Config.ts';
 import { EntityUserData } from '../entities/BaseEntity.ts';
 import { EntityType, BodyType } from '../entities/types.ts';
@@ -51,6 +52,7 @@ export class CollisionDispatcher {
             (aData.type === EntityType.Player && bData.type === BodyType.Edges) ||
             (aData.type === BodyType.Edges && bData.type === EntityType.Player)
         ) {
+            this.playBump(contact);
             if (Config.Debug.showCollisionMarkers) {
                 this.spawnEdgeImpactParticles(contact);
             }
@@ -67,6 +69,7 @@ export class CollisionDispatcher {
         ) {
             const sentryData: EntityUserData = aData?.type === EntityType.Sentry ? aData : bData;
             if (sentryData.entity) {
+                AudioManager.instance.playSfx('sentry');
                 this.player!.onPickup(sentryData.type);
                 this.level!.gentlyDestroyEntity(sentryData.entity);
             }
@@ -78,6 +81,7 @@ export class CollisionDispatcher {
         ) {
             const torchEntity: EntityUserData = aData?.type === EntityType.Torch ? aData : bData;
             if (torchEntity.entity) {
+                AudioManager.instance.playSfx('torch');
                 this.player!.onPickup(torchEntity.type);
                 this.level!.gentlyDestroyEntity(torchEntity.entity);
             }
@@ -91,6 +95,7 @@ export class CollisionDispatcher {
         ) {
             const antiEntity: EntityUserData = aData?.type === EntityType.Anti ? aData : bData;
             if (antiEntity.entity) {
+                AudioManager.instance.playSfx('anti');
                 this.player!.onPickup(antiEntity.type);
                 this.level!.gentlyDestroyEntity(antiEntity.entity);
             }
@@ -100,9 +105,26 @@ export class CollisionDispatcher {
         ) {
             const switchEntity: EntityUserData = aData?.type === EntityType.Switch ? aData : bData;
             if (switchEntity.entity && switchEntity.groupId !== undefined && switchEntity.groupId >= 0) {
+                AudioManager.instance.playSfx('switch');
                 this.level!.onSwitchPressed(switchEntity.groupId);
             }
         }
+    }
+
+    /**
+     * Wall-bump SFX. Begin-contact fires before the solver runs, so the player's velocity is
+     * still the pre-impact one; the speed *into* the wall is |v · contact normal|, which keeps
+     * grazing/sliding contacts quiet. AudioManager applies the speed threshold and throttle.
+     */
+    private playBump(contact: planck.Contact): void {
+        const body = this.player?.body;
+        if (!body) return;
+        const velocity = body.getLinearVelocity();
+        const normal = contact.getWorldManifold(null)?.normal;
+        const impactSpeed = normal
+            ? Math.abs(velocity.x * normal.x + velocity.y * normal.y)
+            : velocity.length();
+        AudioManager.instance.playBump(impactSpeed);
     }
 
     private spawnEdgeImpactParticles(contact: planck.Contact): void {

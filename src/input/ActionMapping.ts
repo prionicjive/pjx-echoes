@@ -16,6 +16,8 @@ export interface PlayerActions {
     fireLidar: boolean;
     /** True on the frame the skin preview should advance (K) */
     cycleSkin: boolean;
+    /** True on the frame audio mute should toggle (M) */
+    toggleMute: boolean;
 }
 
 /** Raw device state consumed by the mapping. */
@@ -31,6 +33,7 @@ export interface InputSnapshot {
 export const ActionBindings = {
     fireLidar: { keys: [' '], gamepadButtons: [0, 5] }, // Space; A, RB
     cycleSkin: { keys: ['k', 'K'] }, // Temporary live skin preview
+    toggleMute: { keys: ['m', 'M'] },
     moveLeft: { keys: ['a', 'A', 'ArrowLeft'] },
     moveRight: { keys: ['d', 'D', 'ArrowRight'] },
     moveUp: { keys: ['w', 'W', 'ArrowUp'] },
@@ -85,6 +88,8 @@ export function resolvePlayerActions(input: InputSnapshot): PlayerActions {
 
     const cycleSkin = ActionBindings.cycleSkin.keys.some(k => keys.get(k)?.justPressed);
 
+    const toggleMute = ActionBindings.toggleMute.keys.some(k => keys.get(k)?.justPressed);
+
     return {
         moveVector: resolveMoveVector(input),
         attractorScreenPos,
@@ -92,5 +97,6 @@ export function resolvePlayerActions(input: InputSnapshot): PlayerActions {
         pointerReleasedScreenPos,
         fireLidar,
         cycleSkin,
+        toggleMute,
     };
 }

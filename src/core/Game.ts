@@ -8,10 +8,12 @@ import { PixiPlugin } from "gsap/PixiPlugin";
 import * as PIXI from 'pixi.js';
 import { Config } from '../config/Config.ts';
 import { World } from './World.ts';
+import { TransitionOverlay } from './TransitionOverlay.ts';
 
 export class Game {
     private app: PIXI.Application | null = null;
     private world: World | null = null;
+    private overlay: TransitionOverlay | null = null;
 
     constructor() {}
 
@@ -31,6 +33,9 @@ export class Game {
         });
         document.body.appendChild(this.app.canvas);
 
+        // Opaque black cover immediately; its text stays hidden until fonts are loaded
+        this.overlay = new TransitionOverlay();
+
         // Register the GSAP Pixi plugin
         gsap.registerPlugin(PixiPlugin);
 
@@ -45,7 +50,7 @@ export class Game {
         window.addEventListener('resize', () => this.handleResize());
 
         // Create the game world
-        this.world = new World(this.app);
+        this.world = new World(this.app, this.overlay);
 
         // TODO Handle additional setup if needed
 

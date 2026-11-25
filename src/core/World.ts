@@ -18,6 +18,8 @@ import { CameraManager } from './CameraManager.ts';
 import { LightRenderPipeline } from './LightRenderPipeline.ts';
 import { CollisionDispatcher } from './CollisionDispatcher.ts';
 import { SkinManager } from './SkinManager.ts';
+import { TransitionOverlay } from './TransitionOverlay.ts';
+import gsap from 'gsap';
 
 export class World {
     private app: PIXI.Application;
@@ -83,12 +85,18 @@ export class World {
     // Deferred reset flag — set inside contact callbacks, acted on after world.step()
     private pendingReset: boolean = false;
 
+    // Level transition state. While true, player input is discarded.
+    private overlay: TransitionOverlay;
+    private transitioning: boolean = false;
+    private coverReady: boolean = false; // Overlay fully opaque: safe to swap the level
+
     // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
     private readonly onBeginContactBound = (contact: planck.Contact) =>
         this.collisionDispatcher.handleContact(contact);
 
-    constructor(app: PIXI.Application) {
+    constructor(app: PIXI.Application, overlay: TransitionOverlay) {
         this.app = app;
+        this.overlay = overlay;
 
         // Initialize input manager
         this.inputManager = new InputManager(app.canvas);
@@ -99,8 +107,11 @@ export class World {
         // Initialize collision dispatcher (depends on preEntitiesContainer from initializeContainers)
         this.collisionDispatcher = new CollisionDispatcher(
             this.preEntitiesContainer,
-            () => { this.pendingReset = true; },
-            () => { SkinManager.instance.recordLevelCompleted(); }
+            () => { if (!this.transitioning) this.pendingReset = true; },
+            () => {
+                // Ignore repeat exit contacts while a transition is pending/running
+                if (!this.transitioning && !this.pendingReset) SkinManager.instance.recordLevelCompleted();
+            }
         );
 
         // Initialize masking system (depends on Graphics/Container objects from initializeContainers)
@@ -271,6 +282,47 @@ export class World {
     private init() {
         // Basically, set up a new world!
         this.setUpWorld();
+
+        // Boot reveal: input stays locked while the opening cave eases in
+        this.transitioning = true;
+        void this.runBootReveal();
+    }
+
+    /** Depth of the cave being entered (levels completed so far + 1). */
+    private currentDepth(): number {
+        return SkinManager.instance.getLevelsCompleted() + 1;
+    }
+
+    private async runBootReveal() {
+        const T = Config.Transition;
+        await this.overlay.revealText(this.currentDepth());
+        await this.wait(T.bootHoldDuration);
+        await this.overlay.hide(T.bootFadeOutDuration);
+        this.endTransition();
+    }
+
+    /** Level exit: lock input, fade in; the swap itself happens in update() once covered. */
+    private async beginTransition() {
+        this.transitioning = true;
+        await this.overlay.show(this.currentDepth());
+        this.coverReady = true;
+    }
+
+    /** Called after the level swap, while still covered: hold, fade out, unlock. */
+    private async finishTransition() {
+        const T = Config.Transition;
+        await this.wait(T.holdDuration);
+        await this.overlay.hide(T.fadeOutDuration);
+        this.endTransition();
+    }
+
+    private endTransition() {
+        this.inputManager.clearState();
+        this.transitioning = false;
+    }
+
+    private wait(seconds: number): Promise<void> {
+        return new Promise(resolve => { gsap.delayedCall(seconds, resolve); });
     }
 
     /**
@@ -458,7 +510,14 @@ export class World {
         // Check for a reset requested from inside a contact callback (must happen after world.step)
         if (this.pendingReset) {
             this.pendingReset = false;
+            void this.beginTransition();
+        }
+
+        // Overlay is fully opaque: swap the level out of sight
+        if (this.coverReady) {
+            this.coverReady = false;
             this.reset();
+            void this.finishTransition();
             return;
         }
     
@@ -507,6 +566,12 @@ export class World {
             y: playerWorldPos.y + levelPosition.y
         };
     
+        // Discard all input during transitions (and drain edge flags so nothing buffers)
+        if (this.transitioning) {
+            this.inputManager.update();
+            return;
+        }
+
         const actions = this.inputManager.getActions();
 
         if (actions.cycleSkin) {

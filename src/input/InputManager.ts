@@ -230,6 +230,24 @@ export class InputManager {
         });
     }
 
+    /**
+     * Drops buffered pointer/touch/tap state and pending edge flags. Called when input unlocks
+     * after a transition so nothing queued during it (or a still-held pointer) acts on the new level.
+     * Held keys and the gamepad stick are live state and are intentionally left alone.
+     */
+    public clearState() {
+        this.pointer.isDown = false;
+        this.pointer.justReleased = false;
+        this.touchState.active = false;
+        this.touchState.history = [];
+        this.touchState.lastSwipeTime = 0;
+        this.touchState.lastSwipeSpeedPixelsPerSecond = 0;
+        this.touchState.lastSwipeDirection = { x: 0, y: 0 };
+        this.lastTapTime = 0;
+        this.doubleTapped = false;
+        this.update();
+    }
+
     public getPointerState(): PointerState { return { ...this.pointer }; }
     public getTouchState(): TouchState { return { ...this.touchState }; }
     public getKeysState(): KeysState { return { ...this.keysState }; }

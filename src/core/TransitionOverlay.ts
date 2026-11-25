@@ -47,6 +47,7 @@ export class TransitionOverlay {
             this.root.style.height = '100dvh';
         }
         this.root.setAttribute('aria-hidden', 'true');
+        this.root.dataset.echoes = 'transition-cover'; // Stable hook for scripts/generate-og.mjs
 
         this.content = document.createElement('div');
         Object.assign(this.content.style, {

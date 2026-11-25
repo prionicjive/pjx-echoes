@@ -1,0 +1,69 @@
+name: Generate OG image
+
+# Regenerates public/og-image.png (1200x630 link-preview screenshot) and commits it back to main
+# when it visibly changed. Vercel then redeploys with the new image.
+#
+# Loop protection (any one of these is enough):
+#   1. Pushes made with GITHUB_TOKEN never trigger new workflow runs.
+#   2. paths-ignore skips pushes that only touch public/og-image.png (or docs).
+#   3. The job is skipped when the actor is github-actions[bot].
+# Note: the bot commit deliberately has no "[skip ci]" so Vercel still deploys it.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'public/og-image.png'
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: og-image
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Install Chromium for Playwright
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Generate OG image
+        run: npm run generate:og
+
+      - name: Upload debug screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: og-debug
+          path: og-debug.png
+          if-no-files-found: ignore
+
+      - name: Commit updated image
+        run: |
+          if [ -z "$(git status --porcelain -- public/og-image.png)" ]; then
+            echo "og-image.png unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/og-image.png
+          git commit -m "chore: update og-image.png"
+          git pull --rebase origin main
+          git push origin HEAD:main

@@ -95,6 +95,10 @@ export class World {
     // but physics is not stepped, so sentries can't drift into the idle player behind the menu.
     private physicsHeld: boolean = false;
 
+    // Optional `?seed=` URL override, consumed by the FIRST level only (used for reproducible
+    // screenshots such as the OpenGraph image). Later levels are random as usual.
+    private pendingSeedOverride: string | null = new URLSearchParams(window.location.search).get('seed') || null;
+
     // Stable bound reference for world.on() / world.off() — delegates to collisionDispatcher at call time
     private readonly onBeginContactBound = (contact: planck.Contact) =>
         this.collisionDispatcher.handleContact(contact);
@@ -412,6 +416,8 @@ export class World {
         this.physicsManager = new PhysicsManager(this.world);
 
         // Create a proceduarally generated level
+        const seedOverride = this.pendingSeedOverride ?? undefined;
+        this.pendingSeedOverride = null;
         this.level = LevelUtils.createProcGenLevel(
             this.app.renderer,
             this.world,
@@ -424,7 +430,8 @@ export class World {
                 postEntitiesContainer: this.postEntitiesContainer
             },
             "Standard",
-            this.lidarManager
+            this.lidarManager,
+            seedOverride
         );
         
         // Remember the seed of the level being played

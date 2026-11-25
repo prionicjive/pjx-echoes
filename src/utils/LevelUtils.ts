@@ -19,13 +19,14 @@ export class LevelUtils {
         physicsManager: PhysicsManager,
         containers: LevelContainers,
         procGenLevelType: ProcGenLevelType,
-        lidarManager: LidarManager
+        lidarManager: LidarManager,
+        seedOverride?: string
     ) {
         let map: number[][] = [];
         let openSpaces: string[] = [];
 
         const levelOptions = ProcGenLevelsConfig[procGenLevelType];
-        const rng = new RandomGenerator(levelOptions.seed);
+        const rng = new RandomGenerator(seedOverride ?? levelOptions.seed);
         console.log("Generating level with seed: " + rng.seed);
 
         switch (levelOptions.MapGeneration.type) {

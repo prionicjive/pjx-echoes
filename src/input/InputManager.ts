@@ -74,6 +74,12 @@ export class InputManager {
     };
     private prevPadButtons: boolean[] = [];
 
+    // Stick snap-back filter state (see isStickSnapBack)
+    private stickPrevMag = 0;
+    private stickLastPollTime = 0;
+    private stickWindowUntil = 0;
+    private stickDir: { x: number; y: number } | null = null;
+
     constructor(canvas: HTMLCanvasElement) {
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
@@ -198,6 +204,7 @@ export class InputManager {
         if (!pad) {
             this.gamepadState = { connected: false, leftStick: { x: 0, y: 0 }, isDown: [], justPressed: [] };
             this.prevPadButtons = [];
+            this.resetStickFilter();
             return;
         }
 
@@ -211,12 +218,59 @@ export class InputManager {
         const mag = Math.hypot(rx, ry);
         const dz = Config.Movement.Gamepad.stickDeadzone;
         let leftStick = { x: 0, y: 0 };
-        if (mag > dz) {
+        if (mag > dz && !this.isStickSnapBack(rx, ry, mag, dz)) {
             const scaled = Math.min(1, (mag - dz) / (1 - dz));
             leftStick = { x: (rx / mag) * scaled, y: (ry / mag) * scaled };
         }
 
         this.gamepadState = { connected: true, leftStick, isDown, justPressed };
+    }
+
+    /**
+     * Snap-back filter. Must be called once per poll with the raw (pre-deadzone) stick.
+     * A rapid drop toward center opens a short window; while open, readings pointing away from the
+     * last stick direction with magnitude below `maxMagnitude` are the spring-back overshoot and are
+     * suppressed. A stronger push (intentional throw) or window expiry resumes normal input.
+     * Returns true when this reading should be treated as zero.
+     */
+    private isStickSnapBack(rx: number, ry: number, mag: number, dz: number): boolean {
+        const cfg = Config.Movement.Gamepad.SnapBack;
+        const now = performance.now();
+        const dt = Math.max(0.001, (now - this.stickLastPollTime) / 1000);
+        const prevMag = this.stickPrevMag;
+        this.stickLastPollTime = now;
+        this.stickPrevMag = mag;
+        if (!cfg.enabled) return false;
+
+        // Rapid drop from an active tilt toward center opens the window (not re-extended while open)
+        if (now >= this.stickWindowUntil && prevMag > dz && (prevMag - mag) / dt >= cfg.releaseDropPerSecond) {
+            this.stickWindowUntil = now + cfg.windowMs;
+        }
+
+        const windowOpen = now < this.stickWindowUntil;
+        if (!windowOpen) {
+            this.stickDir = mag > dz ? { x: rx / mag, y: ry / mag } : null;
+            return false;
+        }
+        if (mag >= cfg.maxMagnitude) {
+            // Intentional throw: close the window and follow the stick again
+            this.stickWindowUntil = 0;
+            this.stickDir = { x: rx / mag, y: ry / mag };
+            return false;
+        }
+        if (this.stickDir && mag > dz) {
+            const dot = (rx / mag) * this.stickDir.x + (ry / mag) * this.stickDir.y;
+            if (dot < Math.cos(cfg.minReversalAngleDeg * Math.PI / 180)) return true;
+            this.stickDir = { x: rx / mag, y: ry / mag };
+        }
+        return false;
+    }
+
+    private resetStickFilter() {
+        this.stickPrevMag = 0;
+        this.stickLastPollTime = performance.now();
+        this.stickWindowUntil = 0;
+        this.stickDir = null;
     }
 
     // Call once per frame to reset "just pressed / released" flags
@@ -245,6 +299,7 @@ export class InputManager {
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
         this.lastTapTime = 0;
         this.doubleTapped = false;
+        this.resetStickFilter();
         this.update();
     }
 

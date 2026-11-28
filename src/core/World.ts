@@ -562,7 +562,8 @@ export class World {
         this.lightRenderPipeline.updateAndRenderLights(
             this.cameraManager.getCameraOffset(),
             this.viewportWidth,
-            this.viewportHeight
+            this.viewportHeight,
+            this.cameraManager.getScale()
         );
 
         // Apply/clear the player-view mask on entity containers (must run after lights update the polygon)
@@ -584,10 +585,11 @@ export class World {
         if (!this.player || !this.player.sprite) return;
 
         const levelPosition = { x: this.worldContainer.x, y: this.worldContainer.y };
+        const scale = this.cameraManager.getScale();
         const playerWorldPos = { x: this.player.sprite.x, y: this.player.sprite.y };
         const playerScreenPos = {
-            x: playerWorldPos.x + levelPosition.x,
-            y: playerWorldPos.y + levelPosition.y
+            x: playerWorldPos.x * scale + levelPosition.x,
+            y: playerWorldPos.y * scale + levelPosition.y
         };
     
         const actions = this.inputManager.getActions();
@@ -607,9 +609,13 @@ export class World {
             SkinManager.instance.cycleNext();
         }
 
+        // Zoom (ignored during the intro and transitions by the guard above)
+        if (actions.zoomReset) this.cameraManager.resetZoom();
+        this.cameraManager.applyZoomInput(actions.zoomImpulse + actions.zoomRate * Config.Camera.Zoom.keyRatePerSecond * deltaTime);
+
         this.player.handleInput(
             actions,
-            { levelPosition, playerScreenPos },
+            { levelPosition, playerScreenPos, scale },
             deltaTime
         );
 

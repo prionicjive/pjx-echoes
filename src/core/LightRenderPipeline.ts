@@ -62,7 +62,8 @@ export class LightRenderPipeline {
     updateAndRenderLights(
         cameraOffset: { x: number; y: number },
         viewportWidth: number,
-        viewportHeight: number
+        viewportHeight: number,
+        scale: number = 1
     ): void {
         const raycastStart = performance.now();
         LightManager.instance.update();
@@ -71,13 +72,17 @@ export class LightRenderPipeline {
 
         const start = performance.now();
 
+        // cameraOffset is the visible area's top-left in world pixels; the visible area spans
+        // viewport / scale world pixels. Lights are positioned in (unscaled) world px relative to
+        // that origin, and the container scale maps them onto the viewport-sized lightmap.
         const screenBounds = {
             left: cameraOffset.x,
             top: cameraOffset.y,
-            right: cameraOffset.x + viewportWidth,
-            bottom: cameraOffset.y + viewportHeight
+            right: cameraOffset.x + viewportWidth / scale,
+            bottom: cameraOffset.y + viewportHeight / scale
         };
 
+        this.tempLightmapContainer.scale.set(scale);
         this.tempLightmapContainer.removeChildren();
 
         if (Config.Debug.onlyDisplayInPlayerView && this.player?.light) {

@@ -38,6 +38,8 @@ export interface GamepadState {
     /** Indexed by standard-mapping button index */
     isDown: boolean[];
     justPressed: boolean[];
+    /** Analog value (0..1) per button; triggers report pull depth here */
+    buttonValues: number[];
 }
 
 export class InputManager {
@@ -71,6 +73,7 @@ export class InputManager {
         leftStick: { x: 0, y: 0 },
         isDown: [],
         justPressed: [],
+        buttonValues: [],
     };
     private prevPadButtons: boolean[] = [];
 
@@ -80,14 +83,29 @@ export class InputManager {
     private stickWindowUntil = 0;
     private stickDir: { x: number; y: number } | null = null;
 
+    // Zoom input (consumed per frame through ActionMapping)
+    private zoomImpulse = 0;       // Accumulated log-zoom from wheel + pinch since last frame()
+    private activeTouches = 0;     // Fingers currently on the screen
+    private pinching = false;      // 2+ fingers down
+    private lastPinchDist = 0;
+    // After a pinch begins, ignore single-finger input until ALL fingers lift so the remaining
+    // finger can't become an attractor, swipe, tap or release-stop
+    private suppressUntilAllUp = false;
+
     constructor(canvas: HTMLCanvasElement) {
+        // Own all touch gestures on the canvas (no browser page zoom / scroll / double-tap zoom)
+        canvas.style.touchAction = 'none';
+        canvas.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
+        canvas.addEventListener('gesturestart', e => e.preventDefault()); // iOS Safari page pinch
+
         canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
         canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
         canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
 
         canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
         canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
-        canvas.addEventListener('touchmove', this.onTouchMove.bind(this));
+        canvas.addEventListener('touchcancel', this.onTouchEnd.bind(this));
+        canvas.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
 
         window.addEventListener('keydown', this.onKeyDown.bind(this));
         window.addEventListener('keyup', this.onKeyUp.bind(this));
@@ -115,7 +133,43 @@ export class InputManager {
         this.pointer.screen = { x: e.clientX, y: e.clientY };
     }
 
+    private onWheel(e: WheelEvent) {
+        e.preventDefault(); // Also swallows trackpad pinch (ctrlKey wheel) so the page doesn't zoom
+        const Z = Config.Camera.Zoom;
+        const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1; // lines / pages -> px
+        const dy = Math.max(-Z.wheelMaxDelta, Math.min(Z.wheelMaxDelta, e.deltaY * unit));
+        this.zoomImpulse -= dy * Z.wheelSensitivity; // Scroll up (negative deltaY) = zoom in
+    }
+
+    private touchDistance(e: TouchEvent): number {
+        const a = e.touches[0], b = e.touches[1];
+        return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    /** Two or more fingers down: cancel single-finger state silently (no release, swipe or tap). */
+    private beginPinch(e: TouchEvent) {
+        this.pinching = true;
+        this.suppressUntilAllUp = true;
+        this.lastPinchDist = this.touchDistance(e);
+        this.pointer.isDown = false;
+        this.pointer.justReleased = false;
+        this.touchState.active = false;
+        this.touchState.history = [];
+        this.touchState.lastSwipeTime = 0;
+        this.touchState.lastSwipeSpeedPixelsPerSecond = 0;
+        this.touchState.lastSwipeDirection = { x: 0, y: 0 };
+        this.lastTapTime = 0;
+        this.doubleTapped = false;
+    }
+
     private onTouchStart(e: TouchEvent) {
+        this.activeTouches = e.touches.length;
+        if (e.touches.length >= 2) {
+            this.beginPinch(e);
+            return;
+        }
+        if (this.suppressUntilAllUp) return;
+
         this.touchState.active = true;
 
         const touch = e.touches[0];
@@ -133,7 +187,15 @@ export class InputManager {
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
     }
 
-    private onTouchEnd() {
+    private onTouchEnd(e: TouchEvent) {
+        this.activeTouches = e.touches.length;
+        if (this.suppressUntilAllUp) {
+            this.pinching = e.touches.length >= 2;
+            if (this.pinching) this.lastPinchDist = this.touchDistance(e); // Re-baseline on finger set change
+            if (e.touches.length === 0) this.suppressUntilAllUp = false;
+            return;
+        }
+
         this.pointer.isDown = false;
         this.pointer.justReleased = true;
         this.touchState.active = false;
@@ -156,6 +218,17 @@ export class InputManager {
     }
 
     private onTouchMove(e: TouchEvent) {
+        if (this.suppressUntilAllUp) {
+            e.preventDefault();
+            if (this.pinching && e.touches.length >= 2) {
+                const d = this.touchDistance(e);
+                if (this.lastPinchDist > 0 && d > 0) {
+                    this.zoomImpulse += Math.log(d / this.lastPinchDist) * Config.Camera.Zoom.pinchSensitivity;
+                }
+                this.lastPinchDist = d;
+            }
+            return;
+        }
         if (!this.touchState.active) return;
         const touch = e.touches[0];
         const now = performance.now();
@@ -202,7 +275,7 @@ export class InputManager {
         const pads = navigator.getGamepads?.() ?? [];
         const pad = Array.from(pads).find(p => p && p.connected) ?? null;
         if (!pad) {
-            this.gamepadState = { connected: false, leftStick: { x: 0, y: 0 }, isDown: [], justPressed: [] };
+            this.gamepadState = { connected: false, leftStick: { x: 0, y: 0 }, isDown: [], justPressed: [], buttonValues: [] };
             this.prevPadButtons = [];
             this.resetStickFilter();
             return;
@@ -210,6 +283,7 @@ export class InputManager {
 
         const isDown = pad.buttons.map(b => b.pressed);
         const justPressed = isDown.map((down, i) => down && !this.prevPadButtons[i]);
+        const buttonValues = pad.buttons.map(b => b.value);
         this.prevPadButtons = isDown;
 
         // Radial deadzone, rescaled so output is smooth from 0 at the edge of the deadzone
@@ -223,7 +297,7 @@ export class InputManager {
             leftStick = { x: (rx / mag) * scaled, y: (ry / mag) * scaled };
         }
 
-        this.gamepadState = { connected: true, leftStick, isDown, justPressed };
+        this.gamepadState = { connected: true, leftStick, isDown, justPressed, buttonValues };
     }
 
     /**
@@ -277,6 +351,7 @@ export class InputManager {
     public update() {
         this.pointer.justReleased = false;
         this.doubleTapped = false;
+        this.zoomImpulse = 0;
 
         this.keysState.keys.forEach((keyState) => {
             keyState.justPressed = false;
@@ -299,6 +374,8 @@ export class InputManager {
         this.touchState.lastSwipeDirection = { x: 0, y: 0 };
         this.lastTapTime = 0;
         this.doubleTapped = false;
+        this.pinching = false;
+        this.suppressUntilAllUp = this.activeTouches > 0; // A finger held through the lock stays ignored
         this.resetStickFilter();
         this.update();
     }
@@ -314,6 +391,7 @@ export class InputManager {
             gamepad: this.getGamepadState(),
             keys: this.keysState.keys,
             doubleTapped: this.doubleTapped,
+            zoomImpulse: this.zoomImpulse,
         });
     }
     public isDoubleTapped(): boolean { return this.doubleTapped; }

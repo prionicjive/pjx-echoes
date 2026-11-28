@@ -18,6 +18,12 @@ export interface PlayerActions {
     cycleSkin: boolean;
     /** True on the frame audio mute should toggle (M) */
     toggleMute: boolean;
+    /** One-shot log-space zoom change this frame (wheel / pinch). Positive = zoom in. */
+    zoomImpulse: number;
+    /** Held zoom rate, -1..1 (keys, analog triggers, D-pad). Positive = zoom in. Multiply by dt. */
+    zoomRate: number;
+    /** True on the frame zoom should snap back to default (0) */
+    zoomReset: boolean;
 }
 
 /** Raw device state consumed by the mapping. */
@@ -27,6 +33,8 @@ export interface InputSnapshot {
     gamepad: GamepadState;
     keys: Map<string, KeyState>;
     doubleTapped: boolean;
+    /** Accumulated wheel/pinch log-zoom since last frame */
+    zoomImpulse: number;
 }
 
 /** Key / button bindings. Edit here to remap. Gamepad indices follow the W3C "standard" mapping. */
@@ -34,6 +42,9 @@ export const ActionBindings = {
     fireLidar: { keys: [' '], gamepadButtons: [0, 5] }, // Space; A, RB
     cycleSkin: { keys: ['k', 'K'] }, // Temporary live skin preview
     toggleMute: { keys: ['m', 'M'] },
+    zoomIn: { keys: ['=', '+'], gamepadTrigger: 7, gamepadButtons: [12] },   // RT (analog), D-pad Up
+    zoomOut: { keys: ['-', '_'], gamepadTrigger: 6, gamepadButtons: [13] },  // LT (analog), D-pad Down
+    zoomReset: { keys: ['0'] },
     moveLeft: { keys: ['a', 'A', 'ArrowLeft'] },
     moveRight: { keys: ['d', 'D', 'ArrowRight'] },
     moveUp: { keys: ['w', 'W', 'ArrowUp'] },
@@ -58,6 +69,19 @@ function resolveMoveVector(input: InputSnapshot): Point | null {
     if (kx === 0 && ky === 0) return null;
     const len = Math.hypot(kx, ky);
     return { x: kx / len, y: ky / len };
+}
+
+function resolveZoomRate(input: InputSnapshot): number {
+    const { keys, gamepad } = input;
+    const inB = ActionBindings.zoomIn;
+    const outB = ActionBindings.zoomOut;
+    let rate = (anyKeyDown(keys, inB.keys) ? 1 : 0) - (anyKeyDown(keys, outB.keys) ? 1 : 0);
+    if (gamepad.connected) {
+        const down = (btns: number[]) => btns.some(b => gamepad.isDown[b]) ? 1 : 0;
+        rate += (gamepad.buttonValues[inB.gamepadTrigger] ?? 0) - (gamepad.buttonValues[outB.gamepadTrigger] ?? 0);
+        rate += down(inB.gamepadButtons) - down(outB.gamepadButtons);
+    }
+    return Math.max(-1, Math.min(1, rate));
 }
 
 export function resolvePlayerActions(input: InputSnapshot): PlayerActions {
@@ -98,5 +122,8 @@ export function resolvePlayerActions(input: InputSnapshot): PlayerActions {
         fireLidar,
         cycleSkin,
         toggleMute,
+        zoomImpulse: input.zoomImpulse,
+        zoomRate: resolveZoomRate(input),
+        zoomReset: ActionBindings.zoomReset.keys.some(k => keys.get(k)?.justPressed),
     };
 }

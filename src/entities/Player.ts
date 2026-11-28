@@ -94,7 +94,9 @@ export class Player extends BaseEntity {
         actions: PlayerActions,
         context: {
             levelPosition: Point,
-            playerScreenPos: Point
+            playerScreenPos: Point,
+            /** Effective world scale (screen px per world px) */
+            scale: number
         },
         deltaTime: number
     ) {
@@ -102,9 +104,9 @@ export class Player extends BaseEntity {
         if (actions.attractorScreenPos) {
             this.handleAttractorMove(actions.attractorScreenPos, context, deltaTime);
         } else if (actions.swipeVelocityPx) {
-            this.handleSwipe(actions.swipeVelocityPx);
+            this.handleSwipe(actions.swipeVelocityPx, context.scale);
         } else if (actions.pointerReleasedScreenPos) {
-            this.handlePointerRelease(actions.pointerReleasedScreenPos, context.levelPosition);
+            this.handlePointerRelease(actions.pointerReleasedScreenPos, context.levelPosition, context.scale);
         }
         if (actions.moveVector && !actions.attractorScreenPos) {
             this.handleDirectionalMove(actions.moveVector, deltaTime);
@@ -131,18 +133,19 @@ export class Player extends BaseEntity {
     /** Touch / mouse held: pull toward (or push away from) the pointer. */
     private handleAttractorMove(
         target: Point,
-        context: { levelPosition: Point, playerScreenPos: Point },
+        context: { levelPosition: Point, playerScreenPos: Point, scale: number },
         deltaTime: number
     ) {
+        // Screen -> world pixels: undo the container offset, then the zoom scale
         const levelRelative = {
-            x: target.x - context.levelPosition.x,
-            y: target.y - context.levelPosition.y
+            x: (target.x - context.levelPosition.x) / context.scale,
+            y: (target.y - context.levelPosition.y) / context.scale
         };
         const screenDistance = Math.hypot(
             context.playerScreenPos.x - target.x,
             context.playerScreenPos.y - target.y
         );
-        const screenThreshold = Config.PixelsPerMeter / 2;
+        const screenThreshold = (Config.PixelsPerMeter / 2) * context.scale;
 
         if (screenDistance > screenThreshold || !Config.Movement.instantlyChangeDirection) {
             if (Config.Movement.towardsPoint) {
@@ -156,21 +159,22 @@ export class Player extends BaseEntity {
     }
 
     /** Non-swipe release: stop the player if released close enough to them. */
-    private handlePointerRelease(releasedScreenPos: Point, levelPosition: Point) {
+    private handlePointerRelease(releasedScreenPos: Point, levelPosition: Point, scale: number) {
         const targetPos = new planck.Vec2(
-            (releasedScreenPos.x - levelPosition.x) / Config.PixelsPerMeter,
-            (releasedScreenPos.y - levelPosition.y) / Config.PixelsPerMeter
+            (releasedScreenPos.x - levelPosition.x) / (Config.PixelsPerMeter * scale),
+            (releasedScreenPos.y - levelPosition.y) / (Config.PixelsPerMeter * scale)
         );
         if (targetPos.sub(this.body!.getPosition()).length() <= Config.Movement.pointerReleaseStopDistance) {
             this.body!.setLinearVelocity(new planck.Vec2(0, 0));
         }
     }
 
-    private handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }) {
-        // Convert to meters (Physics space)
+    private handleSwipe(velocityInPixelsPerSecond: { x: number, y: number }, scale: number) {
+        // Screen px/s -> meters/s (physics space). Dividing by zoom scale keeps a flick matching
+        // the on-screen finger speed at every zoom level.
         let velocityInMetersPerSecond = { 
-            x: velocityInPixelsPerSecond.x / Config.PixelsPerMeter, 
-            y: velocityInPixelsPerSecond.y / Config.PixelsPerMeter
+            x: velocityInPixelsPerSecond.x / (Config.PixelsPerMeter * scale), 
+            y: velocityInPixelsPerSecond.y / (Config.PixelsPerMeter * scale)
         };
          
         // This exaggerates fast flicks, and damps slow ones

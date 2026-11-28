@@ -118,6 +118,7 @@ async function main() {
             viewport: { width: WIDTH, height: HEIGHT },
             deviceScaleFactor: 1,
             reducedMotion: 'no-preference',
+            serviceWorkers: 'block', // the PWA worker must not interfere with the capture
         });
         page = await context.newPage();
 

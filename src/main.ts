@@ -5,6 +5,9 @@
 
 import './style.css'; // Bring in global styles for the game canvas and layout
 import { Game } from './core/Game.ts'; // Main game controller (handles everything!)
+import { registerServiceWorker } from './pwa.ts'; // Offline/installable PWA (production only)
 
 const game = new Game(); // Create a new game instance
 game.init();             // Initialize and start the game loop
+
+registerServiceWorker();

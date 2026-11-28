@@ -8,7 +8,7 @@ export interface PointerState {
     world: Point,
     isDown: boolean,
     justReleased: boolean,
-};
+}
 
 export interface TouchState {
     active: boolean,

@@ -29,7 +29,7 @@ export default defineConfig({
         description: DESCRIPTION,
         start_url: '/',
         scope: '/',
-        display: 'standalone',
+        display: 'fullscreen', // Android WebAPK: true immersive fullscreen; others fall back to standalone
         display_override: ['fullscreen', 'standalone'],
         theme_color: '#000000',
         background_color: '#000000',

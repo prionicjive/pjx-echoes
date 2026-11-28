@@ -1,12 +1,18 @@
+/* Pure black, edge to edge (incl. behind camera cutouts with viewport-fit=cover). */
 html, body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
 }
 
 body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0;
   overflow: hidden;
-  background-color: #000000;
+}
+
+canvas {
+  display: block; /* no inline baseline gap under the canvas */
 }
